@@ -1,6 +1,6 @@
 # VOLUME V2 — Sprint 0
 
-Trạng thái: **Sprint 0 đã được owner chấp thuận. Checkpoint 1A AUTHORIZED nhưng BLOCKED tại runtime preflight; 1B chưa được phép bắt đầu.**
+Trạng thái: **Sprint 0 đã được owner chấp thuận. Checkpoint 1A AUTHORIZED / CI_IMPLEMENTATION_IN_PROGRESS; 1B chưa được phép bắt đầu.**
 
 Project mới hoàn toàn. F6.1 chỉ là LEGACY / REFERENCE; không sửa, không import runtime, không chuyển dữ liệu/credentials tự động.
 
@@ -35,3 +35,6 @@ updated_at chỉ thời gian. Mutable profiles/venues/staff_memberships có vers
 Đã đọc contract/allowlist và chạy runtime preflight. Supabase CLI 2.119.0 chạy được, nhưng local stack chưa khởi động: Docker/Podman không có; native CLI gặp DNS timeout tải artifact, và sandbox chỉ map UID0 nên không chuyển sang tài khoản PostgreSQL non-root được. Chưa tạo migration/core/tests/dependency project trước khi có môi trường kiểm chứng session lifecycle thật. Xem `docs/sprints/SPRINT_1A_RESULTS.md`. Đây là blocker môi trường, không kết luận auth.sessions không hỗ trợ contract. Không freeze 1A hoặc chuyển 1B. Authorization 1A giữ nguyên; không cần authorize lại để tiếp tục trong môi trường phù hợp.
 
 Blueprint/AGENTS/ADR và FREEZE_MANIFEST của Sprint0 giữ nguyên snapshot lịch sử vì ngoài allowlist sửa 1A. Authorization hiện tại ở owner instruction và G1 OPEN_QUESTIONS; không lấy flag authorization cũ trong snapshot để phủ định quyết định owner. FREEZE_MANIFEST chỉ mô tả snapshot Sprint0, không là manifest của working tree 1A.
+
+## Execution update — GitHub Actions
+Owner authorized real Supabase on ubuntu-latest CI. Branch checkpoint-1a from375379a; runtime/session preflight PASS at2a1c8a2, run37439354568. Core/matrix implementation under test; not complete/frozen. Original sandbox blocker is superseded by CI execution; previous notes retain historical evidence. No contract/allowlist change, no main merge, no1B. See SPRINT_1A_RESULTS.md.

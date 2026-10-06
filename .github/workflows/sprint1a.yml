@@ -6,31 +6,62 @@ on:
     branches: [main]
 permissions:
   contents: read
+concurrency:
+  group: sprint1a-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  core:
+  required-core:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
+      - name: Scope, frozen documents and secret scan
+        run: |
+          python - <<'PY'
+          import pathlib,re,subprocess
+          text=pathlib.Path('docs/sprints/SPRINT_1.md').read_text()
+          block=text.split('### Exact file allowlist 1A')[1].split('### Forbidden')[0]
+          allowed=set(re.findall(r'^- `([^`]+)`',block,re.M))
+          changed=subprocess.check_output(['git','diff','--name-only','375379a72ee49a644bb58301a99eb7ebaf4e80e2','HEAD'],text=True).splitlines()
+          assert set(changed)<=allowed, 'Outside frozen allowlist: '+str(set(changed)-allowed)
+          for name in subprocess.check_output(['git','ls-files'],text=True).splitlines():
+            p=pathlib.Path(name)
+            data=p.read_text()
+            assert not re.search(r'sb_secret_[A-Za-z0-9_-]{15,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{20,}',data), 'Secret-like value: '+name
+            assert not name.startswith(('apps/','packages/','reference/')), 'Forbidden surface: '+name
+          assert not any(x in pathlib.Path('package.json').read_text().lower() for x in ['refine','react','shadcn','playwright'])
+          print('PASS: exact allowlist; frozen files unchanged; no legacy files, future/client modules, or embedded secret-like values')
+          PY
+      - name: Install locked core test dependencies
+        run: npm ci
+      - name: Typecheck and dependency audit
+        run: |
+          npm run typecheck
+          npm audit --audit-level=high
       - name: Pin Supabase CLI
         run: |
           npm install --global supabase@2.119.0
-          supabase --version
-      - name: Supabase runtime preflight
+          test "$(supabase --version)" = '2.119.0'
+      - name: Start real Supabase
         run: |
-          mkdir -p "$RUNNER_TEMP/volume-preflight"
-          cd "$RUNNER_TEMP/volume-preflight"
-          supabase init
-          supabase start
-          supabase db reset
-          docker exec supabase_db_volume-preflight psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c "select column_name,data_type from information_schema.columns where table_schema='auth' and table_name='sessions' order by ordinal_position;"
-      - name: Real Auth session lifecycle compatibility
+          supabase start > "$RUNNER_TEMP/supabase-start.log" 2>&1 || { echo 'Supabase startup failed (no credential-bearing logs published)'; exit 1; }
+          docker ps --format '{{.Image}} {{.Status}}'
+      - name: Clean migration and reset
+        run: supabase db reset
+      - name: Database constraints, RLS, RPC, revocation, versions, bootstrap
+        run: supabase test db
+      - name: Real Auth API and security integration, recovery and concurrent transactions
+        run: npm run test:integration
+      - name: Evidence summary
         run: |
-          cd "$RUNNER_TEMP/volume-preflight"
-          node --experimental-strip-types "$GITHUB_WORKSPACE/tests/integration/fixtures/auth.ts" --preflight
+          echo "Required 1A DB/API/security suites passed for $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo 'Supabase CLI 2.119.0; real Docker local stack; four business entities; no UI/1B.' >> "$GITHUB_STEP_SUMMARY"
       - name: Stop local stack
         if: always()
-        run: cd "$RUNNER_TEMP/volume-preflight" && supabase stop --no-backup
+        run: supabase stop --no-backup

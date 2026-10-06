@@ -1,6 +1,6 @@
 # Sprint 1 — Bốn entity, hai checkpoint độc lập
 
-Trạng thái: **1A AUTHORIZED / BLOCKED_RUNTIME_PREFLIGHT; 1B PLANNED / NOT AUTHORIZED**. Sprint0 owner approved; G1 CLOSED_OWNER_AUTHORIZED_1A; G2 CLOSED. Chưa app/migration/dependency project/Supabase deployment. 1A PASS không authorize 1B.
+Trạng thái: **1A AUTHORIZED / CI_IMPLEMENTATION_IN_PROGRESS; 1B PLANNED / NOT AUTHORIZED**. Sprint0 owner approved; G1 CLOSED_OWNER_AUTHORIZED_1A; G2 CLOSED. Chưa app/migration/dependency project/Supabase deployment. 1A PASS không authorize 1B.
 
 ## Business scope không đổi
 profiles, venues, staff_memberships, audit_events. Supabase-managed auth.users/auth.sessions không business entity mới; không expose Auth schema. Năm role/matrix giữ nguyên. Auth mọi role Email + Password, recovery email. Không phone/SMS/social/Telegram/passkey/MFA; không schema chuẩn bị provider.
@@ -273,3 +273,6 @@ Record evidence/file delta in SPRINT_1B_RESULTS.md; checkpoint/tag and STOP. Onl
 
 ## Execution update 2026-10-06
 Đã thực hiện runtime preflight; chưa chạy local stack hoặc matrix DB/API. Kết quả và các bước còn lại ghi SPRINT_1A_RESULTS.md. Không thay allowlist/scope/schema/test contract. Không freeze 1A.
+
+## Execution update — GitHub Actions
+Owner authorized real Supabase on ubuntu-latest CI. Branch checkpoint-1a from375379a; runtime/session preflight PASS at2a1c8a2, run37439354568. Core/matrix implementation under test; not complete/frozen. Original sandbox blocker is superseded by CI execution; previous notes retain historical evidence. No contract/allowlist change, no main merge, no1B. See SPRINT_1A_RESULTS.md.

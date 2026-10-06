@@ -1,78 +1,35 @@
-# Checkpoint 1A — RESULTS / BLOCKED_RUNTIME_PREFLIGHT
+# Checkpoint 1A — BLOCKED_PROVIDER_REVOKE_CONTRACT / NOT FROZEN
 
-Ngày: 2026-10-06. Owner đã AUTHORIZE 1A và chấp thuận Sprint0. **1A CHƯA HOÀN THÀNH, CHƯA FREEZE. Không triển khai 1B.**
+Owner authorized GitHub Actions ubuntu-latest as the real Supabase execution environment. Base: 375379a72ee49a644bb58301a99eb7ebaf4e80e2; working branch checkpoint-1a; draft PR https://github.com/HAD10202/Volume/pull/1. No merge or 1B authorization.
 
-## Kết luận
-Runtime preflight không cung cấp được PostgreSQL + Supabase Auth + Data API thật. Vì session contract cần integration spike trước triển khai rộng, dừng ở prerequisite để không bàn giao core chưa kiểm chứng. Chưa kết luận auth.sessions lifecycle/version không hỗ trợ contract; chưa chạy được provider để đánh giá. Không thay contract bằng logout frontend, mock Auth hay Postgres substitute.
+## Real runtime compatibility evidence
+Preflight commit 2a1c8a2777522520df0166592236071d63ef373c; workflow https://github.com/HAD10202/Volume/actions/runs/37439354568; job112188957380 PASS. Startup/reset and actual email/password signup/login/refresh/re-login PASS. Refresh preserves session_id and auth.sessions.created_at; re-login creates distinct session. This preflight does NOT prove the complete 1A matrix.
+Actual stack: Supabase CLI2.119.0; PostgreSQL image17.11.0.002; GoTruev2.197.0; PostgRESTv16.4; Mailpitv1.31.3. Runner Ubuntu24.04.5/Node22.23.3. Initial ECR rate limits recovered automatically. CLI npm global install is supported by this verified version despite older documentation; no production deploy.
 
-## Files tạo/sửa (tất cả thuộc exact allowlist)
-- README.md — authorization + status preflight.
-- docs/OPEN_QUESTIONS.md — G1 CLOSED_OWNER_AUTHORIZED_1A + môi trường blocker; G2–G14 giữ quyết định.
-- docs/sprints/SPRINT_1.md — execution status; scope/allowlist/matrix giữ nguyên.
-- docs/sprints/SPRINT_1A_RESULTS.md — file mới này.
-Không sửa Blueprint/architecture/permission/AGENTS/ADR/Sprint0 manifest hay legacy. Snapshot authorization cũ chỉ lịch sử; owner instruction hiện tại ưu tiên. Không bổ sung file implementation ngoài allowlist.
+## Dependencies
+All development/test only: pg8.16.3 for PostgreSQL fixture setup, observations and independent transaction connections; @types/pg8.15.5 and @types/node22.18.6 for static typing; TypeScript5.9.3 for test typechecking; Vitest5.0.3 for headless integration suites. Initial3.2.4 audit reported vulnerabilities, upgraded to5.0.3 before full CI; npm audit reports zero vulnerabilities. Exact package-lock required. Auth tests call real Supabase HTTP endpoints with Node fetch; no custom Auth implementation or mocked provider.
 
-## Dependencies và phiên bản
-Không thêm dependency trong project, không package.json/package-lock.json/node_modules project. Runtime preflight dùng pinned npm cache command `npx --yes --package=supabase@2.119.0 supabase --version`; kết quả **2.119.0**, exit0. CLI candidate cần để kiểm tra runtime, chưa pin thành dependency project vì stack compatibility chưa chứng minh.
-Node v24.19.0; npm 11.9.0; Linux x86_64/glibc2.39. Supabase local/Auth/PostgreSQL RUNNING VERSION: **NOT AVAILABLE**. Artifact CLI cố tải postgres-17.11.0.002-r0; không gọi đó là bản database đã chạy/test.
+## Implementation under test
+Two migrations: 20261006000100_identity_scope.sql and 20261006000200_permissions_rpc_audit.sql. Four business tables only. Non-login/non-superuser/non-BYPASSRLS volume_core owner; private helpers, restricted grants and RLS. RPCs: public_venues, current_access, staff_directory, membership_directory, audit_feed, update_own_profile, update_venue, update_access, set_account_status, set_staff_membership_status, revoke_own_sessions. Fixed search_path and schema-qualified references; private functions revoked by default. Versions return decimal strings for exact bigint values beyond JavaScript safe integer.
+Sensitive mutations serialize using one transaction advisory lock, lock caller/target and recheck live session/authority. Multirow change-sets include each expected version; non-staff role transition requires explicit inactivation versions for existing memberships. Account/membership/role/scope/extra changes set cutoff. Self revoke audits before its own cutoff inside the same transaction. Audit failure rolls back domain data/version/cutoff.
 
-## Runtime preflight đã chạy
-| Probe | Kết quả |
-|---|---|
-| Git baseline | d476c30, working tree sạch trước lượt này |
-| Supabase CLI pinned version/help | PASS tooling probe; version2.119.0 hỗ trợ experimental native stack |
-| docker/podman executable + daemon sockets | Không có; Docker path BLOCKED |
-| Linux architecture/glibc | Phù hợp platform native theo docs; chưa bảo đảm quyền chạy |
-| runuser -u oai -- id / nobody | Exit1: cannot set groups: Operation not permitted |
-| /proc/self/uid_map | Chỉ `0 0 1`; không UID non-root mapped |
-| os.setuid(1001) trong process thử riêng | OSError Errno22 Invalid argument; không switch được non-root |
-| Native CLI start với SUPABASE_NATIVE_POSTGRES_USER=oai | Exit1 ExperimentalStackStartError: artifact download DNS getaddrinfo ETIMEOUT |
-| Native thử dùng NODE_USE_ENV_PROXY=1 | Cùng lỗi download, exit1; không sửa network policy |
-| curl official S3 artifact manifest qua network sẵn có | HTTP200; khác transport CLI, không đủ chứng minh CLI download/stack PASS |
+## Tests and status
+Local typecheck PASS; YAML parsing/allowlist checks PASS. Full GitHub Actions DB/API/security matrix: NOT RUN at this report revision. No freeze/completion claim. Required tests are not replaced by static checks or preflight.
+Database files cover constraints, grants/RLS, RPC/audit, revocation, versions, last-Admin invariant and bootstrap. Integration suites cover actual tokens, full role/scope matrix, metadata forgery, HR limits, direct audit denial, old refresh/new session/cutoff boundaries, injected bootstrap/audit faults, bigint exactness/overflow/multirow rollback, concurrent CAS/Admin protection/authority recheck, and captured email recovery/replay/expiry.
+Privileged SQL is confined to isolated local fixture setup, fault injection and observations; allow/deny requests always use anon key and real user JWTs. Provider revoke failure is modeled by deliberately leaving real old Auth sessions alive after DB cutoff, proving application denial independent of provider success.
 
-Command native được chạy ở directory preflight tạm ngoài repository (không tạo project source/config placeholder):
-`SUPABASE_EXPERIMENTAL_STACK=1 SUPABASE_NATIVE_POSTGRES_USER=oai npx --yes --package=supabase@2.119.0 supabase start --runtime native --preparation on-demand`
+## Security / limits
+No security acceptance yet: full CI must pass. No Auth schema exposure; no service-role key used by allow/deny clients. Startup logs suppressed to avoid CLI printing local generated keys. No production credentials. Provisioning Edge Function is optional and not implemented: test operator uses real signup plus controlled SQL fixture bootstrap/reconciliation audit; no generic privileged API proxy.
+No architectural deviation applied. Global mutation serialization is intentionally simple for V1 and may limit write throughput; no extra entity/service. No production SMTP/signup policy decision is implied by local auto-confirm/rate-limit settings.
 
-Hai endpoint CLI báo lỗi DNS: github.com release manifest và supabase-cli-artifacts.s3.us-east-1.amazonaws.com mirror manifest. Không bypass restrictions hoặc dùng credential production. CLI cache/logs chỉ transient diagnostics, không source/deliverable. Root-only UID là blocker native độc lập cần xử lý ngay cả khi download được.
+## File delta / checkpoint
+Source changes must remain within the frozen exact allowlist. Final file list, commit SHA and all group results will be recorded after actual CI. Frozen documents/Legacy unchanged. Do not label this checkpoint PASS or create freeze tag before all required tests pass.
 
-## Migration / RPC / helpers / seed
-Migration: NOT IMPLEMENTED / NOT RUN. RPC/helper: NOT IMPLEMENTED / NOT RUN. RLS/grants/constraints/audit/bootstrap/seed: NOT IMPLEMENTED / NOT RUN. Không đặt SQL giả hoặc mô phỏng Auth nhằm đánh dấu hoàn thành. Admin provisioning server path chưa tạo vì chưa có local Auth để test.
+## Not implemented
+No Customer/Control Center UI, Refine/React/shadcn/Playwright, future business module/schema/menu, invitation module, production deployment, main merge or Checkpoint1B.
 
-## Required acceptance status
-| Acceptance | Status / evidence |
-|---|---|
-| A1A01 clean reset/migration + four entities | BLOCKED / NOT RUN; chưa DB |
-| A1A02 permissions/grants/RLS/projections | BLOCKED / NOT RUN |
-| A1A03 Manager/Staff cross-venue + USER isolation | BLOCKED / NOT RUN |
-| A1A04 privilege escalation/unknown permissions | BLOCKED / NOT RUN |
-| A1A05 session cutoff/old refresh/new session/provider failure | BLOCKED / NOT RUN; chưa kiểm chứng auth.sessions lifecycle |
-| A1A06 bigint CAS/stale/no-op/concurrent/multi-row rollback | BLOCKED / NOT RUN |
-| A1A07 last-active-Admin concurrency | BLOCKED / NOT RUN |
-| A1A08 audit append-only/redaction/atomicity/failure rollback | BLOCKED / NOT RUN |
-| A1A09 bootstrap USER/ACTIVE/version1 + email/password/recovery | BLOCKED / NOT RUN |
-| A1A10 service-role absence / no UI / scope scan | Static repo checks PASS only; không là runtime security PASS |
-
-DB01–DB36: **BLOCKED / NOT RUN**, không database test runner. API01–API13: **BLOCKED / NOT RUN**, không Auth/Data API endpoint. Không chọn subset PASS để thay toàn matrix. Không dùng service-role/token giả chứng minh RLS.
-
-## Security findings / limits / deviations
-- Không runtime security finding đã chứng minh; không đủ môi trường kiểm tra.
-- Không architectural deviation đã áp dụng; đây là blocker runtime/environment.
-- Không dùng metadata role, schema riêng provider hay giải pháp session yếu hơn.
-- Chưa migration/reset, chưa cài dependency business/UI, chưa local config/core; không thể claim exactly-four runtime entities.
-- No secret được thêm source; không gọi production credential/service.
-- Bốn file changes phải kiểm tra allowlist, frozen file hashes và legacy bytes trước commit.
-- Không global install/upgrade Docker, không tác động máy Mac/PC/Pi node của owner.
-
-## Điều kiện tiếp tục
-Cần execution environment có Docker/Podman engine hoạt động, hoặc native CLI với user non-root hợp lệ và download artifacts thành công. Không cần owner authorize lại 1A: authorization giữ nguyên. Sau khắc phục, resume theo đúng allowlist, chứng minh local Auth session cutoff trước triển khai rộng, rồi triển khai và chạy toàn DB/API matrix. Nếu lifecycle thực tế incompatible, DỪNG report deviation trước alternative.
-
-## Checkpoint
-Git commit/tag sẽ là **preflight-blocked**, không freeze/pass tag. Kết quả toàn 1A chưa PASS nên không freeze. 1B vẫn NOT AUTHORIZED.
-
-## Những gì KHÔNG làm
-Không Customer/Control Center UI; không Refine/shadcn/React/Playwright; không future business module/schema; không sửa legacy; không deploy Supabase/cloud; không sửa contract hoặc mở allowlist; không mock test thay evidence.
-
-## Primary sources dùng cho preflight
-- https://supabase.com/docs/guides/local-development/docker-and-native-runtimes — native/root/download prerequisites.
-- https://supabase.com/docs/guides/local-development/running-multiple-local-projects — CLI2.119.0, experimental stack, no-config scratch mode.
-- https://supabase.com/docs/guides/auth/sessions — auth.sessions/session_id mechanism; đây là documentation, chưa runtime verification.
+## Architectural blocker — reported, not silently changed
+Pinned GoTruev2.197.0 source routes expose /logout with authenticated target-user JWT; no Admin revoke-all-by-user-id endpoint. Admin signOut SDK also takes target JWT. After Admin changes another profile role/membership/account, the server has the Admin caller JWT, not the target user's JWT. Four-entity/minimum-Auth-read contract does not authorize storing target tokens, minting impersonation JWTs or deleting managed Auth session rows. Ban/delete/temporary ban is not equivalent to membership disabling and may block new login. Therefore automatic post-commit provider revoke for all administrative changes cannot be claimed implemented under this exact contract.
+Database cutoff/session lifecycle itself was verified compatible. This blocker is specifically the provider-call orchestration, not auth.sessions.created_at. Do not weaken database cutoff or reopen role/scope rules. Required CI includes an explicit failing compatibility gate; no green workflow may be used to claim complete1A while this decision remains unresolved. Further implementation of the affected provider step stops pending owner decision.
+Owner decision needed: clarify provider revoke as best-effort only when a supported target JWT is available (self revoke), while administrative changes always enforce DB cutoff; or authorize a specific supported privileged provider/session mechanism and its exact files/grants. No alternative applied.
+Primary pinned sources: https://github.com/supabase/auth/blob/v2.197.0/internal/api/api.go and https://github.com/supabase/auth/blob/v2.197.0/internal/api/logout.go; SDK https://supabase.com/docs/reference/javascript/auth-admin-signout.

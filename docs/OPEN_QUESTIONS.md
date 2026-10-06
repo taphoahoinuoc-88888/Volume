@@ -41,3 +41,9 @@ CEO V1 không có quyền ghi nội bộ mặc định. Mỗi write action tươ
 
 ## Runtime blocker sau authorization 1A
 G1 đã đóng; không reopen gate kiến trúc. Local runtime chưa chạy: không Docker/Podman; Supabase CLI 2.119.0 native lỗi download artifact getaddrinfo ETIMEOUT; curl tới official S3 manifest trả HTTP200, nên không kết luận domain hoàn toàn không truy cập được. Native PostgreSQL còn cần non-root; uid_map chỉ UID0, runuser và os.setuid(1001) bị từ chối. Cần môi trường có Docker hoạt động hoặc native runtime có non-root hợp lệ và artifact downloads được CLI hỗ trợ. Không thay đổi schema/provider/session contract.
+
+## Execution update — GitHub Actions
+Owner authorized real Supabase on ubuntu-latest CI. Branch checkpoint-1a from375379a; runtime/session preflight PASS at2a1c8a2, run37439354568. Core/matrix implementation under test; not complete/frozen. Original sandbox blocker is superseded by CI execution; previous notes retain historical evidence. No contract/allowlist change, no main merge, no1B. See SPRINT_1A_RESULTS.md.
+
+## 1A blocker needing owner decision
+Administrative post-commit Auth provider revoke needs target JWT in GoTruev2.197.0. No revoke-by-user-id Admin route in pinned source. Database cutoff remains unchanged; session lifecycle spike PASS. Proposed clarification/alternative is NOT applied. See SPRINT_1A_RESULTS.md.1A cannot freeze until owner resolves this provider-orchestration contract. This is not a new symbolic gate.
