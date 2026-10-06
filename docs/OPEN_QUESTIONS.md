@@ -1,6 +1,6 @@
 # Gate definitions và status — Sprint 0 cuối cùng
 
-G2 đã được owner chốt; architecture cơ bản được chấp thuận. **Checkpoint 1A + read maintenance CLOSED/FROZEN tại main68541f8; 1B đã authorize và đang kiểm thử trên branch riêng.** Gate là điều kiện trước công việc tương ứng, không cho phép tạo schema/module tương lai.
+G2 đã được owner chốt; architecture cơ bản được chấp thuận. **Checkpoint 1A + read maintenance CLOSED/FROZEN tại main68541f8; 1B đã authorize, implementation full CI PASS; final checkpoint CI phải SUCCESS mới freeze trên branch riêng.** Gate là điều kiện trước công việc tương ứng, không cho phép tạo schema/module tương lai.
 
 | Gate | Definition | Status | Phải giải quyết trước | Điều kiện đóng |
 |---|---|---|---|---|
@@ -45,4 +45,7 @@ Original 1A closure tại1910394 đã được xác minh lại trực tiếp t�
 
 Owner authorize read maintenance riêng, PR2 merged. Main mới `68541f8a71a0ae10ac22d819a79f78982cf37abb`, full main CI37453711509 SUCCESS,78 DB/27 API; maintenance CLOSED/FROZEN. Hai minimum read RPC giải quyết Admin no-membership account preview, account status cần thiết và HR target CAS không mở directory. volume_core không đọc Auth schema; narrow private boolean session validator không expose auth.sessions. Provider revoke-all của user khác bằng user_id không có API được hỗ trợ; DB cutoff vẫn authority, old refreshed sessions bị DENY. Xem SPRINT_1A_RESULTS.
 
-1B được owner authorize, branch checkpoint-1b phát triển từ main mới; đang kiểm thử product surfaces/real Playwright. Không sửa frozen migrations/RLS/RPC/core tests. Không production deployment, public signup quyết định mới, Sprint2 hoặc future module. Kết quả cuối tại SPRINT_1B_RESULTS; không tự chuyển Sprint sau.
+1B được owner authorize, branch checkpoint-1b phát triển từ main mới; implementation product surfaces/real Playwright PASS tại84d31472/run37459331909 (78 DB/27 API/3 unit/54 browser); final checkpoint CI SUCCESS mới freeze. Không sửa frozen migrations/RLS/RPC/core tests. Không production deployment, public signup quyết định mới, Sprint2 hoặc future module. Kết quả cuối tại SPRINT_1B_RESULTS; không tự chuyển Sprint sau.
+
+## Trước PR/main của 1B
+Frozen sprint1a.yml còn áp dụng scan riêng1A trên PR/main và không cho product files/dependencies. File này ngoài1B allowlist; cần owner authorize separate CI-policy maintenance trước PR/merge1B. Không tự sửa hoặc mở allowlist. Product1B hiện kiểm thử đầy đủ trên push checkpoint-1b, chưa merge/main deployment. Đây không phải gate ký hiệu mới hay thay mô hình permission. Sprint2 vẫn cần authorization riêng và G3–G7.

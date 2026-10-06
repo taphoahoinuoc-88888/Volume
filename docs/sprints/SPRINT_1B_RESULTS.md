@@ -1,4 +1,4 @@
-# Checkpoint 1B — IN PROGRESS / NOT FROZEN
+# Checkpoint 1B — PASS; freeze effective on final checkpoint CI SUCCESS
 
 Date: 2026-10-06. Branch: `checkpoint-1b`. Owner authorized product surfaces after direct GitHub preflight and a separate, narrowly scoped 1A read maintenance. No 1B merge or production deployment has been performed. Sprint 2 has not started.
 
@@ -48,18 +48,19 @@ Supabase CLI remains pinned2.119.0; same frozen local config/reader bootstrap. L
 
 ## Verification and evidence
 
-Current implementation under real CI: `6bd25957cd31fc3dbb3820b29d0fe56fe7de7e0d`,
-[run37458477800](https://github.com/HAD10202/Volume/actions/runs/37458477800).
-No full PASS claim until this run and final documentation checkpoint are SUCCESS.
+Verified implementation: `84d31472e0b2435ac21a949d6692c86c9d3be990`,
+[run37459331909](https://github.com/HAD10202/Volume/actions/runs/37459331909), job112254686884: **completed/SUCCESS**. Actual logs:78 database assertions across8 files;27 API tests across6 files;3 unit tests;54 Playwright tests. JSON report:54 expected,0 skipped,0 unexpected,0 flaky. Browser artifact11411631606 contains12 screenshot attachments; SHA25684d1cc37606faa1bd7f8f7365180e0bc1821acfb815f3ab1150447f9826db924. Downloaded/decoded and visually checked WebKit320px login/scoped venues and desktop; no overflow, legible fields/actions/focus. Text artifact scan contains no fixture password/JWT/secret pattern.
+
+This final checkpoint changes status/result documents only. The identical complete workflow must repeat on its exact commit. Freeze becomes effective **only when the final documentation checkpoint run is SUCCESS**; FAIL/BLOCKED/NOT RUN prevents freeze. Final checkpoint SHA is the tested HEAD in the Actions summary and owner handoff, not a rewritten implementation history. Find its immutable run via [checkpoint-1b Actions](https://github.com/HAD10202/Volume/actions?query=branch%3Acheckpoint-1b). No product/DB code changes after verified84d31472.
 
 | Required group | Current status |
 |---|---|
-| Clean Supabase startup/reset and 78 DB assertions | CI pending for final implementation |
-| 27 real API/security/concurrency/recovery tests | CI pending for final implementation |
-| Typecheck / lint / production builds | Local PASS; final CI pending |
-| 3 permission unit tests | Local PASS; final CI pending |
-| 54 browser/backend cases | CI pending; NOT FROZEN |
-| Allowlist / frozen core / secrets / dependency audit | Final CI pending |
+| Clean Supabase startup/reset and 78 DB assertions | PASS — run37459331909; repeat on final checkpoint |
+| 27 real API/security/concurrency/recovery tests | PASS — run37459331909; repeat on final checkpoint |
+| Typecheck / lint / production builds | PASS local + run37459331909; repeat on final checkpoint |
+| 3 permission unit tests | PASS local + run37459331909; repeat on final checkpoint |
+| 54 browser/backend cases | PASS54/54 — run37459331909; repeat on final checkpoint |
+| Allowlist / frozen core / secrets / dependency audit | PASS — run37459331909; repeat on final checkpoint |
 
 54 cases =9 flows across Chromium/WebKit desktop1440, mobile390, small320. Tests cover real login/recovery/old password denial and link replay; profile validation/CAS/logout/disabled account; old open tab after cutoff; all5 roles/routes and scope; direct cross-role/cross-venue backend denials; HR independent status extra, both CAS versions, no manager/other-venue roster leak, extra revoke/old-tab/new-login; Admin no-membership access/state changes and audit; preview/reason/stale confirmation; changing editor targets without retaining another person's draft; narrow-screen confirmation overflow; keyboard and screenshots.
 
@@ -72,6 +73,10 @@ Earlier CI diagnosis: cancelled runs37455946374/37456502418;31ee4e6 compile fail
 Full source patterns/client configuration checks found no committed secret/service-role. Narrow projection tests remain in complete frozen regression. No private/Auth fields added to product read contracts. Before final artifacts are uploaded, fixture passwords/JWT/recovery token values are redacted from textual reports. Network traces/video are disabled. Earlier diagnostic artifacts could contain ephemeral local test credentials in automatic failure context; no production credentials were used, and those stopped isolated stacks are not final evidence.
 
 CI is Linux Chromium/WebKit browser-engine verification, not physical Safari/macOS/iPhone testing. Physical-device certification, production SMTP/domains/signup/email confirmation/operations (G14) remain NOT RUN/undecided. Local password/redirect policy remains the frozen1A config; no production policy inferred. Build has nonblocking dependency "use client" warnings and a Control Center bundle-size warning; not a server component app. No deployment or performance certification.
+
+## PR/main integration boundary
+
+Current1B evidence is the feature-branch workflow, which includes complete1A regression. No1B PR/merge is performed. Frozen `.github/workflows/sprint1a.yml` still applies its1A-only allowlist/forbidden-product scan to PR/main. Before owner authorizes a1B PR/main merge, that CI policy needs separate approved maintenance: this file is outside1B allowlist and has not been edited in product work. This is a release/CI-policy boundary, not a failed required test in the current branch or permission-model change.
 
 ## Exact 1B changed files
 
@@ -136,5 +141,5 @@ All56 paths are the existing approved1B allowlist, with no expansion:
 
 ## Stop boundary
 
-Maintenance1A CLOSED/FROZEN on main68541f8. Product1B currently under verification on its branch; no schema/security/core test change or additional architectural authorization assumed. No 1B merge, production deployment, Table/Payment/Player/Match/Media/Tournament/Shop/Telegram/CRM/AI/invitation implementation. **Sprint 2 has not started.** Freeze only after complete real CI evidence, then STOP for owner review.
+Maintenance1A CLOSED/FROZEN on main68541f8. Product1B implementation PASS on its branch; freeze effective after identical final checkpoint CI SUCCESS; no schema/security/core test change or additional architectural authorization assumed. No 1B merge, production deployment, Table/Payment/Player/Match/Media/Tournament/Shop/Telegram/CRM/AI/invitation implementation. **Sprint 2 has not started.** Freeze only after complete real CI evidence, then STOP for owner review.
 

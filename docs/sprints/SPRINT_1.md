@@ -302,3 +302,6 @@ Read RPCs use minimum volume_core owner, empty search_path, restricted EXECUTE a
 
 ## Current owner authorization — Checkpoint1B
 Owner authorized1B after direct base verification and separate minimum read maintenance. New frozen core base68541f8a71a0ae10ac22d819a79f78982cf37abb; maintenance CI37453711509 SUCCESS. Planned56-path1B allowlist above is the exact current allowlist; no expansion. Auth/profile/Refine/navigation/venue/people/audit/confirmation and real Playwright only. Supabase/core integration tests unchanged. Independent sprint1b workflow runs complete core regression plus product tests on checkpoint-1b. No1B main merge or Sprint2 without next owner instruction.
+
+## Checkpoint1B final verification — 2026-10-06
+Implementation84d31472e0b2435ac21a949d6692c86c9d3be990, full run37459331909 SUCCESS:78 DB/27 API/3 unit/54 Playwright,0 skipped/flaky. Exact56-path delta; frozen core/security/tests unchanged; Legacy235 files unchanged. Final status/documentation checkpoint repeats identical full CI; freeze effective only on its SUCCESS. Final tested SHA/run are available in Actions and owner handoff. STOP after freeze; no Sprint2. No1B PR/main merge: frozen sprint1a.yml PR/main scan needs separately approved CI-policy maintenance outside1B allowlist before that future action. See SPRINT_1B_RESULTS for evidence, versions and limits.
