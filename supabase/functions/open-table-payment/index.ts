@@ -8,6 +8,13 @@ interface Dependencies {
 }
 const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS'};
 function response(body:unknown,status=200){return new Response(status===204?null:JSON.stringify(body),{status,headers:{...cors,'Content-Type':'application/json','Cache-Control':'no-store'}});}
+async function retrySafe<T>(operation:()=>Promise<T>):Promise<T>{
+ for(let attempt=0;;attempt++){try{return await operation();}catch(e){
+  const code=typeof e==='object'&&e!==null&&'code' in e?String(e.code):'';
+  if(attempt>=2||!(e instanceof TypeError||['40001','40P01','ECONNRESET','ECONNREFUSED','ETIMEDOUT'].includes(code)))throw e;
+  await new Promise(resolve=>setTimeout(resolve,50*(attempt+1)));
+ }}
+}
 export function createOpeningHandler(d:Dependencies){return async(req:Request):Promise<Response>=>{
  if(req.method==='OPTIONS')return response(null,204);
  if(req.method!=='POST')return response({code:'METHOD_NOT_ALLOWED'},405);
@@ -19,7 +26,7 @@ export function createOpeningHandler(d:Dependencies){return async(req:Request):P
   if(!body||typeof body!=='object'||Object.keys(body).some(k=>!['table_id','expected_version','request_key'].includes(k)))return response({code:'INVALID_REQUEST'},400);
   const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if(typeof body.table_id!=='string'||!uuid.test(body.table_id)||typeof body.request_key!=='string'||!uuid.test(body.request_key)||typeof body.expected_version!=='string'||!/^\d+$/.test(body.expected_version)||BigInt(body.expected_version)<1n||BigInt(body.expected_version)>2n**63n-1n)return response({code:'INVALID_REQUEST'},400);
-  const created=await d.rpc<{session_id:string}>(token,'acquire_table',{p_table:body.table_id,p_expected_table_version:body.expected_version,p_request_key:body.request_key});
+  const created=await retrySafe(()=>d.rpc<{session_id:string}>(token,'acquire_table',{p_table:body.table_id,p_expected_table_version:body.expected_version,p_request_key:body.request_key}));
   const current=(await d.rpc<Opening[]>(token,'own_table_sessions',{})).find(s=>s.id===created.session_id);
   if(!current)throw new Error('ACCESS_DENIED');
   if(current.state!=='PENDING_PAYMENT'||!current.payment||current.payment.state!=='WAITING')return response({session_id:current.id,state:current.state});
@@ -35,7 +42,7 @@ export function createOpeningHandler(d:Dependencies){return async(req:Request):P
   }catch{
    // This trusted operation cannot cancel ACTIVE or discard real money. A failed
    // release returns failure, never a fake success ACK; same-key retry is safe.
-   await d.fail(current.payment.reference);
+   await retrySafe(()=>d.fail(current.payment!.reference));
    const final=(await d.rpc<Opening[]>(token,'own_table_sessions',{})).find(s=>s.id===current.id);
    if(final?.state==='ACTIVE')return response({session_id:final.id,state:final.state});
    return response({code:'PAYMENT_UNAVAILABLE',session_id:current.id,message:'Chưa thể tạo mã thanh toán. Vui lòng kiểm tra trạng thái phiên và thử lại sau.'},503);
@@ -55,7 +62,7 @@ if(typeof Deno!=='undefined'){
  const url=Deno.env.get('SUPABASE_URL')!;const anon=Deno.env.get('SUPABASE_ANON_KEY')!;
  async function rpc<T>(token:string,name:string,body:Record<string,unknown>):Promise<T>{
   const r=await fetch(url+'/rest/v1/rpc/'+name,{method:'POST',headers:{Authorization:token,apikey:anon,'Content-Type':'application/json'},body:JSON.stringify(body)});
-  const data=await r.json();if(!r.ok)throw new Error(typeof data.message==='string'?data.message:'RPC_FAILED');return data as T;
+  const data=await r.json();if(!r.ok)throw Object.assign(new Error(typeof data.message==='string'?data.message:'RPC_FAILED'),{code:data.code});return data as T;
  }
  Deno.serve(createOpeningHandler({
   async authenticate(token){const r=await fetch(url+'/auth/v1/user',{headers:{Authorization:token,apikey:anon}});if(!r.ok)throw new Error('UNAUTHORIZED');},
@@ -67,7 +74,7 @@ if(typeof Deno!=='undefined'){
    const pool=new module.default.Pool({connectionString:Deno.env.get('SUPABASE_DB_URL'),max:1});
    const connection=await pool.connect();
    try{await connection.query('begin');await connection.query('set local role volume_payment_ingest');await connection.query('select private.fail_payment_attempt($1,$2)',[reference,'QR_FAILED']);await connection.query('commit');}
-   catch{await connection.query('rollback');throw new Error('RELEASE_FAILED');}
+   catch(e){await connection.query('rollback');throw e;}
    finally{connection.release();await pool.end();}
   },
  }));

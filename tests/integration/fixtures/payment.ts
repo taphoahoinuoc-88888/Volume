@@ -1,6 +1,6 @@
 import {randomUUID} from 'node:crypto';
 import {fixture,allowed,type Fixture} from './auth';
-import {validateVerifiedReceipt,type VerifiedReceipt} from '../../../supabase/functions/_shared/payment-adapter';
+import {validateFinalReceipt,type VerifiedReceipt} from '../../../supabase/functions/_shared/payment-adapter';
 export async function paymentFixture(){return paymentTools(await fixture());}
 export function paymentTools(f:Fixture){
  let tableA='',tableA2='',tableB='';
@@ -18,7 +18,7 @@ export function paymentTools(f:Fixture){
  const acquire=(name='user1',table=tableA,key=randomUUID(),version='1')=>f.rpc(name,'acquire_table',{p_table:table,p_expected_table_version:version,p_request_key:key});
  async function row(session:string){return (await f.db.query('select s.*,p.id payment_id,p.reference,p.state payment_state,p.version payment_version,p.payment_success_at,p.resolution_reason from public.table_sessions s join public.payments p on p.session_id=s.id where s.id=$1',[session])).rows[0];}
  function event(reference:string,amount='100000',extra:Partial<VerifiedReceipt>={}):VerifiedReceipt{
-  const id=randomUUID();return validateVerifiedReceipt({provider:'neutral-fixture',recipient_scope:'test-merchant',external_event_id:id,external_transaction_id:id,reference,kind:'CREDIT',amount_vnd:amount,currency:'VND',provider_occurred_at:new Date(Date.now()-1000).toISOString(),provider_callback_received_at:new Date().toISOString(),evidence_digest:'normalized-financial-facts',...extra});
+  const id=randomUUID();return validateFinalReceipt({provider:'neutral-fixture',recipient_scope:'test-merchant',external_event_id:id,external_transaction_id:id,reference,kind:'CREDIT',amount_vnd:amount,currency:'VND',provider_occurred_at:new Date(Date.now()-1000).toISOString(),provider_callback_received_at:new Date().toISOString(),evidence_digest:'normalized-financial-facts',...extra},'test-merchant',true);
  }
  async function gateway<T>(method:'ingest_payment_event'|'fail_payment_attempt'|'expire_table_holds',args:unknown[]){
   const c=await f.db.connect();try{await c.query('begin');await c.query('set local role volume_payment_ingest');

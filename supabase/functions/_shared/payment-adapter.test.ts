@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {integerVnd,preparationRequest,validateVerifiedReceipt,unconfiguredAdapter,type VerifiedReceipt} from './payment-adapter';
+import {integerVnd,preparationRequest,validateVerifiedReceipt,validateFinalReceipt,unconfiguredAdapter,type VerifiedReceipt} from './payment-adapter';
 import {createOpeningHandler} from '../open-table-payment/index';
 const ids={table:'40000000-0000-0000-0000-000000000001',key:'50000000-0000-0000-0000-000000000001'};
 const body={table_id:ids.table,request_key:ids.key,expected_version:'1'};
@@ -9,6 +9,7 @@ describe('neutral payment boundary (unit; not real-provider evidence)',()=>{
  it.each(['-1','1.5','1e5','0','9223372036854775808','NaN'])('T29/T60 rejects invalid credit %s',value=>expect(()=>integerVnd(value)).toThrow());
  it('accepts bigint beyond JS safe integer without rounding',()=>expect(integerVnd('9007199254740993')).toBe('9007199254740993'));
  it('T29 normalized receipt keeps immutable times and amount',()=>expect(validateVerifiedReceipt(receipt)).toEqual(receipt));
+ it('T35 rejects wrong recipient, nonfinal and non-VND normalized attestation',()=>{expect(()=>validateFinalReceipt(receipt,'another-merchant',true)).toThrow();expect(()=>validateFinalReceipt(receipt,'merchant',false)).toThrow();expect(()=>validateFinalReceipt({...receipt,currency:'USD' as never},'merchant',true)).toThrow();expect(validateFinalReceipt(receipt,'merchant',true)).toEqual(receipt);});
  it('rejects non-credit-as-money/unknown kind',()=>expect(()=>validateVerifiedReceipt({...receipt,kind:'PENDING' as never})).toThrow());
  it('unconfigured provider cannot generate QR or verify money',async()=>{await expect(unconfiguredAdapter.preparePayment('ref','100000')).rejects.toThrow();await expect(unconfiguredAdapter.verifyEvent({},receipt.provider_callback_received_at)).rejects.toThrow();});
 });
@@ -21,4 +22,8 @@ describe('server orchestration unit, actual Edge/auth tested separately',()=>{
  it('T10 QR preparation uses server-read remaining only',async()=>{const h=handler(async(reference,amountVnd)=>{expect(amountVnd).toBe('30000');return {reference,amountVnd,qr:'opaque-test-artifact'};});expect((await h.invoke(req())).status).toBe(200);expect(h.failed()).toBe(0);});
  it('rejects mismatched preparation without returning fake QR',async()=>{const h=handler(async()=>({reference:'wrong',amountVnd:'100000',qr:'wrong'}));expect((await h.invoke(req())).status).toBe(503);expect(h.failed()).toBe(1);});
  it('requires Authorization and allows bodyless CORS preflight',async()=>{const h=handler(async()=>{throw new Error();});expect((await h.invoke(new Request('http://local.test',{method:'POST'}))).status).toBe(401);expect((await h.invoke(new Request('http://local.test',{method:'OPTIONS'}))).status).toBe(204);});
+ it('T46 retryable failures use unchanged command at most three times, never fake success',async()=>{
+  let attempts=0;const bodies:unknown[]=[];const invoke=createOpeningHandler({async authenticate(){},async rpc<T>(_t:string,name:string,b:Record<string,unknown>){if(name==='acquire_table'){attempts++;bodies.push(b);throw Object.assign(new Error('deadlock'),{code:'40P01'});}return [] as T;},async prepare(){throw new Error();},async fail(){}});
+  expect((await invoke(req())).status).toBe(503);expect(attempts).toBe(3);expect(bodies).toEqual([bodies[0],bodies[0],bodies[0]]);
+ });
 });

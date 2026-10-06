@@ -22,14 +22,14 @@ No added npm dependency or lockfile change. Existing pinned `pg@8.16.3` is reuse
 | Group | Status |
 |---|---|
 | Local typecheck / lint / production builds | PASS before final candidate edits; CI required on exact candidate |
-| Unit suites | 25 PASS (3 frozen + 22 added), before final candidate edits |
+| Unit suites | 25 PASS at dacdc3e (3 frozen +22 added); expanded candidate pending rerun |
 | YAML and embedded Python workflow syntax | PASS |
 | Exact file/hash/config/secret guard | Pending final candidate review and CI |
-| Clean Supabase startup/reset and DB/security matrix | NOT RUN |
-| Frozen 78 DB /27 API /54 browser regression on new candidate | NOT RUN |
-| New DB/API/Edge/concurrency/payment/invalidation/audit tests | NOT RUN |
+| Clean Supabase startup/reset and DB/security matrix | PASS at dacdc3e;135 assertions including78 frozen +57 added |
+| Frozen78 DB /27 API regression | PASS at dacdc3e;54 frozen browser cases NOT RUN |
+| New DB/API/security/concurrency/payment/invalidation/audit |57 DB PASS;44 new API PASS;2 Edge BOOT_ERROR failures at dacdc3e |
 | New browser tests | NOT RUN |
-| Dependency audit / full GitHub Actions | NOT RUN |
+| Dependency audit / full GitHub Actions | Audit PASS;full run FAIL, not completion |
 
 Exact inclusive boundary uses the real ingestion function and rollback-only privileged DB clock fixture at precisely expires_at; production helper always returns database clock_timestamp, has no client override/GUC/test mode. API clock/lock-wait tests prove late serialized processing cannot use an earlier raw arrival. Fixture changes are rolled back and never shipped as runtime behavior.
 
@@ -38,3 +38,6 @@ No old Auth/API/security setting change; only local Edge runtime enabled and JWT
 
 ## Freeze gate
 Do not close/freeze Sprint2 until all required real CI checks and the 90-case coverage review pass on the final candidate. Any new file outside45 or material frozen security change must be reported before implementation. Pending SHA/run/test counts will be added from actual evidence; NOT RUN is not PASS.
+
+## Real CI iteration 1
+Candidate `dacdc3e721ca0a6a00e12091efdebc43aa8f24ac`; [run37516446963](https://github.com/HAD10202/Volume/actions/runs/37516446963): FAIL. Exact45 allowlist/frozen hashes/JWT/secret guard, typecheck/lint/25unit/dependency audit, Supabase start/clean reset,135 DB assertions PASS. Integration71 PASS /2 FAIL of73; all27 frozen API tests PASS. Failure is actual Edge worker BOOT_ERROR, not accepted QR-failure behavior; browser/build CI steps consequently NOT RUN. Fix candidate adds explicit JWT-verified function serving/readiness and redacted runtime diagnostics, bounded same-identity retry for SQL40P01/40001/network failures, neutral recipient/finality attestation tests and acquire/expiry audit rollback tests. No failed assertion weakened; rerun mandatory.

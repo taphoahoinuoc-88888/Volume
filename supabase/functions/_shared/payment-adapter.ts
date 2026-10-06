@@ -34,3 +34,9 @@ export function validateVerifiedReceipt(value:VerifiedReceipt):VerifiedReceipt {
  if(!Number.isFinite(Date.parse(value.provider_occurred_at))||!Number.isFinite(Date.parse(value.provider_callback_received_at)))throw new Error('INVALID_EVENT');
  return {...value};
 }
+/** Normalized adapter attestation, never a public callback or signature verifier.
+ * The concrete provider adapter must establish these facts server-side first. */
+export function validateFinalReceipt(value:VerifiedReceipt,expectedRecipient:string,final:boolean):VerifiedReceipt {
+ if(!expectedRecipient||value.recipient_scope!==expectedRecipient||!final)throw new Error('UNVERIFIED_PAYMENT');
+ return validateVerifiedReceipt(value);
+}
