@@ -7,14 +7,16 @@ export function hasExtra(a:Access,permission:string,venue?:string){return a.memb
 export function can(a:Access|null,resource:string,action='list',venue?:string):boolean{
  if(!a||a.profile.account_status!=='ACTIVE'||a.profile.role==='USER')return false;
  if(venue&&!a.venues.some(v=>v.id===venue))return false;
- if(resource==='overview')return true;
- if(resource==='venues')return action==='list'||a.profile.role==='ADMIN';
- if(resource==='audit')return ['ADMIN','CEO','MANAGER'].includes(a.profile.role);
+ const read=action==='list'||action==='show';
+ if(resource==='overview')return read;
+ if(resource==='venues')return read||(['create','edit','update'].includes(action)&&a.profile.role==='ADMIN');
+ if(resource==='audit')return read&&['ADMIN','CEO','MANAGER'].includes(a.profile.role);
  if(resource==='people'){
-  if(action!=='list')return a.profile.role==='ADMIN'||hasExtra(a,'STAFF_MEMBERSHIP_STATUS_MANAGE',venue);
+  if(!read)return ['edit','update'].includes(action)&&(a.profile.role==='ADMIN'||hasExtra(a,'STAFF_MEMBERSHIP_STATUS_MANAGE',venue));
   return ['ADMIN','CEO','MANAGER'].includes(a.profile.role)||hasExtra(a,'STAFF_DIRECTORY_READ',venue)||hasExtra(a,'STAFF_MEMBERSHIP_STATUS_MANAGE',venue);
  }
  return false;
 }
 export const nav=[{resource:'overview',path:'/overview',label:'Tổng quan'},{resource:'venues',path:'/venues',label:'Chi nhánh'},{resource:'people',path:'/people',label:'Nhân sự & truy cập'},{resource:'audit',path:'/audit',label:'Nhật ký'}];
 export const actionLabels:Record<string,string>={ROLE_CHANGED:'Đổi vai trò',MEMBERSHIP_CREATED:'Phân công chi nhánh',MEMBERSHIP_UPDATED:'Đổi phân công',MEMBERSHIP_STATUS_CHANGED:'Đổi trạng thái làm việc',ACCOUNT_STATUS_CHANGED:'Đổi trạng thái tài khoản',SESSIONS_REVOKED:'Đăng xuất các phiên',VENUE_CREATED:'Thêm chi nhánh',VENUE_UPDATED:'Cập nhật chi nhánh',BOOTSTRAP_ADMIN_CREATED:'Thiết lập quản trị',AUTH_ACCOUNT_PROVISIONED:'Tạo tài khoản',AUTH_PROVISION_RECONCILED:'Kiểm tra tài khoản'};
+

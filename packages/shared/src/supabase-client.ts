@@ -4,7 +4,7 @@ const url=import.meta.env.VITE_SUPABASE_URL;
 const key=import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const client=createClient(url||'http://127.0.0.1:54321',key||'configuration-required',{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'volume-auth-v2'}});
 export class VolumeError extends Error {constructor(public kind:string,message:string){super(message);}}
-export async function readAccess():Promise<Access>{const {data,error}=await client.rpc('current_access');if(error){await logout();throw new VolumeError('ACCESS_DENIED','Quyền truy cập đã thay đổi. Vui lòng đăng nhập lại hoặc liên hệ quản trị viên.');}return data as Access;}
+export async function readAccess():Promise<Access>{const {data,error}=await client.rpc('current_access');if(error){if(error.message.includes('ACCESS_DENIED')||['PGRST301','PGRST302','PGRST303'].includes(error.code)){await logout();throw new VolumeError('ACCESS_DENIED','Quyền truy cập đã thay đổi. Vui lòng đăng nhập lại hoặc liên hệ quản trị viên.');}throw new VolumeError('UNAVAILABLE','Chưa thể tải thông tin. Vui lòng kiểm tra kết nối và thử lại.');}return data as Access;}
 export async function logout(){await client.auth.signOut({scope:'local'});window.dispatchEvent(new Event('volume-session-ended'));}
 export async function rpc<T>(name:string,body:Record<string,unknown>={}):Promise<T>{
  const {data,error}=await client.rpc(name,body);

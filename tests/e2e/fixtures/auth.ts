@@ -2,7 +2,7 @@ import {test as base,expect,type Page} from '@playwright/test';
 import {fixture,type Fixture} from '../../integration/fixtures/auth';
 export type {Fixture};
 export const customer='http://127.0.0.1:3000',control='http://127.0.0.1:3001';
-export const test=base.extend<{reset:void}, {volume:Fixture}>({volume:[async({},use)=>{const volume=await fixture();await use(volume);await volume.close();},{scope:'worker'}],reset:[async({volume},use)=>{await resetData(volume);await use();},{auto:true}]});
+export const test=base.extend<{reset:void;diagnostics:void}, {volume:Fixture}>({volume:[async({},use)=>{const volume=await fixture();await use(volume);await volume.close();},{scope:'worker'}],reset:[async({volume},use)=>{await resetData(volume);await use();},{auto:true}],diagnostics:[async({page},use,info)=>{const events:object[]=[];page.on('response',r=>{const path=new URL(r.url()).pathname;if(path.startsWith('/auth/v1/')||path.startsWith('/rest/v1/'))events.push({path,status:r.status()});});page.on('requestfailed',r=>events.push({path:new URL(r.url()).pathname,status:'request_failed'}));page.on('pageerror',e=>events.push({error:e.name}));await use();if(info.status!==info.expectedStatus)await info.attach('http-statuses',{body:Buffer.from(JSON.stringify(events)),contentType:'application/json'});},{auto:true}]});
 const roles:Record<string,string>={admin1:'ADMIN',admin2:'ADMIN',ceo:'CEO',managerA:'MANAGER',managerB:'MANAGER',managerAB:'MANAGER',staffA:'STAFF',staffB:'STAFF',hrA:'STAFF',user1:'USER',user2:'USER',disabled:'USER',inactive:'STAFF'};
 async function resetData(f:Fixture){
  await f.db.query('truncate public.audit_events,public.staff_memberships');
