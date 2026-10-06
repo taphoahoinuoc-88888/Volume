@@ -1,6 +1,6 @@
-# Checkpoint 1B — PASS; freeze effective on final checkpoint CI SUCCESS
+# Checkpoint 1B — product PASS; closure requires PR and post-merge main CI SUCCESS
 
-Date: 2026-10-06. Branch: `checkpoint-1b`. Owner authorized product surfaces after direct GitHub preflight and a separate, narrowly scoped 1A read maintenance. No 1B merge or production deployment has been performed. Sprint 2 has not started.
+Date: 2026-10-06. Branch: `checkpoint-1b`. Owner authorized product surfaces after direct GitHub preflight and a separate, narrowly scoped 1A read maintenance. Owner now authorizes narrowly scoped CI maintenance, PR review/merge and post-merge verification. CLOSED/FROZEN applies only after both required workflows succeed on final main; final branch/main SHAs and run links are recorded in the merged PR closure record. No production deployment. Sprint 2 has not started.
 
 ## Frozen base and maintenance closure
 
@@ -51,7 +51,7 @@ Supabase CLI remains pinned2.119.0; same frozen local config/reader bootstrap. L
 Verified implementation: `84d31472e0b2435ac21a949d6692c86c9d3be990`,
 [run37459331909](https://github.com/HAD10202/Volume/actions/runs/37459331909), job112254686884: **completed/SUCCESS**. Actual logs:78 database assertions across8 files;27 API tests across6 files;3 unit tests;54 Playwright tests. JSON report:54 expected,0 skipped,0 unexpected,0 flaky. Browser artifact11411631606 contains12 screenshot attachments; SHA25684d1cc37606faa1bd7f8f7365180e0bc1821acfb815f3ab1150447f9826db924. Downloaded/decoded and visually checked WebKit320px login/scoped venues and desktop; no overflow, legible fields/actions/focus. Text artifact scan contains no fixture password/JWT/secret pattern.
 
-This final checkpoint changes status/result documents only. The identical complete workflow must repeat on its exact commit. Freeze becomes effective **only when the final documentation checkpoint run is SUCCESS**; FAIL/BLOCKED/NOT RUN prevents freeze. Final checkpoint SHA is the tested HEAD in the Actions summary and owner handoff, not a rewritten implementation history. Find its immutable run via [checkpoint-1b Actions](https://github.com/HAD10202/Volume/actions?query=branch%3Acheckpoint-1b). No product/DB code changes after verified84d31472.
+Verified final product/documentation head9ba95b1d9f7372168051c2311d242ec799afc033: run37460504275 SUCCESS with78 DB/27 API/3 unit/54 Playwright. Owner-authorized closure maintenance changes CI and existing status documents only. Product files, dependencies, tests and all frozen core paths are unchanged from9ba. Both workflows must test the actual PR/main candidate HEAD. Final branch/main SHAs and immutable run links belong to the PR closure record to avoid a self-referential documentation commit. FAIL/BLOCKED/NOT RUN prevents closure.
 
 | Required group | Current status |
 |---|---|
@@ -74,13 +74,17 @@ Full source patterns/client configuration checks found no committed secret/servi
 
 CI is Linux Chromium/WebKit browser-engine verification, not physical Safari/macOS/iPhone testing. Physical-device certification, production SMTP/domains/signup/email confirmation/operations (G14) remain NOT RUN/undecided. Local password/redirect policy remains the frozen1A config; no production policy inferred. Build has nonblocking dependency "use client" warnings and a Control Center bundle-size warning; not a server component app. No deployment or performance certification.
 
-## PR/main integration boundary
+## Authorized PR/main CI maintenance and closure
 
-Current1B evidence is the feature-branch workflow, which includes complete1A regression. No1B PR/merge is performed. Frozen `.github/workflows/sprint1a.yml` still applies its1A-only allowlist/forbidden-product scan to PR/main. Before owner authorizes a1B PR/main merge, that CI policy needs separate approved maintenance: this file is outside1B allowlist and has not been edited in product work. This is a release/CI-policy boundary, not a failed required test in the current branch or permission-model change.
+Owner explicitly authorizes CI maintenance and PR merge, followed by full main verification. Existing sprint1a workflow runtime/security steps remain byte-identical outside its scope scanner. Its scanner retains original 1A-only behavior for the core stage; product-stage ancestry uses the approved9ba commit, the immutable approved56-path allowlist plus the single owner-authorized sprint1a workflow path, and strict comparisons with frozen main68541f8. All schema/RLS/RPC/Auth/core tests/AGENTS/Blueprint/permissions/architecture/ADRs remain unchanged. Application/dependency/test changes after approved9ba are rejected.
+
+sprint1b runs on checkpoint-1b, PRs into main and main pushes: allowlist, secrets, dependency audit, typecheck, lint, production build, real Supabase DB/security/API regressions, unit and Playwright tests. It also verifies that all original1A workflow steps outside the scope scanner remain unchanged. Both workflows check the candidate HEAD; no old-snapshot checkout substitutes for current-main verification.
+
+Closure sequence: branch CI SUCCESS → open PR → full57-file scope/secret/frozen-core/Legacy/no-Sprint2 review → both PR workflows SUCCESS → merge exact reviewed head → both main workflows SUCCESS → record final SHAs/runs/counts in merged PR → CLOSED/FROZEN and STOP. Post-merge failure means not CLOSED.
 
 ## Exact 1B changed files
 
-All56 paths are the existing approved1B allowlist, with no expansion:
+The original56 product paths remain the approved1B allowlist. Closure adds only owner-authorized `.github/workflows/sprint1a.yml`, making57 changed files against frozen main. No business/security-contract expansion:
 
 - `package.json`
 - `package-lock.json`
@@ -141,5 +145,4 @@ All56 paths are the existing approved1B allowlist, with no expansion:
 
 ## Stop boundary
 
-Maintenance1A CLOSED/FROZEN on main68541f8. Product1B implementation PASS on its branch; freeze effective after identical final checkpoint CI SUCCESS; no schema/security/core test change or additional architectural authorization assumed. No 1B merge, production deployment, Table/Payment/Player/Match/Media/Tournament/Shop/Telegram/CRM/AI/invitation implementation. **Sprint 2 has not started.** Freeze only after complete real CI evidence, then STOP for owner review.
-
+Maintenance1A CLOSED/FROZEN on main68541f8. Product1B implementation PASS; closure is conditional on successful PR and post-merge main CI, recorded in the merged PR. Authorized CI scope adaptation is the only closure deviation; no architectural/security/business deviation. No production deployment/SMTP/domain configuration. No Table/Payment/Player/Match/Media/Tournament/Shop/Telegram/CRM/AI/invitation implementation. **Sprint2 has not started.** After successful main verification mark CLOSED/FROZEN, then STOP.

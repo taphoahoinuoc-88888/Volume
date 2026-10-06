@@ -47,5 +47,6 @@ Owner authorize read maintenance riêng, PR2 merged. Main mới `68541f8a71a0ae1
 
 1B được owner authorize, branch checkpoint-1b phát triển từ main mới; implementation product surfaces/real Playwright PASS tại84d31472/run37459331909 (78 DB/27 API/3 unit/54 browser); final checkpoint CI SUCCESS mới freeze. Không sửa frozen migrations/RLS/RPC/core tests. Không production deployment, public signup quyết định mới, Sprint2 hoặc future module. Kết quả cuối tại SPRINT_1B_RESULTS; không tự chuyển Sprint sau.
 
-## Trước PR/main của 1B
-Frozen sprint1a.yml còn áp dụng scan riêng1A trên PR/main và không cho product files/dependencies. File này ngoài1B allowlist; cần owner authorize separate CI-policy maintenance trước PR/merge1B. Không tự sửa hoặc mở allowlist. Product1B hiện kiểm thử đầy đủ trên push checkpoint-1b, chưa merge/main deployment. Đây không phải gate ký hiệu mới hay thay mô hình permission. Sprint2 vẫn cần authorization riêng và G3–G7.
+## Owner authorization — CI/main closure 1B
+
+Owner authorize narrow CI maintenance: original56 product paths plus existing sprint1a workflow path only. Original1A runtime/security checks remain unchanged; actual candidate HEAD is tested, not an older snapshot. Strict frozen-core/product baseline checks prevent unrelated implementation changes. Both1A and1B workflows must SUCCESS on PR and post-merge main before CLOSED/FROZEN. Exact SHAs/runs/test counts recorded in merged PR closure record. No production SMTP/domain/deployment. Sprint2 still requires separate authorization and G3–G7.

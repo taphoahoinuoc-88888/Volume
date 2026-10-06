@@ -1,6 +1,6 @@
 # VOLUME V2
 
-Checkpoint 1A + read maintenance **CLOSED / FROZEN** trên main `68541f8a71a0ae10ac22d819a79f78982cf37abb`. Checkpoint 1B implementation **PASS** (full run37459331909), freeze có hiệu lực sau final checkpoint CI SUCCESS trên branch `checkpoint-1b`; chưa merge hoặc triển khai production. Sprint 2 chưa được phép bắt đầu.
+Checkpoint 1A + read maintenance **CLOSED / FROZEN** trên main `68541f8a71a0ae10ac22d819a79f78982cf37abb`. Checkpoint 1B implementation **PASS** (78 DB/27 API/3 unit/54 Playwright). Owner authorize CI maintenance + PR review/merge; CLOSED/FROZEN chỉ sau khi cả hai workflow kiểm tra candidate HEAD trên main SUCCESS. Final branch/main SHA và CI links được ghi trong merged PR closure record. Không production deployment/SMTP/domain; Sprint2 chưa bắt đầu.
 
 Project mới; F6.1 chỉ LEGACY / REFERENCE. Không sửa hoặc import runtime legacy. Một Supabase Auth identity, `profiles.id = auth.users.id`; một role tại profiles; memberships giữ phạm vi chi nhánh và fixed extra permissions. PostgreSQL/RLS/RPC là authority. UI chỉ phản ánh quyền hiện tại.
 
