@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path=public,extensions;
-select plan(15);
+select plan(16);
 insert into auth.users(id,email) select ('30000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,'db-test-'||n||'@example.test' from generate_series(1,9) n;
 update public.profiles set role=case right(id::text,1) when '1' then 'ADMIN' when '2' then 'ADMIN' when '3' then 'CEO' when '4' then 'MANAGER' when '5' then 'STAFF' when '8' then 'STAFF' when '9' then 'STAFF' else 'USER' end where id::text like '30000000%';
 insert into auth.sessions(id,user_id,created_at,updated_at) select ('20000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,('30000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,clock_timestamp()-interval '1 second',clock_timestamp() from generate_series(1,9) n;
@@ -28,6 +28,7 @@ select ok(not has_function_privilege('authenticated','private.ingest_payment_eve
 select ok(not (select rolcanlogin from pg_catalog.pg_roles where rolname='volume_payment_ingest'),'Gateway is NOLOGIN not business identity');
 select is((select count(*)::int from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid=p.pronamespace where n.nspname='private' and p.proname like 'sprint2_%' and not coalesce(p.proconfig @> array['search_path=""'],false)),0,'T59 private helper search_path locked');
 
+select is((select count(*)::int from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid=p.pronamespace where n.nspname='private' and (p.proname like 'sprint2_%' or p.proname in ('ingest_payment_event','fail_payment_attempt','expire_table_holds')) and (has_function_privilege('anon',p.oid,'EXECUTE') or has_function_privilege('authenticated',p.oid,'EXECUTE') or has_function_privilege('service_role',p.oid,'EXECUTE'))),0,'T59 every private Sprint2 helper denies direct client execution');
 set constraints all immediate;
 select * from finish();
 rollback;

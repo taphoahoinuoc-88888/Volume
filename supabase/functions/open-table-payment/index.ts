@@ -54,6 +54,10 @@ export function createOpeningHandler(d:Dependencies){return async(req:Request):P
   }
  }catch(e){
   const message=e instanceof Error?e.message:'';
+  const rawCode=typeof e==='object'&&e!==null&&'code' in e?String(e.code):'';
+  const code=/^[A-Z0-9_]{1,40}$/.test(rawCode)?rawCode:'UNCLASSIFIED';
+  const kind=/module|resolve|npm|package|graph/i.test(message)?'MODULE':/password|SASL|SCRAM/i.test(message)?'DB_AUTH':/connect|socket|refused/i.test(message)?'DB_CONNECTION':/permission|denied/i.test(message)?'PERMISSION':/not supported|Not implemented|is not a function/i.test(message)?'DRIVER':'OTHER';
+  console.error('OPENING_FAILURE',code,kind); // Codes only, never error text/credentials/payload.
   if(message.includes('ACCESS_DENIED')||message==='UNAUTHORIZED')return response({code:'ACCESS_DENIED'},403);
   if(message.includes('VERSION_CONFLICT'))return response({code:'VERSION_CONFLICT'},409);
   if(/TABLE_UNAVAILABLE|CUSTOMER_HOLD_EXISTS|IDEMPOTENCY_CONFLICT/.test(message))return response({code:'UNAVAILABLE'},409);
@@ -75,7 +79,9 @@ if(typeof Deno!=='undefined'){
   async fail(reference){
    // Reuse the existing locked pg dependency. Loaded only by server runtime;
    // credential never enters client modules, responses or logs.
-   const specifier='npm:pg@8.16.3';const module=await import(specifier) as DatabaseDriver;
+   // Deno resolves this pinned npm specifier; Node tsc validates the used structural API.
+   // @ts-expect-error npm: specifier is resolved by the Edge Runtime, not Node.
+   const module=await import('npm:pg@8.16.3') as DatabaseDriver;
    const pool=new module.default.Pool({connectionString:Deno.env.get('SUPABASE_DB_URL'),max:1});
    const connection=await pool.connect();
    try{await connection.query('begin');await connection.query('set local role volume_payment_ingest');await connection.query('select private.fail_payment_attempt($1,$2)',[reference,'QR_FAILED']);await connection.query('commit');}

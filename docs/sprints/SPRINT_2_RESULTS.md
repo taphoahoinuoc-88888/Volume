@@ -44,3 +44,6 @@ Candidate `dacdc3e721ca0a6a00e12091efdebc43aa8f24ac`; [run37516446963](https://g
 
 ## Real CI iteration 2
 Candidate `a239ee3f97fc119f374f1c3f9b56872da98bed47`; [run37517170309](https://github.com/HAD10202/Volume/actions/runs/37517170309): FAIL at actual function readiness. Guard/typecheck/lint/27unit/audit and clean Supabase reset PASS; DB/API/browser NOT RUN in this run due readiness failure. Redacted runtime logs identify Deno graph resolution of bare Node type import `pg`; candidate fixes this inside the approved Edge file with a narrow structural interface. Pinned runtime npm pg import unchanged; no dependency, allowlist or security expansion. JWT stays TRUE; no assertion skipped/weakened.
+
+## Real CI iteration 3
+Candidate `215f3e13d38727f4fc6de543a7175edf465514fe`; [run37517649527](https://github.com/HAD10202/Volume/actions/runs/37517649527): FAIL. Function graph/readiness now PASS with JWT TRUE, guard/type/lint/27unit/audit/clean reset/135 DB PASS. Integration77 PASS /2 FAIL of79; remaining failures require trusted QR-failure release to return PAYMENT_UNAVAILABLE, but runtime returns REQUEST_FAILED. No failure accepted as release PASS. Fix candidate makes pinned npm dependency statically discoverable by Deno graph and adds server code-only error classification (no payload, message, credentials or Auth data). Full CI rerun required; browser NOT RUN.
