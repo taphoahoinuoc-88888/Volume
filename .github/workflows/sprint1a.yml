@@ -1,0 +1,32 @@
+name: Checkpoint 1A
+on:
+  push:
+    branches: [checkpoint-1a]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Pin Supabase CLI
+        run: |
+          npm install --global supabase@2.119.0
+          supabase --version
+      - name: Supabase runtime preflight
+        run: |
+          mkdir -p "$RUNNER_TEMP/volume-preflight"
+          cd "$RUNNER_TEMP/volume-preflight"
+          supabase init
+          supabase start
+          supabase db reset
+          docker exec supabase_db_volume-preflight psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c "select column_name,data_type from information_schema.columns where table_schema='auth' and table_name='sessions' order by ordinal_position;"
+      - name: Stop local stack
+        if: always()
+        run: cd "$RUNNER_TEMP/volume-preflight" && supabase stop --no-backup
