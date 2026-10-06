@@ -1,6 +1,6 @@
 # Sprint 2 — exact implementation preflight
 
-Status: PLAN COMPLETE; implementation conditionally authorized by owner. Runtime evidence NOT RUN.
+Status: BUSINESS CONTRACT FROZEN; implementation IN PROGRESS / BLOCKED at server orchestration allowlist. Runtime evidence NOT RUN.
 Base: main `2b47f0a619f494a811c94e41697f7d09dcb19e3a`; new branch `checkpoint-2` starts from that main, then receives the frozen business contract and this plan. Do not merge or deploy without further owner instruction.
 Frozen contract commit: `fd3400aa93f2c365d422b2a50b2a66ee039621dd` on sprint2-contract.
 Contract: `SPRINT_2_BUSINESS_CONTRACT.md`, FINAL, 36 invariants / 90 cases. One Sprint2 implementation checkpoint; no Sprint3 continuation. Changes outside the exact list below require report before creation.
@@ -67,6 +67,7 @@ Public functions all SECURITY DEFINER only where needed, owned by minimum volume
 | private.fail_payment_attempt(p_reference text,p_cause text) | Trusted QR preparation failure; cancel pending0 or positive resolution, never close ACTIVE. |
 | private.expire_table_holds(p_limit integer) | Bounded housekeeping sweep with ordered locks; correctness remains in projections/acquire/ingest/invalidation without worker. |
 | private.sprint2_receipt_immutable() | Reject runtime UPDATE/DELETE, immutable append-only ledger. |
+| private.sprint2_validate_payment_session() | Deferred constraint trigger enforcing PAYMENT/SUCCESS/start/receipts and MANUAL/no-fake-payment relationship at commit; required by section1 cross-entity invariant. |
 
 Technical gateway role `volume_payment_ingest` NOLOGIN/NOINHERIT, not business role/profile. EXECUTE only on private ingestion/failure/expiry; no business/Auth SELECT or direct writes. Trusted local integration server fixture may SET ROLE using operator DB credential; browser/anon/authenticated (including ADMIN) cannot assume it. No shipped provider endpoint/credential or generic service-role proxy. Core gets only required new business table permissions; existing Auth/session reader grants unchanged. Direct invocation DENY tests cover every private helper.
 
@@ -290,3 +291,17 @@ These are authorized minimal operational extensions, not material identity/secur
 
 Business blockers: none outstanding. Provider-dependent P1–P3 non-blocking for neutral-core; real QR/provider integration separately authorized. Sprint3+ S1–S4 deferred. Architectural compatibility is a planned test obligation, not runtime PASS. Frozen business semantics cannot drift.
 This plan authorizes only its exact paths under owner's conditional instruction. Contract/plan publication is the preflight checkpoint; no migration/RPC/UI/provider code exists at this checkpoint. Implementation begins only after this plan is committed, on checkpoint-2 from the verified main. CI reports remain NOT RUN until implementation exists and real Actions executes. No merge, production, real provider or Sprint3.
+
+## Implementation finding — server orchestration file gate
+
+Verified during implementation against actual main: supabase/config.toml has [edge_runtime] enabled=false; [api].schemas=["public"]. There is no existing server entrypoint that can prepare QR and invoke the non-exposed private gateway. The approved43-path list includes only a server adapter module, not an executable entrypoint/configuration. The module alone cannot serve an authenticated customer request or reliably report preparation failure after a hold is committed.
+
+Do not expose private schema through PostgREST, grant browser gateway privileges, move provider secrets/client success into UI, introduce a separate API server, or leave failure release dependent on browser. No such shortcut implemented.
+
+Proposed exact additions, NOT yet in implementation allowlist:
+- supabase/functions/open-table-payment/index.ts: authenticated provider-neutral opening/prepare orchestration; forward ordinary JWT for existing live/RPC authorization, use minimum private server capability for preparation failure, idempotent same-key retry. No real provider, fake QR or client success flag. Explicit unconfigured-provider failure path must release the pending hold server-side. Adapter authenticity/finality remains separately selected.
+- supabase/config.toml: only local [edge_runtime].enabled=true for real integration/E2E execution. Preserve all [auth] configuration, [api].schemas, JWT/cutoff/RLS/security contracts. No production deployment or provider credentials.
+
+Existing listed .github/workflows/sprint2.yml would exercise this real local server path (plus all frozen security/DB/API/browser regression) after authorization; no additional workflow path required. Existing43 paths cannot replace an HTTP server entrypoint or enable a disabled runtime. This is an operational allowlist extension, not a material identity/RLS/Auth architecture change, but cannot be silently added. STOP server/orchestration/UI payment portion and report to owner before creating/changing these two paths. No change to business semantics.
+
+Two additive migrations have been drafted within the43 paths. They are NOT RUN, not validated by real PostgreSQL/Actions, not frozen or ready to merge. No UI/server/dependency/CI implementation has been created. No Sprint3 or production work. Contract freeze is preserved; implementation completion remains BLOCKED pending exact-file scope resolution and all required tests.
