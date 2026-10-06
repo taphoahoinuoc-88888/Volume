@@ -1,6 +1,6 @@
 # Gate definitions và status — Sprint 0 cuối cùng
 
-G2 đã được owner chốt; architecture cơ bản được chấp thuận. **Checkpoint 1A đã authorize, runtime preflight BLOCKED; 1B chưa authorize.** Gate là điều kiện trước công việc tương ứng, không cho phép tạo schema/module tương lai.
+G2 đã được owner chốt; architecture cơ bản được chấp thuận. **Checkpoint 1A đã authorize, full CI PASS; 1B chưa authorize.** Gate là điều kiện trước công việc tương ứng, không cho phép tạo schema/module tương lai.
 
 | Gate | Definition | Status | Phải giải quyết trước | Điều kiện đóng |
 |---|---|---|---|---|
@@ -39,5 +39,10 @@ Version Supabase/dependency và local Docker môi trường phải được ki�
 ## Các việc chưa có write action được duyệt
 CEO V1 không có quyền ghi nội bộ mặc định. Mỗi write action tương lai cần yêu cầu/scope/audit/tests cụ thể. F6.1 business rules không tự áp dụng. G3–G14 chỉ chốt trước công việc liên quan; không cần giải quyết toàn bộ để làm Auth Core.
 
-## Runtime blocker sau authorization 1A
+## Historical sandbox blocker — resolved through GitHub Actions
 G1 đã đóng; không reopen gate kiến trúc. Local runtime chưa chạy: không Docker/Podman; Supabase CLI 2.119.0 native lỗi download artifact getaddrinfo ETIMEOUT; curl tới official S3 manifest trả HTTP200, nên không kết luận domain hoàn toàn không truy cập được. Native PostgreSQL còn cần non-root; uid_map chỉ UID0, runuser và os.setuid(1001) bị từ chối. Cần môi trường có Docker hoạt động hoặc native runtime có non-root hợp lệ và artifact downloads được CLI hỗ trợ. Không thay đổi schema/provider/session contract.
+
+## Checkpoint 1A — PASS / frozen / STOP
+Real complete GitHub Actions https://github.com/HAD10202/Volume/actions/runs/37445694355 PASS at2db65c8d0e5a0c4155b1357a25ef991d8dd1d603:57 database assertions and22 real API/security/concurrency/recovery tests. Final report commit repeats full CI. See docs/sprints/SPRINT_1A_RESULTS.md for evidence, versions, exact file delta, narrow reader privilege bootstrap and owner-accepted provider limitation.
+volume_core has no Auth grants; private boolean validator has a dedicated NOLOGIN three-column reader. Old provider sessions/refresh cannot bypass database cutoff; provider revoke-all-by-other-user-id is not implemented or required by owner decision.
+Branch checkpoint-1a; draft PR1 unmerged; main unchanged. No production deployment.1B NOT AUTHORIZED; STOP. Production signup/email/SMTP settings and future payment/business gates remain undecided. Frozen Sprint0 documents outside the1A allowlist are historical snapshots; current owner authorization prevails.

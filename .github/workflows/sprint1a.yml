@@ -1,0 +1,84 @@
+name: Checkpoint 1A
+on:
+  push:
+    branches: [checkpoint-1a, main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: sprint1a-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  required-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Scope, frozen documents and secret scan
+        run: |
+          python - <<'PY'
+          import pathlib,re,subprocess
+          text=pathlib.Path('docs/sprints/SPRINT_1.md').read_text()
+          block=text.split('### Exact file allowlist 1A')[1].split('### Forbidden')[0]
+          allowed=set(re.findall(r'^- `([^`]+)`',block,re.M))
+          changed=subprocess.check_output(['git','diff','--name-only','375379a72ee49a644bb58301a99eb7ebaf4e80e2','HEAD'],text=True).splitlines()
+          assert set(changed)<=allowed, 'Outside frozen allowlist: '+str(set(changed)-allowed)
+          for name in subprocess.check_output(['git','ls-files'],text=True).splitlines():
+            p=pathlib.Path(name)
+            data=p.read_text()
+            assert not re.search(r'sb_secret_[A-Za-z0-9_-]{15,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{20,}',data), 'Secret-like value: '+name
+            assert not name.startswith(('apps/','packages/','reference/')), 'Forbidden surface: '+name
+          assert not any(x in pathlib.Path('package.json').read_text().lower() for x in ['refine','react','shadcn','playwright'])
+          print('PASS: exact allowlist; frozen files unchanged; no legacy files, future/client modules, or embedded secret-like values')
+          PY
+      - name: Install locked core test dependencies
+        run: npm ci
+      - name: Typecheck and dependency audit
+        run: |
+          npm run typecheck
+          npm audit --audit-level=high
+      - name: Pin Supabase CLI
+        run: |
+          npm install --global supabase@2.119.0
+          test "$(supabase --version)" = '2.119.0'
+      - name: Start real Supabase
+        run: |
+          if ! supabase start > "$RUNNER_TEMP/supabase-start.log" 2>&1; then
+            python - <<'PY'
+          import os,pathlib,re
+          data=pathlib.Path(os.environ['RUNNER_TEMP']+'/supabase-start.log').read_text()
+          for line in data.splitlines():
+            if re.search(r'error|failed|SQLSTATE|Applying migration',line,re.I):
+              line=re.sub(r'eyJ[A-Za-z0-9_.-]+|sb_(?:secret|publishable)_[A-Za-z0-9_-]+','[REDACTED]',line)
+              line=re.sub(r'postgres(?:ql)?://[^\\s]+','[DATABASE_URL_REDACTED]',line)
+              print(line)
+          PY
+            exit 1
+          fi
+          docker ps --format '{{.Image}} {{.Status}}'
+      - name: Clean migration and reset
+        run: supabase db reset
+      - name: Initialize narrow session-reader privileges via trusted local operator
+        run: |
+          docker exec supabase_db_volume-v2 psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c "alter role volume_session_reader bypassrls; grant usage on schema auth to volume_session_reader; grant select(id,user_id,created_at) on auth.sessions to volume_session_reader;"
+      - name: Managed Auth privilege compatibility diagnostics
+        run: |
+          docker exec supabase_db_volume-v2 psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c "select has_schema_privilege('volume_core','auth','USAGE') as auth_usage,has_column_privilege('volume_core','auth.sessions','id','SELECT') as session_id_read,has_column_privilege('volume_core','auth.sessions','user_id','SELECT') as session_user_read,has_column_privilege('volume_core','auth.sessions','created_at','SELECT') as session_created_read; select n.nspname,p.proname,pg_get_userbyid(p.proowner) as owner,p.prosecdef from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='private' and p.proname in ('live_profile','writer','live_self','session_valid'); select relrowsecurity,relforcerowsecurity from pg_class where oid='auth.sessions'::regclass;"
+      - name: Database constraints, RLS, RPC, revocation, versions, bootstrap
+        run: supabase test db
+      - name: Real Auth API and security integration, recovery and concurrent transactions
+        run: npm run test:integration
+      - name: Evidence summary
+        run: |
+          echo "Required 1A DB/API/security suites passed for $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo 'Supabase CLI 2.119.0; real Docker local stack; four business entities; no UI/1B.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Stop local stack
+        if: always()
+        run: supabase stop --no-backup
