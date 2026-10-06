@@ -1,6 +1,6 @@
 # Sprint 2 — exact implementation preflight
 
-Status: BUSINESS CONTRACT FROZEN; implementation IN PROGRESS / BLOCKED at server orchestration allowlist. Runtime evidence NOT RUN.
+Status: BUSINESS CONTRACT FROZEN; implementation AUTHORIZED / IN PROGRESS. Owner approved exactly two additional paths; runtime evidence pending.
 Base: main `2b47f0a619f494a811c94e41697f7d09dcb19e3a`; new branch `checkpoint-2` starts from that main, then receives the frozen business contract and this plan. Do not merge or deploy without further owner instruction.
 Frozen contract commit: `fd3400aa93f2c365d422b2a50b2a66ee039621dd` on sprint2-contract.
 Contract: `SPRINT_2_BUSINESS_CONTRACT.md`, FINAL, 36 invariants / 90 cases. One Sprint2 implementation checkpoint; no Sprint3 continuation. Changes outside the exact list below require report before creation.
@@ -57,6 +57,7 @@ Public functions all SECURITY DEFINER only where needed, owned by minimum volume
 | public.create_billiard_table(p_venue uuid,p_code text,p_label text,p_hourly_price_vnd bigint,p_reason text) | ADMIN TABLE_DEFINITIONS_MANAGE only, current enabled/configured venue, safe business audit. |
 | public.update_billiard_table(p_table uuid,p_expected_version bigint,p_label text,p_status text,p_hourly_price_vnd bigint,p_reason text) | ADMIN only preview/diff/reason/CAS; service invalidation pending-only; snapshot unaffected. No-op NO_CHANGE. |
 | public.set_venue_management_contact(p_venue uuid,p_expected_version bigint,p_contact text NULL,p_reason text) | Existing ADMIN VENUES_MANAGE authority, venue version/CAS/audit; cannot modify other venue/security fields. |
+| private.sprint2_clock() | Actual database clock only; no public input/GUC/test mode. Controlled boundary DB tests temporarily replace this private helper inside a rollback-only privileged fixture transaction; production definition always clock_timestamp. |
 | private.sprint2_lock() | Shared advisory transaction barrier at existing key (20261006,1), then live authority; no replacement of frozen writer/session helpers. |
 | private.sprint2_can_manual(p_venue uuid) | Fixed role/default or active membership extra, active venue scope/live session; no directory/finance implicit grants. |
 | private.sprint2_balances(p_payment uuid) | Sum unique CREDIT safely; derive required/received/remaining/excess, no duplicate authority. Non-exposed core only. |
@@ -126,6 +127,8 @@ supabase/tests/sprint2_operations.test.sql
 supabase/tests/sprint2_payments.test.sql
 supabase/tests/sprint2_atomicity.test.sql
 supabase/functions/_shared/payment-adapter.ts
+supabase/functions/open-table-payment/index.ts
+supabase/config.toml
 supabase/functions/_shared/payment-adapter.test.ts
 tests/integration/fixtures/payment.ts
 tests/integration/sprint2-acquire.test.ts
@@ -155,12 +158,12 @@ tsconfig.base.json
 vitest.config.ts
 ```
 
-43 exact paths. No package-lock dependency changes planned, no supabase config/seed/Auth/helper/migration1 edits. New tests create isolated tables via privileged fixture setup only; all actual permission assertions use ordinary real JWT, never service-role proof. PeoplePage minimum fixed manual-extra choice, no permission builder. README/result scope/evidence only; no rewriting frozen Blueprint or Sprint1 contracts. Package scripts include server-only unit/lint/type paths; versions/dependencies unchanged.
+45 exact paths. No package-lock dependency changes planned; supabase/config.toml may only enable local Edge Runtime and explicitly retain JWT verification for open-table-payment. No seed/Auth/helper/migration1 edits. New tests create isolated tables via privileged fixture setup only; all actual permission assertions use ordinary real JWT, never service-role proof. PeoplePage minimum fixed manual-extra choice, no permission builder. README/result scope/evidence only; no rewriting frozen Blueprint or Sprint1 contracts. Package scripts include server-only unit/lint/type paths; versions/dependencies unchanged.
 
 ## 12. Exact CI changes
 
 Keep Supabase CLI 2.119.0 and all pinned dependency versions. Ubuntu GitHub Actions with real local Supabase, clean reset and minimum session reader operator bootstrap as frozen.
-- Existing sprint1a.yml/sprint1b.yml: scope-scanner additive approved Sprint2 phase on checkpoint-2/main/PR into main using pinned frozen base and exact43 paths. Retain prior phase checks and every runtime/security step, ordinary JWT tests, no checkout of old snapshot. Permit only listed new migrations and minimal described constraint-test maintenance; hash-check the three frozen migrations and unchanged Auth/security helper sources. No disabling required jobs/tests/failing audit or relaxing secret scan. Prior CI semantics continue on older phase branches.
+- Existing sprint1a.yml/sprint1b.yml: scope-scanner additive approved Sprint2 phase on checkpoint-2/main/PR into main using pinned frozen base and exact45 paths. Retain prior phase checks and every runtime/security step, ordinary JWT tests, no checkout of old snapshot. Permit only listed new migrations and minimal described constraint-test maintenance; hash-check the three frozen migrations and unchanged Auth/security helper sources. No disabling required jobs/tests/failing audit or relaxing secret scan. Prior CI semantics continue on older phase branches.
 - sprint2.yml: triggers push checkpoint-2/main and PR main; candidate checkout; exact allowlist, immutable core/Legacy diff, forbidden-module scan, secret scan; npm ci; dependency audit; typecheck; lint; unit (shared+server adapter); production customer/control builds; start real Supabase; clean reset; all database tests; all API integrations; browser install; all Playwright desktop/mobile projects. Safe artifacts only redacted reports; no token/QR-secret/network payload traces. Stop-stack always cleanup.
 - Required green main after any later approved merge remains freeze prerequisite; current task does not authorize merge. Branch CI can establish reviewable Sprint2 evidence, not main CLOSED claim. Actual provider integration explicitly excluded/non-blocking.
 - Scope validation checks exact eight business tables, no future schemas, no service-role client secret, no browser import of server module. New CI tests current candidate; no mock Supabase or excluded failed security group.
@@ -169,7 +172,7 @@ Keep Supabase CLI 2.119.0 and all pinned dependency versions. Ubuntu GitHub Acti
 
 All 90 contract IDs map below to concrete files. IDs are requirements, not claimed executed-test counts. DB tests real pgtap; API tests real Auth/JWT/PostgreSQL connections; unit tests deterministic adapter/timer/permission pure logic; E2E real local backend with trusted server fixture evidence, not browser-forged payment. No old test rerun until changed schema/CI requires full regression, then full regression mandatory.
 
-Fixture exact-boundary proof: test-only transaction invokes non-exposed boundary predicate with fixture timestamps and separately exercises actual live processing/late lock waits; production helper receives no public clock override. Do not present only pure predicate proof as full real callback boundary proof. Verify persisted ownership, receipt sums, versions/start/audit after races. If exact integrated boundary cannot be deterministically proven, report BLOCKED/NOT RUN rather than claim PASS.
+Fixture exact-boundary proof: real PostgreSQL rollback-only fixture transaction temporarily replaces private.sprint2_clock with a fixed server timestamp, runs the actual ingestion/threshold/session/audit transaction at exact expires_at, and rolls back to the immutable runtime definition. No public clock input/GUC, browser clock or production test mode; owner/EXECUTE restrictions tested. This is controlled DB-clock fixture evidence, not actual-provider/HTTP microsecond scheduling evidence. API/Edge tests use unchanged actual clock and separately exercise before/after/queued-processing boundaries and persisted outcomes.
 
 Mapping follows; DB/API/E2E identifiers refer to the exact filename groups listed after the table. Provider-specific portions T29/T34/T35/T64/T68 remain separately NOT RUN until selected; their neutral reject/dedupe/no-automation behavior is still required now.
 
@@ -292,16 +295,12 @@ These are authorized minimal operational extensions, not material identity/secur
 Business blockers: none outstanding. Provider-dependent P1–P3 non-blocking for neutral-core; real QR/provider integration separately authorized. Sprint3+ S1–S4 deferred. Architectural compatibility is a planned test obligation, not runtime PASS. Frozen business semantics cannot drift.
 This plan authorizes only its exact paths under owner's conditional instruction. Contract/plan publication is the preflight checkpoint; no migration/RPC/UI/provider code exists at this checkpoint. Implementation begins only after this plan is committed, on checkpoint-2 from the verified main. CI reports remain NOT RUN until implementation exists and real Actions executes. No merge, production, real provider or Sprint3.
 
-## Implementation finding — server orchestration file gate
+## Owner-approved exact two-path extension — CLOSED
 
-Verified during implementation against actual main: supabase/config.toml has [edge_runtime] enabled=false; [api].schemas=["public"]. There is no existing server entrypoint that can prepare QR and invoke the non-exposed private gateway. The approved43-path list includes only a server adapter module, not an executable entrypoint/configuration. The module alone cannot serve an authenticated customer request or reliably report preparation failure after a hold is committed.
+Owner authorizes exactly these two additional paths; no other expansion:
+- `supabase/functions/open-table-payment/index.ts`: authenticated server orchestration invokes approved customer RPCs using ordinary user JWT, neutral adapter preparation, safe returned projection and trusted narrow QR-failure operation. No direct protected-table writes, client price/success/ownership/start authority, real provider/webhook/refund/overtime/Sprint3, client secrets or security bypass. Any narrow elevated database credential remains server-only, SET LOCAL ROLE volume_payment_ingest, and never replaces database invariants.
+- `supabase/config.toml`: only enable local [edge_runtime] and define [functions.open-table-payment] verify_jwt=true. All existing Auth/API/security settings remain identical. Never disable JWT verification or pass --no-verify-jwt; no provider webhook boundary authorized.
 
-Do not expose private schema through PostgREST, grant browser gateway privileges, move provider secrets/client success into UI, introduce a separate API server, or leave failure release dependent on browser. No such shortcut implemented.
+Why necessary: main disables Edge runtime and exposes only public database schema. An adapter module cannot serve an authenticated HTTP request or invoke non-exposed failure processing. Browser-only release cannot guarantee safe preparation failure handling. Use existing Supabase functions architecture; no separate API server.
 
-Proposed exact additions, NOT yet in implementation allowlist:
-- supabase/functions/open-table-payment/index.ts: authenticated provider-neutral opening/prepare orchestration; forward ordinary JWT for existing live/RPC authorization, use minimum private server capability for preparation failure, idempotent same-key retry. No real provider, fake QR or client success flag. Explicit unconfigured-provider failure path must release the pending hold server-side. Adapter authenticity/finality remains separately selected.
-- supabase/config.toml: only local [edge_runtime].enabled=true for real integration/E2E execution. Preserve all [auth] configuration, [api].schemas, JWT/cutoff/RLS/security contracts. No production deployment or provider credentials.
-
-Existing listed .github/workflows/sprint2.yml would exercise this real local server path (plus all frozen security/DB/API/browser regression) after authorization; no additional workflow path required. Existing43 paths cannot replace an HTTP server entrypoint or enable a disabled runtime. This is an operational allowlist extension, not a material identity/RLS/Auth architecture change, but cannot be silently added. STOP server/orchestration/UI payment portion and report to owner before creating/changing these two paths. No change to business semantics.
-
-Two additive migrations have been drafted within the43 paths. They are NOT RUN, not validated by real PostgreSQL/Actions, not frozen or ready to merge. No UI/server/dependency/CI implementation has been created. No Sprint3 or production work. Contract freeze is preserved; implementation completion remains BLOCKED pending exact-file scope resolution and all required tests.
+Gate CLOSED by owner; exact list now45 paths. Frozen business semantics unchanged. No material frozen Sprint1 security change authorized. Implementation/test results are tracked separately; no runtime PASS until full real CI.

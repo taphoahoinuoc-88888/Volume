@@ -14,7 +14,8 @@
     "types": [
       "node",
       "vite/client"
-    ]
+    ],
+    "allowImportingTsExtensions": true
   },
   "include": [
     "tests/**/*.ts",
@@ -22,6 +23,7 @@
     "apps/**/*.tsx",
     "packages/**/*.ts",
     "vitest.config.ts",
-    "playwright.config.ts"
+    "playwright.config.ts",
+    "supabase/functions/**/*.ts"
   ]
 }

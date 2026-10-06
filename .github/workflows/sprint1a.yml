@@ -24,36 +24,66 @@ jobs:
       - name: Scope, frozen documents and secret scan
         run: |
           python - <<'PY'
-          import pathlib,re,subprocess
-          frozen='68541f8a71a0ae10ac22d819a79f78982cf37abb'
-          product='9ba95b1d9f7372168051c2311d242ec799afc033'
-          product_stage=subprocess.run(['git','merge-base','--is-ancestor',product,'HEAD']).returncode==0
-          text=pathlib.Path('docs/sprints/SPRINT_1.md').read_text()
-          if product_stage:
-            approved=subprocess.check_output(['git','show',product+':docs/sprints/SPRINT_1.md'],text=True)
-            block=approved.split('### Planned exact file allowlist 1B')[1].split('## Playwright')[0]
-            allowed=set(re.findall(r'^- `([^`]+)`',block,re.M))
-            allowed.add('.github/workflows/sprint1a.yml') # Owner-approved CI-only maintenance.
-            base=frozen
-            core=subprocess.check_output(['git','diff','--name-only',frozen,'HEAD','--','supabase','tests/integration','AGENTS.md','docs/blueprint.yaml','docs/permissions.md','docs/architecture.md','docs/decisions'],text=True)
-            assert not core.strip(),'Frozen1A core/security modified:'+core
-            implementation=subprocess.check_output(['git','diff','--name-only',product,'HEAD','--','apps','packages','tests','supabase','package.json','package-lock.json','tsconfig.base.json','vitest.config.ts','playwright.config.ts'],text=True)
-            assert not implementation.strip(),'CI-only maintenance modified tested implementation:'+implementation
+          import pathlib,re,subprocess,json,tomllib
+          sprint2_stage=subprocess.run(['git','merge-base','--is-ancestor','7adfafe261eb97a331c5c3f85368afe557d1cf60','HEAD']).returncode==0
+          if sprint2_stage:
+            approved='7adfafe261eb97a331c5c3f85368afe557d1cf60'
+            base='2b47f0a619f494a811c94e41697f7d09dcb19e3a'
+            plan=subprocess.check_output(['git','show',approved+':docs/sprints/SPRINT_2_IMPLEMENTATION_PLAN.md'],text=True)
+            allowed=set(plan.split(chr(96)*3+'text'+chr(10))[1].split(chr(10)+chr(96)*3)[0].splitlines())
+            allowed.update(['supabase/functions/open-table-payment/index.ts','supabase/config.toml'])
+            assert len(allowed)==45
+            changed=subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines()
+            assert set(changed)<=allowed,'Outside45-path Sprint2 allowlist:'+str(set(changed)-allowed)
+            for prefix in ['AGENTS.md','docs/blueprint.yaml','docs/permissions.md','docs/architecture.md','docs/decisions','supabase/migrations/20261006000100_identity_scope.sql','supabase/migrations/20261006000200_permissions_rpc_audit.sql','supabase/migrations/20261006000300_access_read_projections.sql','supabase/tests/sprint1_rls.test.sql','supabase/tests/sprint1_rpc_audit.test.sql','supabase/tests/sprint1_revocation.test.sql','supabase/tests/sprint1_versions.test.sql','supabase/tests/sprint1_concurrency.test.sql','supabase/tests/sprint1_auth_bootstrap.test.sql','supabase/tests/sprint1_projections.test.sql','tests/integration/fixtures/auth.ts','tests/integration/sprint1-api.test.ts','tests/integration/sprint1-projections.test.ts','tests/integration/sprint1-revocation.test.ts','tests/integration/sprint1-versions.test.ts','tests/integration/sprint1-concurrency.test.ts','tests/integration/sprint1-auth-recovery.test.ts','tests/e2e/fixtures/auth.ts','tests/e2e/sprint1-auth.spec.ts','tests/e2e/sprint1-permissions.spec.ts','tests/e2e/sprint1-admin.spec.ts','tests/e2e/sprint1-mobile.spec.ts','supabase/seed.sql','package-lock.json']:
+             assert not subprocess.check_output(['git','diff','--name-only',base,'HEAD','--',prefix],text=True).strip(),'Frozen contract/test/dependency changed:'+prefix
+            old=json.loads(subprocess.check_output(['git','show',base+':package.json'],text=True));now=json.loads(pathlib.Path('package.json').read_text())
+            for key in ['dependencies','devDependencies','workspaces']:assert old[key]==now[key],'Unapproved dependency/workspace change:'+key
+            old_config=tomllib.loads(subprocess.check_output(['git','show',base+':supabase/config.toml'],text=True));new_config=tomllib.loads(pathlib.Path('supabase/config.toml').read_text())
+            assert new_config.pop('functions')=={'open-table-payment':{'verify_jwt':True}},'Only authenticated opening function allowed'
+            assert new_config['edge_runtime']['enabled'] is True
+            new_config['edge_runtime']['enabled']=old_config['edge_runtime']['enabled']
+            assert new_config==old_config,'Frozen Auth/API/security config modified'
+            for workflow,start,end in [('.github/workflows/sprint1a.yml','      - name: Scope, frozen documents and secret scan'+chr(10),'      - name: Install locked core test dependencies'+chr(10)),('.github/workflows/sprint1b.yml','      - name: Exact 1B allowlist, frozen core and secret scan'+chr(10),'      - name: Locked dependencies, typecheck, lint, unit tests, dependency audit'+chr(10))]:
+             old_workflow=subprocess.check_output(['git','show',base+':'+workflow],text=True);new_workflow=pathlib.Path(workflow).read_text()
+             assert old_workflow.split(start)[0]==new_workflow.split(start)[0] and old_workflow.split(end)[1]==new_workflow.split(end)[1],'Frozen runtime/security steps changed:'+workflow
+            for name in subprocess.check_output(['git','ls-files'],text=True).splitlines():
+             data=pathlib.Path(name).read_text()
+             assert not re.search(r'sb_secret_[A-Za-z0-9_-]{15,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{20,}',data),'Secret-like value:'+name
+             assert not name.startswith('reference/'),'Legacy edited:'+name
+             assert not re.search(r'/(?:player|matches|video|tournament|shop|telegram|crm|ai|billing|refund)/',name,re.I),'Forbidden future module:'+name
+             if name.startswith(('apps/','packages/')):assert 'SUPABASE_DB_URL' not in data and 'payment-adapter' not in data and 'service_role' not in data,'Server capability in client:'+name
+            print('PASS exact45-path scope; immutable Sprint1 migrations/Auth/security/tests; no secret/future module; JWT verification TRUE')
           else:
-            block=text.split('### Exact file allowlist 1A')[1].split('### Forbidden')[0]
-            allowed=set(re.findall(r'^- `([^`]+)`',block,re.M))
-            maintenance=text.split('### Exact maintenance file allowlist')[1].split('### Maintenance read contract')[0]
-            allowed.update(re.findall(r'^- `([^`]+)`',maintenance,re.M))
-            base='375379a72ee49a644bb58301a99eb7ebaf4e80e2'
-          changed=subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines()
-          assert set(changed)<=allowed,'Outside approved checkpoint allowlist:'+str(set(changed)-allowed)
-          for name in subprocess.check_output(['git','ls-files'],text=True).splitlines():
-            data=pathlib.Path(name).read_text()
-            assert not re.search(r'sb_secret_[A-Za-z0-9_-]{15,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{20,}',data),'Secret-like value:'+name
-            assert not name.startswith('reference/'),'Legacy surface:'+name
-            if not product_stage:assert not name.startswith(('apps/','packages/')),'Forbidden1A surface:'+name
-          if not product_stage:assert not any(x in pathlib.Path('package.json').read_text().lower() for x in ['refine','react','shadcn','playwright'])
-          print('PASS: approved checkpoint allowlist; frozen1A unchanged; candidate HEAD tested; no legacy/future modules or embedded secret')
+            frozen='68541f8a71a0ae10ac22d819a79f78982cf37abb'
+            product='9ba95b1d9f7372168051c2311d242ec799afc033'
+            product_stage=subprocess.run(['git','merge-base','--is-ancestor',product,'HEAD']).returncode==0
+            text=pathlib.Path('docs/sprints/SPRINT_1.md').read_text()
+            if product_stage:
+              approved=subprocess.check_output(['git','show',product+':docs/sprints/SPRINT_1.md'],text=True)
+              block=approved.split('### Planned exact file allowlist 1B')[1].split('## Playwright')[0]
+              allowed=set(re.findall(r'^- `([^`]+)`',block,re.M))
+              allowed.add('.github/workflows/sprint1a.yml') # Owner-approved CI-only maintenance.
+              base=frozen
+              core=subprocess.check_output(['git','diff','--name-only',frozen,'HEAD','--','supabase','tests/integration','AGENTS.md','docs/blueprint.yaml','docs/permissions.md','docs/architecture.md','docs/decisions'],text=True)
+              assert not core.strip(),'Frozen1A core/security modified:'+core
+              implementation=subprocess.check_output(['git','diff','--name-only',product,'HEAD','--','apps','packages','tests','supabase','package.json','package-lock.json','tsconfig.base.json','vitest.config.ts','playwright.config.ts'],text=True)
+              assert not implementation.strip(),'CI-only maintenance modified tested implementation:'+implementation
+            else:
+              block=text.split('### Exact file allowlist 1A')[1].split('### Forbidden')[0]
+              allowed=set(re.findall(r'^- `([^`]+)`',block,re.M))
+              maintenance=text.split('### Exact maintenance file allowlist')[1].split('### Maintenance read contract')[0]
+              allowed.update(re.findall(r'^- `([^`]+)`',maintenance,re.M))
+              base='375379a72ee49a644bb58301a99eb7ebaf4e80e2'
+            changed=subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines()
+            assert set(changed)<=allowed,'Outside approved checkpoint allowlist:'+str(set(changed)-allowed)
+            for name in subprocess.check_output(['git','ls-files'],text=True).splitlines():
+              data=pathlib.Path(name).read_text()
+              assert not re.search(r'sb_secret_[A-Za-z0-9_-]{15,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{20,}',data),'Secret-like value:'+name
+              assert not name.startswith('reference/'),'Legacy surface:'+name
+              if not product_stage:assert not name.startswith(('apps/','packages/')),'Forbidden1A surface:'+name
+            if not product_stage:assert not any(x in pathlib.Path('package.json').read_text().lower() for x in ['refine','react','shadcn','playwright'])
+            print('PASS: approved checkpoint allowlist; frozen1A unchanged; candidate HEAD tested; no legacy/future modules or embedded secret')
           PY
       - name: Install locked core test dependencies
         run: npm ci

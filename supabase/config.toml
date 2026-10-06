@@ -53,6 +53,9 @@ token_refresh = 1000
 sign_in_sign_ups = 1000
 token_verifications = 1000
 [edge_runtime]
-enabled = false
+enabled = true
 [analytics]
 enabled = false
+
+[functions.open-table-payment]
+verify_jwt = true

@@ -9,10 +9,10 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.base.json",
-    "lint": "eslint --no-config-lookup --ext .ts,.tsx --parser @typescript-eslint/parser --parser-options '{\"ecmaFeatures\":{\"jsx\":true}}' --rule 'no-debugger:error' --rule 'no-constant-condition:error' 'apps/**/src/**/*.{ts,tsx}' 'packages/**/src/**/*.{ts,tsx}' 'tests/e2e/**/*.ts'",
+    "lint": "eslint --no-config-lookup --ext .ts,.tsx --parser @typescript-eslint/parser --parser-options '{\"ecmaFeatures\":{\"jsx\":true}}' --rule 'no-debugger:error' --rule 'no-constant-condition:error' 'apps/**/src/**/*.{ts,tsx}' 'packages/**/src/**/*.{ts,tsx}' 'tests/e2e/**/*.ts' 'supabase/functions/**/*.ts'",
     "build": "npm run build -w @volume/customer && npm run build -w @volume/control-center",
     "test:integration": "vitest run tests/integration",
-    "test:unit": "vitest run packages/shared",
+    "test:unit": "vitest run packages/shared supabase/functions/_shared",
     "test:e2e": "playwright test"
   },
   "dependencies": {

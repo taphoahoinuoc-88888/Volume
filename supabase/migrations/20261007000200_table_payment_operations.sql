@@ -1,6 +1,9 @@
 -- Existing Auth/cutoff/writer functions are unchanged. All new runtime owners
 -- have minimum business grants and fixed, empty search_path.
 grant create on schema public,private to volume_core;
+create function private.sprint2_clock() returns timestamptz language sql volatile set search_path='' as $$
+ select pg_catalog.clock_timestamp()
+$$;
 create function private.sprint2_lock() returns void language sql set search_path='' as $$
  select pg_catalog.pg_advisory_xact_lock_shared(20261006,1)
 $$;
@@ -66,8 +69,8 @@ create function public.public_tables(p_venue uuid default null) returns jsonb la
  select coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('id',t.id,'venue_id',t.venue_id,'venue_name',v.name,'code',t.code,'label',t.label,
  'hourly_price_vnd',t.hourly_price_vnd::text,'version',t.version::text,'management_contact',v.management_contact,
  'availability',case when exists(select 1 from public.table_sessions s where s.table_id=t.id and s.state='ACTIVE') then 'playing'
- when exists(select 1 from public.table_sessions s join public.profiles c on c.id=s.customer_profile_id where s.table_id=t.id and s.state='PENDING_PAYMENT' and s.expires_at>=pg_catalog.clock_timestamp() and c.account_status='ACTIVE') then 'pending' else 'available' end,
- 'server_now',pg_catalog.clock_timestamp()) order by v.code,t.code),'[]')
+ when exists(select 1 from public.table_sessions s join public.profiles c on c.id=s.customer_profile_id where s.table_id=t.id and s.state='PENDING_PAYMENT' and s.expires_at>=private.sprint2_clock() and c.account_status='ACTIVE') then 'pending' else 'available' end,
+ 'server_now',private.sprint2_clock()) order by v.code,t.code),'[]')
  from public.billiard_tables t join public.venues v on v.id=t.venue_id
  where v.is_enabled and v.is_public and t.status='ACTIVE' and (p_venue is null or v.id=p_venue)
 $$;
@@ -79,18 +82,18 @@ begin
  if a.role in ('ADMIN','CEO','MANAGER') and (p_venue is null or private.can_venue(p_venue)) then perms:=perms||array['OPENING_PAYMENTS_READ']; end if;
  if a.role='ADMIN' then perms:=perms||array['TABLE_DEFINITIONS_MANAGE']; end if;
  if a.role in ('ADMIN','CEO') or (p_venue is not null and private.sprint2_can_manual(p_venue)) then perms:=perms||array['TABLE_SESSION_OPEN_MANUAL']; end if;
- return pg_catalog.jsonb_build_object('permissions',perms,'venue_id',p_venue);
+ return pg_catalog.jsonb_build_object('permissions',perms,'venue_id',p_venue,'venue_contact',case when a.role='ADMIN' and p_venue is not null then (select pg_catalog.jsonb_build_object('id',v.id,'name',v.name,'management_contact',v.management_contact,'version',v.version::text) from public.venues v where v.id=p_venue) else null end);
 end $$;
 create function public.own_table_sessions() returns jsonb language plpgsql security definer set search_path='' as $$
 declare a public.profiles; result jsonb;
 begin
  a:=private.live_profile();
  select coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('id',s.id,'table_id',s.table_id,'venue_id',s.venue_id,'label',t.label,
- 'opening_method',s.opening_method,'state',case when s.state='PENDING_PAYMENT' and s.expires_at<pg_catalog.clock_timestamp() then 'CANCELLED' else s.state end,
- 'expires_at',s.expires_at,'started_at',s.started_at,'version',s.version::text,'server_now',pg_catalog.clock_timestamp(),
- 'management_contact',v.management_contact,'payment',case when p.id is null then null else
+ 'opening_method',s.opening_method,'state',case when s.state='PENDING_PAYMENT' and s.expires_at<private.sprint2_clock() then 'CANCELLED' else s.state end,
+ 'expires_at',s.expires_at,'started_at',s.started_at,'version',s.version::text,'server_now',private.sprint2_clock(),
+ 'management_contact',v.management_contact,'request_key',case when s.opening_method='PAYMENT' then s.request_key else null end,'quote_version',case when s.opening_method='PAYMENT' then s.request_digest::jsonb->>2 else null end,'payment',case when p.id is null then null else
  private.sprint2_balances(p.id)||pg_catalog.jsonb_build_object('id',p.id,'reference',p.reference,'version',p.version::text,'payment_success_at',p.payment_success_at,
- 'state',case when s.state='PENDING_PAYMENT' and s.expires_at<pg_catalog.clock_timestamp() then
+ 'state',case when s.state='PENDING_PAYMENT' and s.expires_at<private.sprint2_clock() then
   case when (private.sprint2_balances(p.id)->>'received_amount_vnd')::bigint>0 then 'PAYMENT_NEEDS_RESOLUTION' else 'CANCELLED' end else p.state end) end)
  order by s.created_at desc),'[]') into result
  from public.table_sessions s join public.billiard_tables t on t.id=s.table_id join public.venues v on v.id=s.venue_id
@@ -104,10 +107,10 @@ begin
  if a.role not in ('ADMIN','CEO','MANAGER','STAFF') or (p_venue is not null and not private.can_venue(p_venue)) then raise exception 'ACCESS_DENIED'; end if;
  select coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('id',t.id,'venue_id',t.venue_id,'code',t.code,'label',t.label,'status',t.status,
  'version',t.version::text,'availability',case when s.state='ACTIVE' then 'playing' when s.state='PENDING_PAYMENT' then 'pending' else 'available' end,
- 'started_at',s.started_at,'server_now',pg_catalog.clock_timestamp())||
+ 'started_at',s.started_at,'server_now',private.sprint2_clock())||
  case when a.role in ('ADMIN','CEO','MANAGER') then pg_catalog.jsonb_build_object('hourly_price_vnd',t.hourly_price_vnd::text,'session_id',s.id,'expires_at',s.expires_at,'customer_profile_id',s.customer_profile_id,'opening_method',s.opening_method) else '{}'::jsonb end order by t.code),'[]') into result
  from public.billiard_tables t join public.venues v on v.id=t.venue_id
- left join public.table_sessions s on s.table_id=t.id and (s.state='ACTIVE' or (s.state='PENDING_PAYMENT' and s.expires_at>=pg_catalog.clock_timestamp()))
+ left join public.table_sessions s on s.table_id=t.id and (s.state='ACTIVE' or (s.state='PENDING_PAYMENT' and s.expires_at>=private.sprint2_clock()))
  where (p_venue is null or t.venue_id=p_venue) and private.can_venue(t.venue_id);
  return result;
 end $$;
@@ -117,10 +120,10 @@ begin
  a:=private.live_profile();
  if a.role not in ('ADMIN','CEO','MANAGER') or (p_venue is not null and not private.can_venue(p_venue)) then raise exception 'ACCESS_DENIED'; end if;
  select coalesce(pg_catalog.jsonb_agg(private.sprint2_balances(p.id)||pg_catalog.jsonb_build_object('id',p.id,'session_id',s.id,'venue_id',s.venue_id,'table_id',s.table_id,
- 'state',case when s.state='PENDING_PAYMENT' and s.expires_at<pg_catalog.clock_timestamp() then
+ 'state',case when s.state='PENDING_PAYMENT' and s.expires_at<private.sprint2_clock() then
  case when (private.sprint2_balances(p.id)->>'received_amount_vnd')::bigint>0 then 'PAYMENT_NEEDS_RESOLUTION' else 'CANCELLED' end else p.state end,
  'version',p.version::text,'expires_at',s.expires_at,'started_at',s.started_at,'payment_success_at',p.payment_success_at,
- 'resolution_reason',p.resolution_reason,'server_now',pg_catalog.clock_timestamp(),
+ 'resolution_reason',p.resolution_reason,'server_now',private.sprint2_clock(),
  'notice',exists(select 1 from public.payment_receipts r where r.payment_id=p.id and r.kind<>'CREDIT')) order by p.created_at desc),'[]') into result
  from public.payments p join public.table_sessions s on s.id=p.session_id
  where (p_venue is null or s.venue_id=p_venue) and private.can_venue(s.venue_id);
@@ -143,7 +146,7 @@ begin
  perform 1 from public.billiard_tables where id in (p_table,old_table) order by id for update;
  select * into t from public.billiard_tables where id=p_table;
  if t.id is null or t.status<>'ACTIVE' or not exists(select 1 from public.venues v where v.id=t.venue_id and v.is_enabled and v.is_public) then raise exception 'TABLE_UNAVAILABLE'; end if;
- perform private.check_version(t.version,p_expected_table_version); n:=pg_catalog.clock_timestamp();
+ perform private.check_version(t.version,p_expected_table_version); n:=private.sprint2_clock();
  for prior in select * from public.table_sessions where state='PENDING_PAYMENT' and (table_id=p_table or customer_profile_id=a.id) order by table_id,id loop
   if prior.expires_at<n then perform private.sprint2_expire_locked(prior.id,n,'EXPIRED'); end if;
  end loop;
@@ -168,7 +171,7 @@ begin
  select * into p from public.payments where session_id=s.id for update;
  perform private.check_version(s.version,p_expected_session_version);perform private.check_version(p.version,p_expected_payment_version);
  if s.state<>'PENDING_PAYMENT' then raise exception 'HOLD_NOT_PENDING'; end if;
- n:=pg_catalog.clock_timestamp();
+ n:=private.sprint2_clock();
  perform private.sprint2_expire_locked(s.id,n,case when n>s.expires_at then 'EXPIRED' else 'CUSTOMER_CANCELLED' end);
  return pg_catalog.jsonb_build_object('status','CANCELLED','session_id',s.id);
 end $$;
@@ -202,7 +205,7 @@ begin
  end if;
  if t.status<>'ACTIVE' or not exists(select 1 from public.venues where id=t.venue_id and is_enabled) then raise exception 'TABLE_UNAVAILABLE'; end if;
  if p_customer is not null and not exists(select 1 from public.profiles where id=p_customer and account_status='ACTIVE') then raise exception 'ACCESS_DENIED'; end if;
- perform private.check_version(t.version,p_expected_table_version);n:=pg_catalog.clock_timestamp();
+ perform private.check_version(t.version,p_expected_table_version);n:=private.sprint2_clock();
  for prior in select * from public.table_sessions where table_id=t.id and state='PENDING_PAYMENT' and expires_at<n loop
   perform private.sprint2_expire_locked(prior.id,n,'EXPIRED');
  end loop;
@@ -230,7 +233,7 @@ begin
  if a.role<>'ADMIN' then raise exception 'ACCESS_DENIED'; end if;perform private.check_reason(p_reason);
  select * into old from public.billiard_tables where id=p_table for update;perform private.check_version(old.version,p_expected_version);
  if row(old.label,old.status,old.hourly_price_vnd) is not distinct from row(p_label,p_status,p_hourly_price_vnd) then return pg_catalog.jsonb_build_object('status','NO_CHANGE','version',old.version::text); end if;
- update public.billiard_tables set label=p_label,status=p_status,hourly_price_vnd=p_hourly_price_vnd,version=version+1,updated_at=pg_catalog.clock_timestamp() where id=p_table returning * into t;
+ update public.billiard_tables set label=p_label,status=p_status,hourly_price_vnd=p_hourly_price_vnd,version=version+1,updated_at=private.sprint2_clock() where id=p_table returning * into t;
  perform private.sprint2_audit('TABLE_UPDATED','billiard_tables',t.id,t.venue_id,p_reason,
  pg_catalog.jsonb_build_object('label',old.label,'status',old.status,'hourly_price_vnd',old.hourly_price_vnd::text,'version',old.version::text),
  pg_catalog.jsonb_build_object('label',t.label,'status',t.status,'hourly_price_vnd',t.hourly_price_vnd::text,'version',t.version::text),'CONTROL_CENTER');
@@ -243,7 +246,7 @@ begin
  if a.role<>'ADMIN' then raise exception 'ACCESS_DENIED'; end if;perform private.check_reason(p_reason);
  select * into v from public.venues where id=p_venue for update;perform private.check_version(v.version,p_expected_version);
  if v.management_contact is not distinct from p_contact then return pg_catalog.jsonb_build_object('status','NO_CHANGE','version',v.version::text); end if;
- update public.venues set management_contact=p_contact,version=version+1,updated_at=pg_catalog.clock_timestamp() where id=p_venue;
+ update public.venues set management_contact=p_contact,version=version+1,updated_at=private.sprint2_clock() where id=p_venue;
  perform private.sprint2_audit('VENUE_MANAGEMENT_CONTACT_UPDATED','venues',v.id,v.id,p_reason,
  pg_catalog.jsonb_build_object('version',v.version::text),pg_catalog.jsonb_build_object('management_contact_changed',true,'version',(v.version+1)::text),'CONTROL_CENTER');
  return pg_catalog.jsonb_build_object('status','UPDATED','version',(v.version+1)::text);
@@ -277,7 +280,7 @@ begin
   select * into s from public.table_sessions where id=s.id for update;
   select * into p from public.payments where id=p.id for update;
  end if;
- n:=pg_catalog.clock_timestamp();
+ n:=private.sprint2_clock();
  insert into public.payment_receipts(payment_id,provider,recipient_scope,external_event_id,external_transaction_id,reference,kind,amount_vnd,currency,provider_occurred_at,provider_callback_received_at,processed_at,evidence_digest)
  values(p.id,p_event->>'provider',p_event->>'recipient_scope',p_event->>'external_event_id',p_event->>'external_transaction_id',p_event->>'reference',p_event->>'kind',(p_event->>'amount_vnd')::bigint,p_event->>'currency',(p_event->>'provider_occurred_at')::timestamptz,(p_event->>'provider_callback_received_at')::timestamptz,n,p_event->>'evidence_digest') returning * into r;
  perform private.sprint2_audit('PAYMENT_RECEIPT_RECORDED','payment_receipts',r.id,s.venue_id,'Validated provider evidence',null,pg_catalog.jsonb_build_object('payment_id',p.id));
@@ -290,7 +293,7 @@ begin
  b:=private.sprint2_balances(p.id);received:=(b->>'received_amount_vnd')::bigint;
  -- Sample after serialization and cumulative-credit computation. Never use now(),
  -- transaction start, client time or provider_occurred_at as the opening clock.
- success_time:=pg_catalog.clock_timestamp();
+ success_time:=private.sprint2_clock();
  if s.state='PENDING_PAYMENT' then
   if not exists(select 1 from public.profiles where id=s.customer_profile_id and account_status='ACTIVE') then cause:='ACCOUNT_DISABLED';
   elsif not exists(select 1 from public.venues where id=s.venue_id and is_enabled) then cause:='VENUE_DISABLED';
@@ -326,7 +329,7 @@ begin
  select * into s from public.table_sessions where id=p.session_id;
  perform 1 from public.profiles where id=s.customer_profile_id for update;
  perform 1 from public.billiard_tables where id=s.table_id for update;
- perform private.sprint2_expire_locked(s.id,pg_catalog.clock_timestamp(),p_cause);
+ perform private.sprint2_expire_locked(s.id,private.sprint2_clock(),p_cause);
 end $$;
 create function private.expire_table_holds(p_limit integer default 100) returns integer language plpgsql security definer set search_path='' as $$
 declare s public.table_sessions; count_expired integer:=0;
@@ -335,9 +338,9 @@ begin
  if p_limit is null or p_limit not between 1 and 1000 then raise exception 'INVALID_LIMIT'; end if;
  -- Lock each affected table first, in UUID order. No profile lock is acquired
  -- after a table lock: expiration never mutates or authenticates a profile.
- for s in select * from public.table_sessions where state='PENDING_PAYMENT' and expires_at<pg_catalog.clock_timestamp() order by table_id,id limit p_limit loop
+ for s in select * from public.table_sessions where state='PENDING_PAYMENT' and expires_at<private.sprint2_clock() order by table_id,id limit p_limit loop
   perform 1 from public.billiard_tables where id=s.table_id for update;
-  perform private.sprint2_expire_locked(s.id,pg_catalog.clock_timestamp(),'EXPIRED');
+  perform private.sprint2_expire_locked(s.id,private.sprint2_clock(),'EXPIRED');
   count_expired:=count_expired+1;
  end loop;
  return count_expired;
@@ -358,7 +361,7 @@ begin
  ((tg_table_name='profiles' and customer_profile_id=new.id) or
  (tg_table_name='venues' and venue_id=new.id) or (tg_table_name='billiard_tables' and table_id=new.id)) order by table_id,id loop
   perform 1 from public.billiard_tables where id=s.table_id for update;
-  perform private.sprint2_expire_locked(s.id,pg_catalog.clock_timestamp(),cause);
+  perform private.sprint2_expire_locked(s.id,private.sprint2_clock(),cause);
  end loop;
  return new;
 end $$;
