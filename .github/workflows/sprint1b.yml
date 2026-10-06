@@ -1,7 +1,9 @@
 name: Checkpoint 1B
 on:
   push:
-    branches: [checkpoint-1b]
+    branches: [checkpoint-1b, main]
+  pull_request:
+    branches: [main]
 permissions:
   contents: read
 concurrency:
@@ -23,9 +25,18 @@ jobs:
         run: |
           python - <<'PY'
           import pathlib,re,subprocess
-          text=pathlib.Path('docs/sprints/SPRINT_1.md').read_text()
+          product='9ba95b1d9f7372168051c2311d242ec799afc033'
+          text=subprocess.check_output(['git','show',product+':docs/sprints/SPRINT_1.md'],text=True)
           block=text.split('### Planned exact file allowlist 1B')[1].split('## Playwright')[0]
           allowed=set(re.findall(r'^- `([^`]+)`',block,re.M))
+          allowed.add('.github/workflows/sprint1a.yml') # Owner-approved CI-only maintenance.
+          implementation=subprocess.check_output(['git','diff','--name-only',product,'HEAD','--','apps','packages','tests','supabase','package.json','package-lock.json','tsconfig.base.json','vitest.config.ts','playwright.config.ts'],text=True)
+          assert not implementation.strip(),'Tested implementation modified:'+implementation
+          old=subprocess.check_output(['git','show','68541f8a71a0ae10ac22d819a79f78982cf37abb:.github/workflows/sprint1a.yml'],text=True)
+          now=pathlib.Path('.github/workflows/sprint1a.yml').read_text()
+          start='      - name: Scope, frozen documents and secret scan'+chr(10)
+          end='      - name: Install locked core test dependencies'+chr(10)
+          assert old.split(start)[0]==now.split(start)[0] and old.split(end)[1]==now.split(end)[1],'Frozen1A runtime checks modified'
           changed=subprocess.check_output(['git','diff','--name-only','68541f8a71a0ae10ac22d819a79f78982cf37abb','HEAD'],text=True).splitlines()
           assert set(changed)<=allowed,'Outside1B allowlist:'+str(set(changed)-allowed)
           core=subprocess.check_output(['git','diff','--name-only','68541f8a71a0ae10ac22d819a79f78982cf37abb','HEAD','--','supabase','tests/integration','AGENTS.md','docs/blueprint.yaml','docs/permissions.md','docs/architecture.md','docs/decisions'],text=True)
@@ -33,7 +44,7 @@ jobs:
           for name in subprocess.check_output(['git','ls-files'],text=True).splitlines():
             data=pathlib.Path(name).read_text()
             assert not re.search(r'sb_secret_[A-Za-z0-9_-]{15,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{20,}',data),'Secret-like value:'+name
-          print('PASS:56-path1B allowlist; frozen security/core/tests unchanged; no future schema/module; secret scan')
+          print('PASS:56-path1B allowlist plus CI-only maintenance; frozen security/core/tests unchanged; no future schema/module; secret scan')
           PY
       - name: Locked dependencies, typecheck, lint, unit tests, dependency audit
         run: |

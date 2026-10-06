@@ -25,20 +25,35 @@ jobs:
         run: |
           python - <<'PY'
           import pathlib,re,subprocess
+          frozen='68541f8a71a0ae10ac22d819a79f78982cf37abb'
+          product='9ba95b1d9f7372168051c2311d242ec799afc033'
+          product_stage=subprocess.run(['git','merge-base','--is-ancestor',product,'HEAD']).returncode==0
           text=pathlib.Path('docs/sprints/SPRINT_1.md').read_text()
-          block=text.split('### Exact file allowlist 1A')[1].split('### Forbidden')[0]
-          allowed=set(re.findall(r'^- `([^`]+)`',block,re.M))
-          maintenance=text.split('### Exact maintenance file allowlist')[1].split('### Maintenance read contract')[0]
-          allowed.update(re.findall(r'^- `([^`]+)`',maintenance,re.M))
-          changed=subprocess.check_output(['git','diff','--name-only','375379a72ee49a644bb58301a99eb7ebaf4e80e2','HEAD'],text=True).splitlines()
-          assert set(changed)<=allowed, 'Outside frozen allowlist: '+str(set(changed)-allowed)
+          if product_stage:
+            approved=subprocess.check_output(['git','show',product+':docs/sprints/SPRINT_1.md'],text=True)
+            block=approved.split('### Planned exact file allowlist 1B')[1].split('## Playwright')[0]
+            allowed=set(re.findall(r'^- `([^`]+)`',block,re.M))
+            allowed.add('.github/workflows/sprint1a.yml') # Owner-approved CI-only maintenance.
+            base=frozen
+            core=subprocess.check_output(['git','diff','--name-only',frozen,'HEAD','--','supabase','tests/integration','AGENTS.md','docs/blueprint.yaml','docs/permissions.md','docs/architecture.md','docs/decisions'],text=True)
+            assert not core.strip(),'Frozen1A core/security modified:'+core
+            implementation=subprocess.check_output(['git','diff','--name-only',product,'HEAD','--','apps','packages','tests','supabase','package.json','package-lock.json','tsconfig.base.json','vitest.config.ts','playwright.config.ts'],text=True)
+            assert not implementation.strip(),'CI-only maintenance modified tested implementation:'+implementation
+          else:
+            block=text.split('### Exact file allowlist 1A')[1].split('### Forbidden')[0]
+            allowed=set(re.findall(r'^- `([^`]+)`',block,re.M))
+            maintenance=text.split('### Exact maintenance file allowlist')[1].split('### Maintenance read contract')[0]
+            allowed.update(re.findall(r'^- `([^`]+)`',maintenance,re.M))
+            base='375379a72ee49a644bb58301a99eb7ebaf4e80e2'
+          changed=subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines()
+          assert set(changed)<=allowed,'Outside approved checkpoint allowlist:'+str(set(changed)-allowed)
           for name in subprocess.check_output(['git','ls-files'],text=True).splitlines():
-            p=pathlib.Path(name)
-            data=p.read_text()
-            assert not re.search(r'sb_secret_[A-Za-z0-9_-]{15,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{20,}',data), 'Secret-like value: '+name
-            assert not name.startswith(('apps/','packages/','reference/')), 'Forbidden surface: '+name
-          assert not any(x in pathlib.Path('package.json').read_text().lower() for x in ['refine','react','shadcn','playwright'])
-          print('PASS: exact allowlist; frozen files unchanged; no legacy files, future/client modules, or embedded secret-like values')
+            data=pathlib.Path(name).read_text()
+            assert not re.search(r'sb_secret_[A-Za-z0-9_-]{15,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{20,}',data),'Secret-like value:'+name
+            assert not name.startswith('reference/'),'Legacy surface:'+name
+            if not product_stage:assert not name.startswith(('apps/','packages/')),'Forbidden1A surface:'+name
+          if not product_stage:assert not any(x in pathlib.Path('package.json').read_text().lower() for x in ['refine','react','shadcn','playwright'])
+          print('PASS: approved checkpoint allowlist; frozen1A unchanged; candidate HEAD tested; no legacy/future modules or embedded secret')
           PY
       - name: Install locked core test dependencies
         run: npm ci
