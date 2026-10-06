@@ -6,6 +6,11 @@ interface Dependencies {
  prepare(reference:string,amountVnd:string):Promise<Preparation>;
  fail(reference:string):Promise<void>;
 }
+// Structural contract avoids a bare Node type import in the Deno module graph.
+interface DatabaseDriver {default:{Pool:new(options:{connectionString:string|undefined;max:number})=>{
+ connect():Promise<{query(sql:string,values?:unknown[]):Promise<unknown>;release():void}>;
+ end():Promise<void>;
+}}}
 const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS'};
 function response(body:unknown,status=200){return new Response(status===204?null:JSON.stringify(body),{status,headers:{...cors,'Content-Type':'application/json','Cache-Control':'no-store'}});}
 async function retrySafe<T>(operation:()=>Promise<T>):Promise<T>{
@@ -70,7 +75,7 @@ if(typeof Deno!=='undefined'){
   async fail(reference){
    // Reuse the existing locked pg dependency. Loaded only by server runtime;
    // credential never enters client modules, responses or logs.
-   const specifier='npm:pg@8.16.3';const module=await import(specifier) as {default:typeof import('pg')};
+   const specifier='npm:pg@8.16.3';const module=await import(specifier) as DatabaseDriver;
    const pool=new module.default.Pool({connectionString:Deno.env.get('SUPABASE_DB_URL'),max:1});
    const connection=await pool.connect();
    try{await connection.query('begin');await connection.query('set local role volume_payment_ingest');await connection.query('select private.fail_payment_attempt($1,$2)',[reference,'QR_FAILED']);await connection.query('commit');}
