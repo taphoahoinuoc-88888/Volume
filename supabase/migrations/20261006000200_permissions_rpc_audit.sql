@@ -2,7 +2,7 @@
 create function private.request_user_id() returns uuid language sql stable set search_path='' as $$
  select (pg_catalog.current_setting('request.jwt.claims',true)::jsonb->>'sub')::uuid
 $$;
--- Narrow Auth adapter. Existing managed Auth table owner is the only definer
+-- Narrow Auth adapter. Dedicated non-login three-column session reader is the only definer
 -- that reads managed sessions. No Auth privileges are granted to volume_core.
 -- Returns one boolean; binds user/session to verified request claims, not inputs.
 create function private.session_valid(p_cutoff timestamptz) returns boolean language sql security definer set search_path='' as $$
@@ -231,10 +231,8 @@ grant execute on function public.current_access(),public.staff_directory(uuid),p
 
 revoke create on schema public,private from volume_core;
 
--- Managed Auth owner already has the correct table-owner read access under RLS.
--- Only this tiny read-only adapter uses that owner, not business RPCs.
-grant usage,create on schema private to supabase_auth_admin;
-alter function private.session_valid(timestamptz) owner to supabase_auth_admin;
-revoke create on schema private from supabase_auth_admin;
+-- Dedicated read-only adapter owner; never a superuser/operational role.
+alter function private.session_valid(timestamptz) owner to volume_session_reader;
+revoke create on schema private from volume_session_reader;
 revoke all on function private.session_valid(timestamptz) from public,anon,authenticated,service_role;
 grant execute on function private.session_valid(timestamptz) to volume_core;

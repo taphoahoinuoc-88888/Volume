@@ -2,6 +2,10 @@
 create schema private;
 revoke all on schema private from public;
 create role volume_core nologin noinherit;
+-- Separate non-login owner for a three-column Auth adapter, not a business role.
+create role volume_session_reader nologin noinherit;
+grant volume_session_reader to postgres;
+grant usage,create on schema private to volume_session_reader;
 -- Local managed postgres is not superuser: allow migration operator to transfer
 -- ownership, then remove schema CREATE from the runtime owner at migration end.
 grant volume_core to postgres;

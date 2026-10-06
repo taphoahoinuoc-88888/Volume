@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path=public,extensions;
-select plan(16);
+select plan(19);
 
 insert into auth.users(id,email) select ('30000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,'db-test-'||n||'@example.test' from generate_series(1,9) n;
 update public.profiles set role=case right(id::text,1) when '1' then 'ADMIN' when '2' then 'ADMIN' when '3' then 'CEO' when '4' then 'MANAGER' when '5' then 'STAFF' when '8' then 'STAFF' when '9' then 'STAFF' else 'USER' end where id::text like '30000000%';
@@ -34,7 +34,10 @@ select is(jsonb_array_length(public.membership_directory('10000000-0000-0000-000
 reset role;
 select ok(not has_schema_privilege('volume_core','auth','USAGE'),'Application core has no Auth schema usage');
 select ok(not has_table_privilege('volume_core','auth.sessions','SELECT') and not has_column_privilege('volume_core','auth.sessions','id','SELECT'),'Application core has no Auth session select');
+select ok(not has_function_privilege('anon','private.session_valid(timestamptz)','EXECUTE') and not has_function_privilege('authenticated','private.session_valid(timestamptz)','EXECUTE') and not has_function_privilege('service_role','private.session_valid(timestamptz)','EXECUTE'),'Only trusted core may execute session adapter');
+select ok((select prosecdef and prorettype='boolean'::regtype and proconfig @> array['search_path=""'] from pg_proc where oid='private.session_valid(timestamptz)'::regprocedure),'Session adapter boolean/definer/empty search_path');
 set local role anon;
+select throws_ok($$select private.session_valid(null)$$,'42501',null,'Anon direct helper invocation denied');
 select is((select count(*)::int from public.public_venues()),1,'Anon safe published enabled venues');
 
 select * from finish();
