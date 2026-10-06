@@ -4,7 +4,7 @@ let f:Fixture;beforeAll(async()=>{f=await fixture();});afterAll(async()=>{await 
 async function oldRefresh(name:string,refresh:string){const r=await f.auth('token?grant_type=refresh_token',{refresh_token:refresh});if(r.status===200){f.users[name].token=r.data.access_token;denied(await f.rpc(name,'current_access'));}else expect(r.status).toBeGreaterThanOrEqual(400);}
 test('API04/05: role cutoff, provider-revoke failure, old refresh denied, new login current authority',async()=>{
  const old={...f.users.user1};allowed(await f.changeRole('user1','CEO'));
- // Intentionally do not call provider signout: models provider outage after DB commit.
+ // Owner accepted provider limitation: old provider session stays alive, VOLUME cutoff must still deny.
  denied(await f.rpc('user1','current_access'));await oldRefresh('user1',old.refresh);
  await f.login('user1');expect(f.users.user1.session).not.toBe(old.session);const r=await f.rpc('user1','current_access');allowed(r);expect(r.data.profile.role).toBe('CEO');
  const p=(await f.db.query('select sessions_revoked_before,version from public.profiles where id=$1',[old.id])).rows[0];expect(p.version).toBe('2');expect(p.sessions_revoked_before).toBeTruthy();
@@ -29,14 +29,3 @@ test('API04: own revoke atomically audits and denies current/refresh sessions',a
  const a=(await f.db.query("select * from public.audit_events where action='SESSIONS_REVOKED' and actor_id=$1",[old.id])).rows;expect(a).toHaveLength(1);expect(a[0].source).toBe('CUSTOMER_WEB');expect(a[0].actor_role).toBe('USER');expect(a[0].after_data).toEqual({profile_id:old.id,revoked:true});
 });
 
-test('CONTRACT BLOCKER: administrative provider revocation by user id requires owner decision',async()=>{
- // This is an Auth Admin API compatibility probe, not an RLS allow/deny test.
- // Service-role credential exists only in this isolated server fixture process.
- const {execFileSync}=await import('node:child_process');
- const config=JSON.parse(execFileSync('supabase',['status','-o','json'],{encoding:'utf8'}));
- const secret=config.SERVICE_ROLE_KEY;
- expect(secret,'Server-only local Auth Admin credential required for compatibility probe').toBeTruthy();
- const r=await fetch(`${f.base}/auth/v1/admin/users/${f.users.user1.id}/sessions`,{method:'DELETE',headers:{apikey:f.anon,Authorization:`Bearer ${secret}`}});
- expect(r.status).toBe(404);
- throw new Error('BLOCKED: GoTrue v2.197.0 has no revoke-by-user-id Admin API. Supported global logout requires the target user JWT. Owner must resolve the frozen post-commit provider-revoke contract before 1A can freeze; DB cutoff is not silently substituted.');
-});

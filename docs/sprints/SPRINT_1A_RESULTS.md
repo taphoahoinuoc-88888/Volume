@@ -82,3 +82,7 @@ Legacy ZIP SHA256=f0b0cf8372b1a127a30362bd1a584bb0c1e8a4d3346de6f3113cfdb4d00783
 - `vitest.config.ts`
 
 28 files, all in exact1A allowlist. Optional provisioning Edge Function files omitted.
+
+## Owner resolution — resume1A (2026-10-06)
+Owner authorizes narrow private session-validation helper instead of broad Auth access for volume_core. Application core has no Auth schema USAGE or session SELECT. private.session_valid(cutoff) returns only boolean, binds user/session to verified PostgREST claims, fixed empty search_path, schema-qualified objects, no client EXECUTE. Helper owner is existing managed auth.sessions table owner supabase_auth_admin; only this read-only adapter uses that native Auth owner; business RPC owners remain volume_core (non-superuser/non-BYPASSRLS). No new Auth schema, Auth role inheritance, token store, Auth writes or provider prepared schema. Supabase Auth owner naturally holds managed-schema privileges; adapter code is the narrow boundary, not a new broad role granted to application code.
+Provider limit accepted: no Admin revoke-all-by-user-id; no target JWT storage, Auth-session writes or account ban to force logout. Database live profile/cutoff + real session-created-at remains mandatory authority. Old provider refresh may succeed but old VOLUME private/internal requests must deny; new login uses current rights. Removed obsolete intentionally failing provider gate; no success claim before new complete CI. Prior failures above are historical evidence, not current acceptance.1A IN PROGRESS, not frozen;1B remains unauthorized.

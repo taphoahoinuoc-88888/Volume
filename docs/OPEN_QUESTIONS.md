@@ -50,3 +50,6 @@ Administrative post-commit Auth provider revoke needs target JWT in GoTruev2.197
 
 ## STOP — actual CI compatibility findings
 Latest tested implementation240e159; workflow37442226921: startup/reset PASS, DB security suite FAIL (Auth schema USAGE missing for private definer owner; auth.sessions RLS enabled), API/security suite NOT RUN. Provider revoke-by-user-id also needs owner contract decision. See docs/sprints/SPRINT_1A_RESULTS.md (from repository root). No privilege escalation workaround applied.1A not complete/frozen; main unmerged;1B not authorized.
+
+## Owner resolution — resume1A
+Owner accepted provider revoke limit and authorized a narrow private session helper. Core has no direct Auth schema access. Resume full real CI; no1A PASS/freeze yet. Previous blocker notes are historical; no1B authorization or main merge. See SPRINT_1A_RESULTS.md.

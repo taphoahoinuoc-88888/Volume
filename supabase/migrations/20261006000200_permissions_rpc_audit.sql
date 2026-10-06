@@ -1,10 +1,24 @@
--- Every private/internal entry reads live authority, not editable metadata.
+-- Verified PostgREST claims prove identity only. No role/scope metadata authority.
+create function private.request_user_id() returns uuid language sql stable set search_path='' as $$
+ select (pg_catalog.current_setting('request.jwt.claims',true)::jsonb->>'sub')::uuid
+$$;
+-- Narrow Auth adapter. Existing managed Auth table owner is the only definer
+-- that reads managed sessions. No Auth privileges are granted to volume_core.
+-- Returns one boolean; binds user/session to verified request claims, not inputs.
+create function private.session_valid(p_cutoff timestamptz) returns boolean language sql security definer set search_path='' as $$
+ select exists (
+  select 1 from auth.sessions s
+  where s.id=(pg_catalog.current_setting('request.jwt.claims',true)::jsonb->>'session_id')::uuid
+    and s.user_id=(pg_catalog.current_setting('request.jwt.claims',true)::jsonb->>'sub')::uuid
+    and (p_cutoff is null or s.created_at>p_cutoff)
+ )
+$$;
+-- Every private/internal entry reads live profile and the narrow session adapter.
 create function private.live_profile() returns public.profiles language plpgsql security definer set search_path='' as $$
-declare p public.profiles; sid uuid;
+declare p public.profiles;
 begin
- sid := (auth.jwt()->>'session_id')::uuid;
- select * into p from public.profiles where id=auth.uid() and account_status='ACTIVE';
- if p.id is null or sid is null or not exists(select 1 from auth.sessions s where s.id=sid and s.user_id=p.id and (p.sessions_revoked_before is null or s.created_at>p.sessions_revoked_before)) then raise exception 'ACCESS_DENIED'; end if;
+ select * into p from public.profiles where id=private.request_user_id() and account_status='ACTIVE';
+ if p.id is null or not private.session_valid(p.sessions_revoked_before) then raise exception 'ACCESS_DENIED'; end if;
  return p;
 end $$;
 create function private.live_self(p_id uuid) returns boolean language plpgsql security definer set search_path='' as $$
@@ -26,7 +40,7 @@ end $$;
 create function private.writer() returns public.profiles language plpgsql security definer set search_path='' as $$
 begin
  perform pg_catalog.pg_advisory_xact_lock(20261006,1);
- perform 1 from public.profiles where id=auth.uid() for update;
+ perform 1 from public.profiles where id=private.request_user_id() for update;
  return private.live_profile();
 end $$;
 create function private.check_version(actual bigint,expected bigint) returns void language plpgsql set search_path='' as $$
@@ -206,7 +220,7 @@ grant select(id,display_name,role,account_status,version) on public.profiles to 
 create policy self_profile_read on public.profiles for select to authenticated using(private.live_self(id));
 -- Function owners are neither postgres nor BYPASSRLS; helpers not exposed by PostgREST.
 do $$ declare f record; begin
- for f in select p.oid::regprocedure as signature from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='private' or (n.nspname='public' and p.proname in ('public_venues','current_access','staff_directory','membership_directory','audit_feed','update_own_profile','update_venue','update_access','set_account_status','set_staff_membership_status','revoke_own_sessions')) loop
+ for f in select p.oid::regprocedure as signature from pg_proc p join pg_namespace n on n.oid=p.pronamespace where (n.nspname='private' and p.proname<>'session_valid') or (n.nspname='public' and p.proname in ('public_venues','current_access','staff_directory','membership_directory','audit_feed','update_own_profile','update_venue','update_access','set_account_status','set_staff_membership_status','revoke_own_sessions')) loop
   execute format('alter function %s owner to volume_core',f.signature);
   execute format('revoke all on function %s from public,anon,authenticated',f.signature);
  end loop;
@@ -216,3 +230,11 @@ grant execute on function public.public_venues() to anon,authenticated;
 grant execute on function public.current_access(),public.staff_directory(uuid),public.membership_directory(uuid),public.audit_feed(uuid),public.update_own_profile(text,bigint),public.update_venue(uuid,bigint,text,text,text,text,boolean,boolean,text),public.update_access(uuid,bigint,text,jsonb,text),public.set_account_status(uuid,bigint,text,text),public.set_staff_membership_status(uuid,bigint,bigint,text,text),public.revoke_own_sessions(bigint) to authenticated;
 
 revoke create on schema public,private from volume_core;
+
+-- Managed Auth owner already has the correct table-owner read access under RLS.
+-- Only this tiny read-only adapter uses that owner, not business RPCs.
+grant usage,create on schema private to supabase_auth_admin;
+alter function private.session_valid(timestamptz) owner to supabase_auth_admin;
+revoke create on schema private from supabase_auth_admin;
+revoke all on function private.session_valid(timestamptz) from public,anon,authenticated,service_role;
+grant execute on function private.session_valid(timestamptz) to volume_core;
