@@ -27,6 +27,10 @@ jobs:
           supabase start
           supabase db reset
           docker exec supabase_db_volume-preflight psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c "select column_name,data_type from information_schema.columns where table_schema='auth' and table_name='sessions' order by ordinal_position;"
-      - name: Real Auth session lifecycle compatibility\n        run: |\n          cd "$RUNNER_TEMP/volume-preflight"\n          node --experimental-strip-types "$GITHUB_WORKSPACE/tests/integration/fixtures/auth.ts" --preflight\n      - name: Stop local stack
+      - name: Real Auth session lifecycle compatibility
+        run: |
+          cd "$RUNNER_TEMP/volume-preflight"
+          node --experimental-strip-types "$GITHUB_WORKSPACE/tests/integration/fixtures/auth.ts" --preflight
+      - name: Stop local stack
         if: always()
         run: cd "$RUNNER_TEMP/volume-preflight" && supabase stop --no-backup
