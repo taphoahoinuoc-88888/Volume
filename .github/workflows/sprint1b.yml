@@ -85,7 +85,7 @@ jobs:
           for p in pathlib.Path('test-results').rglob('*'):
             if p.suffix in {'.json','.md','.txt'}:
               content=p.read_text()
-              content=re.sub(r'Local-[0-9a-f-]+!|Recovered-browser-password-2026!|eyJ[A-Za-z0-9_.-]+|sb_secret_[A-Za-z0-9_-]+','[REDACTED]',content)
+              content=re.sub(r'Local-[0-9a-f-]+!|Recovered-browser-password-2026!|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+|sb_secret_[A-Za-z0-9_-]+','[REDACTED]',content)
               content=re.sub(r'([?&](?:token|token_hash|access_token|refresh_token)=)[^&\s\"\'<>]+',r'\1[REDACTED]',content)
               p.write_text(content)
           PY

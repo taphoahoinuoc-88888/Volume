@@ -19,6 +19,7 @@ test('PW02: direct route and actual backend cross-role/cross-venue requests deny
 });
 test('PW06: status-only HR gets target CAS without directory, cross-venue or other roles',async({page,volume:f})=>{
  const own=await f.membership('hrA');await f.changeRole('hrA','STAFF','admin1',[{id:own.id,venue_id:f.A,status:'ACTIVE',extra_permissions:['STAFF_MEMBERSHIP_STATUS_MANAGE'],expected_version:own.version}]);
+ await f.login('hrA');expect((await f.rpc('hrA','current_access')).status).toBe(200);
  await login(page,f,'hrA');await page.getByRole('link',{name:'Nhân sự & truy cập',exact:true}).click();
  await expect(page.getByRole('heading',{name:'staffA',exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'managerA',exact:true})).toHaveCount(0);await expect(page.getByRole('heading',{name:'staffB',exact:true})).toHaveCount(0);
  expect((await f.rpc('hrA','staff_directory',{p_venue:f.A})).status).toBeGreaterThanOrEqual(400);
@@ -28,8 +29,8 @@ test('PW06: status-only HR gets target CAS without directory, cross-venue or oth
  await page.goto(control+'/people');
  const current=await f.membership('hrA');
  const revoked=await f.changeRole('hrA','STAFF','admin1',[{id:current.id,venue_id:f.A,status:'ACTIVE',extra_permissions:[],expected_version:current.version}]);expect(revoked.status).toBe(200);
- await page.getByRole('button',{name:'Tải lại dữ liệu'}).click();await expect(page.getByRole('heading',{name:'Đăng nhập',exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'staffA',exact:true})).toHaveCount(0);
+ expect((await f.rpc('hrA','current_access')).status).toBeGreaterThanOrEqual(400);await page.evaluate(()=>window.dispatchEvent(new Event('focus')));await expect(page.getByRole('heading',{name:'Đăng nhập',exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'staffA',exact:true})).toHaveCount(0);
  await login(page,f,'hrA');await expect(page.getByRole('link',{name:'Nhân sự & truy cập',exact:true})).toHaveCount(0);
- await f.login('hrA');expect((await f.rpc('hrA','membership_mutation_targets',{p_venue:f.A})).status).toBeGreaterThanOrEqual(400);
+ await f.login('hrA');expect((await f.rpc('hrA','current_access')).status).toBe(200);expect((await f.rpc('hrA','membership_mutation_targets',{p_venue:f.A})).status).toBeGreaterThanOrEqual(400);
 });
 

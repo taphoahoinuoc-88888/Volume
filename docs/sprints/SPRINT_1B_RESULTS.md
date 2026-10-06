@@ -1,37 +1,140 @@
-# Checkpoint 1B — AUTHORIZED / IN PROGRESS
+# Checkpoint 1B — IN PROGRESS / NOT FROZEN
 
-Date:2026-10-06. Owner conditionally authorized1B after direct GitHub preflight. Branch checkpoint-1b starts exactly at frozen main `1910394b2c446c031109da6f170ead83169ff015`. Checkpoint1A CLOSED/FROZEN remains unchanged. No1B application code, dependencies or CI configuration created.
+Date: 2026-10-06. Branch: `checkpoint-1b`. Owner authorized product surfaces after direct GitHub preflight and a separate, narrowly scoped 1A read maintenance. No 1B merge or production deployment has been performed. Sprint 2 has not started.
 
-## Direct GitHub preflight — PASS
-Fresh reads from GitHub, not prior conclusion: main HEAD equals expected1910394; PR1 state closed/merged=true, target main, merge7cc481f5f2c58d2d5b04108b14fefd2720920939. Compare88ad708 to frozen main: only existing workflow trigger and four status/result documents differ; migrations/helpers/RPC/tests are unchanged.
-Main workflow https://github.com/HAD10202/Volume/actions/runs/37450151247 completed SUCCESS on expected SHA. Actual job112224490278 logs contain57 DB assertions across7 files PASS and22 integration tests across5 files PASS. DB RLS/revocation/RPC-audit/version/bootstrap/constraints/concurrency files all ok; API/security, version, revocation, concurrent transactions and actual recovery suites all PASS. Allowlist/secret scan/typecheck/npm audit steps PASS;zero vulnerabilities.
-Freshly fetched all41 tracked blobs at expected SHA: secret-pattern scan clean, no apps/packages or future module implementations. Source tree contains only four business entities. No full security certification is inferred from pattern scanning alone. Original Legacy ZIP SHA256 f0b0cf8372b1a127a30362bd1a584bb0c1e8a4d3346de6f3113cfdb4d007837b;235 extracted files compared byte-for-byte:zero mismatches. No Legacy code/config/data changed.
+## Frozen base and maintenance closure
 
-## Contract review
-Read frozen AGENTS, Blueprint, architecture, permissions, Sprint1 and related ADRs from GitHub. Owner current authorization supersedes historical Sprint0 authorization flags. Planned exact1B allowlist contains56 paths. This sole new report is explicitly allowed; no allowlist expansion. Frozen migrations/RLS/RPC/security/config/1A tests are outside1B mutation scope.
+Original expected main `1910394b2c446c031109da6f170ead83169ff015` was freshly verified: PR #1 merged; full main Actions run [37450151247](https://github.com/HAD10202/Volume/actions/runs/37450151247) SUCCESS, 57 database assertions / 22 real API tests. Compared with approved88ad708: core implementation/tests unchanged. Legacy235 reference files were rechecked byte-for-byte against the original ZIP; zero differences. ZIP SHA256: `f0b0cf8372b1a127a30362bd1a584bb0c1e8a4d3346de6f3113cfdb4d007837b`.
 
-## Blocker — missing authorized access-management read projections
-Source at frozen SHA: supabase/migrations/20261006000200_permissions_rpc_audit.sql.
-1. private.live_self (line24) compares caller profile.id only; authenticated SELECT profiles policy(line220) is self-only, including Admin. current_access(line74) returns only caller profile. staff_directory(line86)/membership_directory(line94) start from memberships at a supplied venue. Therefore Admin cannot list/select/read a USER or ADMIN/CEO without a membership, or load that target's current role/account state/version for safe access/account management preview. Write RPCs exist, but a manually entered UUID/guessed version is not a usable or authoritative preview.
-2. Both staff_directory and Admin membership_directory omit target account_status. A membership ACTIVE is not proof account ACTIVE. UI must not label a disabled account enabled or invent the before-state for account status diff. Audit history is not a current-state read authority and may not cover every seeded/imported account.
-3. HR fixed extra STAFF_MEMBERSHIP_STATUS_MANAGE may be granted independently of STAFF_DIRECTORY_READ. A STAFF caller with status-only extra can write another STAFF membership with expected membership/profile versions, but current read paths expose only own membership, and can_directory requires separate directory permission. set_staff_membership_status(line193/200) requires both target versions. There is no authorized target/edit projection for this valid permission combination. Tests presently obtain those target versions through isolated fixture SQL, not a browser-readable authorized projection.
+1B preflight identified three missing reads: Admin targets without memberships; authorized target account_status; independent HR mutation target versions without directory access. Owner authorized separate1A maintenance. [PR #2](https://github.com/HAD10202/Volume/pull/2) merged; **maintenance CLOSED / FROZEN**. New frozen main:
+`68541f8a71a0ae10ac22d819a79f78982cf37abb`.
+Post-merge main [run37453711509](https://github.com/HAD10202/Volume/actions/runs/37453711509), job112236091294: **SUCCESS;78 DB assertions /27 API tests**. Previous57/22 preserved and expanded, not replaced.
 
-These gaps block required people/access/account-state UI and preview/version UX. Authentication UI could be implemented alone, but owner explicitly requires STOP before changing frozen1A contract; no partial product implementation started.
+Maintenance delta exactly six approved paths: new `supabase/migrations/20261006000300_access_read_projections.sql`, `supabase/tests/sprint1_projections.test.sql`, `tests/integration/sprint1-projections.test.ts`, existing `.github/workflows/sprint1a.yml`, `docs/sprints/SPRINT_1.md`, `docs/sprints/SPRINT_1A_RESULTS.md`. No old migration/write contract, role model, Auth grant, entity, dependency or broad client SELECT changed.
 
-## Owner decision required — proposal only, NOT applied
-Authorize a separate1A maintenance scope before resuming1B: minimum Admin-only account/access read projection for eligible targets, including id/display_name/role/account_status/profile.version and necessary membership ids/scopes/status/fixed extras/versions; and an action-specific HR target projection limited to other STAFF at authorized venues with both versions, without implicitly granting directory permission. Reuse existing four entities, live session/cutoff authority and fixed permission vocabulary. No Auth contacts/session cutoff exposure, generic permission builder, service-role proxy or broad profile SELECT grant proposed.
-Exact new migration/test paths and maintenance allowlist must be owner-approved first. No new RPC/schema/RLS grant created, no frozen migration edited. This is an integration-contract proposal, not an approved architecture change.
+New `account_access` is live Admin-only, safe account/access fields including no-membership and disabled targets. `membership_mutation_targets` is action-specific, other STAFF only at the caller's authorized venue, both bigint versions/account status, including INACTIVE for reactivation; no independent directory grant, extras, unrelated staff or Auth data. Negative/cross-role/cross-venue/direct-field/CAS/revocation tests PASS. Provider revoke-all of another user by user_id remains unsupported and not implemented; DB cutoff remains mandatory authority.
 
-## Tests / handoff status
-1A preflight evidence PASS;1B typecheck/lint/build/unit/route/Playwright/backend browser integration/CI NOT RUN because implementation is stopped at contract blocker.1B is BLOCKED, never PASS/frozen.
-Changed file: docs/sprints/SPRINT_1B_RESULTS.md only. No dependency/version delta, no1B app/CI/tests, no main/history rewrite, no1A maintenance implementation, no Sprint2 or future module. Do not proceed until owner resolves maintenance scope. STOP.
+1B history updated by merge `e745f6d3609c7b64f5ee00d19dd17d455a0453f1`, retaining main history. All frozen Supabase config/migrations/helpers/RLS/RPC, core integration/SQL tests, AGENTS, Blueprint, permissions, architecture and ADR files remain unchanged in1B.
 
-## Owner resolution — resume1B
-Owner authorized separate1A maintenance; PR2 merged and CLOSED/FROZEN at68541f8a71a0ae10ac22d819a79f78982cf37abb, complete main CI37453711509 SUCCESS(78 DB/27 integration). Missing read projections resolved by minimum account_access and membership_mutation_targets; no broader role/security model. Previous blocker section is historical.1B updated from this exact main without rewriting1A history. Resume only56-path1B allowlist; all Supabase migrations/config/RLS/RPC and core tests unchanged. No Sprint2.
+## Product behavior
 
-## Implementation under test — NOT FROZEN
-Current UI implementation only in56-path allowlist. Three pure permission tests PASS locally; typecheck/lint/build PASS locally after Vite8 config compatibility correction. Actual backend/browser CI pending; no product PASS claim. No old Supabase/core test modifications.
-Dependencies pinned/locked: React/react-dom19.3.0 and types19.3.0; Supabase JS2.117.2 (Auth, recovery, Data API; Node>=22); Refine core5.0.12 and TanStack Query5.104.1 (Auth/data/access provider and cache); Radix Dialog1.2.0 (accessible confirmation/focus); Vite8.3.3 (two app builds/dev server); Playwright1.63.0 (Chromium/WebKit); ESLint10.12.0 and TypeScript parser8.71.1 (lint). Existing pg/types/TypeScript/Vitest pins unchanged. No UI animation, Tailwind toolchain, provider-specific schema, API server or business dependency.
-Small shadcn-style local UI primitives use semantic button/input/table and official Radix Dialog with CSS instead of adding a CSS build stack. No complex widget is rewritten. Auth/session operations use stable Supabase SDK; Refine data adapter maps only fixed existing RPCs, not generic client CRUD writes. Role/navigation helper reflects current_access and scoped extras; backend remains authority. Auth contact information/session cutoff never rendered.
-54 real Playwright cases planned:9 flows across Chromium/WebKit desktop1440/mobile390/small320. Actual recovery via local mail/provider link, self name validation/CAS/logout/disabled account, old-tab cutoff, all5 roles and direct cross-venue/backend denial, independent HR status-only permission, Admin no-membership account/access/state preview and audit, stale confirmation, mobile overflow/focus/screenshots. Network traces/video disabled to avoid capturing Auth tokens. This is Linux browser-engine verification, not physical macOS/Safari/iPhone certification.
-Frozen1A regression required:78 database assertions and27 real API integrations. Entire full CI must be SUCCESS before1B PASS/freeze. No production deploy, main merge or Sprint2.
+- Customer: email/password login, local logout, real email recovery/new password, own display name with validation and bigint CAS; own session cutoff action.
+- Control Center: Refine Auth/data/access providers, role-aware overview, venue, people/access, audit. USER cannot access internal surfaces. STAFF has only its authorized routes/data; Manager venue choices are assigned venues; CEO has global read surfaces without security writes.
+- Admin can manage accounts with no membership. Account DISABLED and membership INACTIVE have distinct text and effects. HR status-only extra uses the new action projection, not a directory grant.
+- Sensitive writes freeze the preview snapshot, show before/after, require reason, then call the existing RPC with expected_version(s). Stale writes are rejected without success audit; user reloads before confirming again.
+- Unknown resources/actions default deny. UI helpers are not a security boundary. No direct profile/role/audit client writes, service-role, Auth contacts/session rows, generic permissions builder or future menu.
+- Denied live access clears cached protected UI/session. Network/aborted navigation failures are distinguished from database authority denial. Browser Auth/session/recovery use Supabase SDK; no custom token engine.
+
+## Dependencies and compatibility
+
+All pins in the single lockfile. Existing core pins unchanged: TypeScript5.9.3, Vitest5.0.3, pg8.16.3, @types/pg8.15.5, @types/node22.18.6.
+
+| New dependency | Pin | Reason |
+|---|---|---|
+| react / react-dom | 19.3.0 | Two product surfaces |
+| @types/react / @types/react-dom | 19.3.0 | React typecheck |
+| @supabase/supabase-js | 2.117.2 | Official Auth/recovery/Data API client; Node22+ |
+| @refinedev/core | 5.0.12 | Approved Control Center Auth/data/access integration |
+| @tanstack/react-query | 5.104.1 | Refine query cache/provider |
+| @radix-ui/react-dialog | 1.2.0 | Accessible confirmation/focus handling |
+| vite | 8.3.3 | App dev/build tooling |
+| @playwright/test | 1.63.0 | Real Chromium/WebKit E2E |
+| eslint | 10.12.0 | Lint |
+| @typescript-eslint/parser | 8.71.1 | TypeScript/TSX lint parser |
+
+Compatibility checked via npm metadata/peers and actual Node22 install/typecheck/build. Small shadcn-style local button/input/table primitives and official Radix Dialog use semantic CSS rather than an added Tailwind/CVA/generator build stack. This UI composition choice is explicit; not a new security/business architecture. No complex widget/state engine is rewritten. No Refine/Shadcn/React/Playwright was added to the maintenance branch.
+
+Supabase CLI remains pinned2.119.0; same frozen local config/reader bootstrap. Last frozen runtime evidence: PostgreSQL17.11.0.002, GoTruev2.197.0, PostgRESTv16.4, Mailpitv1.31.3. Runner is ubuntu-latest; no sandbox Docker requirement or mocked integration.
+
+## Verification and evidence
+
+Current implementation under real CI: `6bd25957cd31fc3dbb3820b29d0fe56fe7de7e0d`,
+[run37458477800](https://github.com/HAD10202/Volume/actions/runs/37458477800).
+No full PASS claim until this run and final documentation checkpoint are SUCCESS.
+
+| Required group | Current status |
+|---|---|
+| Clean Supabase startup/reset and 78 DB assertions | CI pending for final implementation |
+| 27 real API/security/concurrency/recovery tests | CI pending for final implementation |
+| Typecheck / lint / production builds | Local PASS; final CI pending |
+| 3 permission unit tests | Local PASS; final CI pending |
+| 54 browser/backend cases | CI pending; NOT FROZEN |
+| Allowlist / frozen core / secrets / dependency audit | Final CI pending |
+
+54 cases =9 flows across Chromium/WebKit desktop1440, mobile390, small320. Tests cover real login/recovery/old password denial and link replay; profile validation/CAS/logout/disabled account; old open tab after cutoff; all5 roles/routes and scope; direct cross-role/cross-venue backend denials; HR independent status extra, both CAS versions, no manager/other-venue roster leak, extra revoke/old-tab/new-login; Admin no-membership access/state changes and audit; preview/reason/stale confirmation; changing editor targets without retaining another person's draft; narrow-screen confirmation overflow; keyboard and screenshots.
+
+Tests use anon key plus real user JWT/browser email/password. SQL operator access is isolated fixture setup/reset and observations, not RLS proof. No service-role establishes allow/deny. Worker fixtures use unique real Auth accounts and automatic per-test business reset. Playwright fails fast on failure; remaining cases then NOT RUN, never PASS.
+
+Earlier CI diagnosis: cancelled runs37455946374/37456502418;31ee4e6 compile failure corrected in a6cfe0c;37456885116 found imported reset-hook isolation;37457590421 passed9 Chromium desktop cases but found WebKit login/navigation race. Label association, automatic per-test reset and network-vs-authority error handling corrected. An initial local environment-file suspicion was disproved by the actual GitHub workflow/browser evidence; it is not reported as a backend failure. Run37458477800 then passed17 cases including WebKit Auth/recovery; HR revocation cleared UI before a test attempted to click the old reload button. Test now triggers a protected live refresh without assuming that button survives revocation, and checks that negative requests use a valid current session before grant revocation. No assertion removed or permission relaxed to obtain a pass.
+
+## Security findings and limits
+
+Full source patterns/client configuration checks found no committed secret/service-role. Narrow projection tests remain in complete frozen regression. No private/Auth fields added to product read contracts. Before final artifacts are uploaded, fixture passwords/JWT/recovery token values are redacted from textual reports. Network traces/video are disabled. Earlier diagnostic artifacts could contain ephemeral local test credentials in automatic failure context; no production credentials were used, and those stopped isolated stacks are not final evidence.
+
+CI is Linux Chromium/WebKit browser-engine verification, not physical Safari/macOS/iPhone testing. Physical-device certification, production SMTP/domains/signup/email confirmation/operations (G14) remain NOT RUN/undecided. Local password/redirect policy remains the frozen1A config; no production policy inferred. Build has nonblocking dependency "use client" warnings and a Control Center bundle-size warning; not a server component app. No deployment or performance certification.
+
+## Exact 1B changed files
+
+All56 paths are the existing approved1B allowlist, with no expansion:
+
+- `package.json`
+- `package-lock.json`
+- `tsconfig.base.json`
+- `.gitignore`
+- `.env.example`
+- `.github/workflows/sprint1b.yml`
+- `vitest.config.ts`
+- `apps/customer/package.json`
+- `apps/customer/tsconfig.json`
+- `apps/customer/vite.config.ts`
+- `apps/customer/index.html`
+- `apps/customer/src/main.tsx`
+- `apps/customer/src/App.tsx`
+- `apps/customer/src/styles.css`
+- `apps/customer/src/lib/supabase.ts`
+- `apps/customer/src/features/auth/AuthPage.tsx`
+- `apps/customer/src/features/profile/ProfilePage.tsx`
+- `apps/control-center/package.json`
+- `apps/control-center/tsconfig.json`
+- `apps/control-center/vite.config.ts`
+- `apps/control-center/index.html`
+- `apps/control-center/src/main.tsx`
+- `apps/control-center/src/App.tsx`
+- `apps/control-center/src/styles.css`
+- `apps/control-center/src/providers/auth-provider.ts`
+- `apps/control-center/src/providers/data-provider.ts`
+- `apps/control-center/src/providers/access-control-provider.ts`
+- `apps/control-center/src/components/Shell.tsx`
+- `apps/control-center/src/components/ConfirmChange.tsx`
+- `apps/control-center/src/components/ui/button.tsx`
+- `apps/control-center/src/components/ui/input.tsx`
+- `apps/control-center/src/components/ui/dialog.tsx`
+- `apps/control-center/src/components/ui/table.tsx`
+- `apps/control-center/src/lib/utils.ts`
+- `apps/control-center/src/features/auth/AuthPage.tsx`
+- `apps/control-center/src/features/overview/AccessOverviewPage.tsx`
+- `apps/control-center/src/features/venues/VenuesPage.tsx`
+- `apps/control-center/src/features/people/PeoplePage.tsx`
+- `apps/control-center/src/features/audit/AuditPage.tsx`
+- `packages/shared/package.json`
+- `packages/shared/tsconfig.json`
+- `packages/shared/src/index.ts`
+- `packages/shared/src/database.types.ts`
+- `packages/shared/src/permissions.ts`
+- `packages/shared/src/supabase-client.ts`
+- `packages/shared/src/permissions.test.ts`
+- `playwright.config.ts`
+- `tests/e2e/fixtures/auth.ts`
+- `tests/e2e/sprint1-auth.spec.ts`
+- `tests/e2e/sprint1-permissions.spec.ts`
+- `tests/e2e/sprint1-admin.spec.ts`
+- `tests/e2e/sprint1-mobile.spec.ts`
+- `README.md`
+- `docs/sprints/SPRINT_1.md`
+- `docs/sprints/SPRINT_1B_RESULTS.md`
+- `docs/OPEN_QUESTIONS.md`
+
+## Stop boundary
+
+Maintenance1A CLOSED/FROZEN on main68541f8. Product1B currently under verification on its branch; no schema/security/core test change or additional architectural authorization assumed. No 1B merge, production deployment, Table/Payment/Player/Match/Media/Tournament/Shop/Telegram/CRM/AI/invitation implementation. **Sprint 2 has not started.** Freeze only after complete real CI evidence, then STOP for owner review.
+
