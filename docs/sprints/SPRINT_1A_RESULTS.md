@@ -1,6 +1,6 @@
-# Checkpoint 1A — PASS / FROZEN — CHECKPOINT 1A ONLY
+# Checkpoint 1A — CLOSED / FROZEN — CHECKPOINT 1A ONLY
 
-Scope: Data/Auth/Security Core only. Owner authorized Checkpoint 1A and real Supabase on GitHub Actions ubuntu-latest. Base/main: `375379a72ee49a644bb58301a99eb7ebaf4e80e2`. Branch `checkpoint-1a`; draft PR https://github.com/HAD10202/Volume/pull/1. No merge or Checkpoint 1B authorization.
+Scope: Data/Auth/Security Core only. Owner authorized Checkpoint 1A and real Supabase on GitHub Actions ubuntu-latest. Base/main: `375379a72ee49a644bb58301a99eb7ebaf4e80e2`. Branch `checkpoint-1a`; draft PR https://github.com/HAD10202/Volume/pull/1. Owner has now authorized merge/closure; Checkpoint1B remains unauthorized.
 
 ## Runtime and dependencies
 Real stack: Supabase CLI **2.119.0**, PostgreSQL image **17.11.0.002**, GoTrue **v2.197.0**, PostgREST **v16.4**, Mailpit **v1.31.3**; Ubuntu 24.04.5, Node 22.23.3, npm 10.9.9. Local sandbox does not run Docker; required runtime evidence comes from GitHub Actions, not mocks or static inspection.
@@ -89,3 +89,10 @@ No Customer/Control Center UI, Refine/React/shadcn/Playwright, Player/Match/Tabl
 
 ## Freeze and handoff
 Checkpoint1A implementation is frozen at the tested commit above. Results/status documentation is the only subsequent delta and triggers a final complete CI rerun. Any failed final rerun reopens the checkpoint; no owner-facing completion claim before final branch-head CI succeeds. Preserve both migrations/contracts in future checkpoints. Draft PR1 remains unmerged and main375379a unchanged. STOP; owner review and separate authorization required for1B.
+
+## Owner closure — 2026-10-06
+**Checkpoint 1A CLOSED / FROZEN.** Owner authorized final review and merge; PR #1 merged into main. Merge/main implementation commit: `7cc481f5f2c58d2d5b04108b14fefd2720920939`.
+Final review:28 changed files, all within exact1A allowlist; no Legacy edits/secrets/1B. Compared with approved88ad708: implementation/tests unchanged; only existing allowlisted CI file adds main to push trigger. Pre-merge full run https://github.com/HAD10202/Volume/actions/runs/37449532177 SUCCESS.
+Post-merge main full run https://github.com/HAD10202/Volume/actions/runs/37449817588 **SUCCESS** on merge commit. Required core covers real startup/reset,57 database assertions,22 API/security/concurrency/recovery tests, scope/secret checks and dependency audit. Main tree equals the pre-merge tested PR head5248f5e; no merge-introduced code change. Legacy235-file byte comparison:zero differences.
+This closure-record commit changes only four allowlisted status/result documents and runs the same full CI on main. The final closure-record SHA and its CI run are recorded in PR #1 after SUCCESS; a failure reopens closure and must be reported. Earlier unmerged/pending-review/preflight statements are historical, superseded by this owner closure.
+No new business implementation, deployment, migration changes or Checkpoint1B. **STOP;1B still NOT AUTHORIZED.**
