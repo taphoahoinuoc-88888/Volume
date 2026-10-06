@@ -1,10 +1,10 @@
 # Gate definitions và status — Sprint 0 cuối cùng
 
-G2 đã được owner chốt; architecture cơ bản được chấp thuận. **Checkpoint 1A đã authorize, full CI PASS; 1B chưa authorize.** Gate là điều kiện trước công việc tương ứng, không cho phép tạo schema/module tương lai.
+G2 đã được owner chốt; architecture cơ bản được chấp thuận. **Checkpoint 1A + read maintenance CLOSED/FROZEN tại main68541f8; 1B đã authorize, implementation full CI PASS; final checkpoint CI phải SUCCESS mới freeze trên branch riêng.** Gate là điều kiện trước công việc tương ứng, không cho phép tạo schema/module tương lai.
 
 | Gate | Definition | Status | Phải giải quyết trước | Điều kiện đóng |
 |---|---|---|---|---|
-| G1 | Owner reviews final Sprint0 contract and explicitly authorizes Checkpoint 1A; basic architecture approval alone is insufficient | CLOSED_OWNER_AUTHORIZED_1A | Checkpoint 1A | Owner authorize 1A ngày 2026-10-06; không authorize 1B |
+| G1 | Owner reviews final Sprint0 contract and explicitly authorizes Checkpoint 1A; basic architecture approval alone is insufficient | CLOSED_OWNER_AUTHORIZED_1A | Checkpoint 1A | Owner authorize 1A ngày 2026-10-06; 1B authorization riêng đã được cấp sau preflight/read maintenance |
 | G2 | V1 internal ADMIN/CEO/MANAGER/STAFF and customer USER authenticate email+password; email password recovery; Supabase Auth only; no phone/SMS/social/Telegram/passkey/MFA or prep schema in Sprint1 | CLOSED_OWNER_DECIDED | Checkpoint 1A | Owner decided 2026-10-06; operational email/signup settings separately documented, not an undecided provider gate |
 | G3 | Meaning of open-table payment: deposit, prepaid amount or operational confirmation | OPEN | Sprint 2 | Owner-approved payment business meaning |
 | G4 | Amount/currency, payment method, who may confirm and confirmation responsibility | OPEN | Sprint 2 | Owner-approved amount/method/authority rules |
@@ -39,17 +39,14 @@ Version Supabase/dependency và local Docker môi trường phải được ki�
 ## Các việc chưa có write action được duyệt
 CEO V1 không có quyền ghi nội bộ mặc định. Mỗi write action tương lai cần yêu cầu/scope/audit/tests cụ thể. F6.1 business rules không tự áp dụng. G3–G14 chỉ chốt trước công việc liên quan; không cần giải quyết toàn bộ để làm Auth Core.
 
-## Historical sandbox blocker — resolved through GitHub Actions
-G1 đã đóng; không reopen gate kiến trúc. Local runtime chưa chạy: không Docker/Podman; Supabase CLI 2.119.0 native lỗi download artifact getaddrinfo ETIMEOUT; curl tới official S3 manifest trả HTTP200, nên không kết luận domain hoàn toàn không truy cập được. Native PostgreSQL còn cần non-root; uid_map chỉ UID0, runuser và os.setuid(1001) bị từ chối. Cần môi trường có Docker hoạt động hoặc native runtime có non-root hợp lệ và artifact downloads được CLI hỗ trợ. Không thay đổi schema/provider/session contract.
+## Trạng thái thực thi hiện tại
 
-## Checkpoint 1A — PASS / frozen / STOP
-Real complete GitHub Actions https://github.com/HAD10202/Volume/actions/runs/37445694355 PASS at2db65c8d0e5a0c4155b1357a25ef991d8dd1d603:57 database assertions and22 real API/security/concurrency/recovery tests. Final report commit repeats full CI. See docs/sprints/SPRINT_1A_RESULTS.md for evidence, versions, exact file delta, narrow reader privilege bootstrap and owner-accepted provider limitation.
-volume_core has no Auth grants; private boolean validator has a dedicated NOLOGIN three-column reader. Old provider sessions/refresh cannot bypass database cutoff; provider revoke-all-by-other-user-id is not implemented or required by owner decision.
-Branch checkpoint-1a; draft PR1 unmerged; main unchanged. No production deployment.1B NOT AUTHORIZED; STOP. Production signup/email/SMTP settings and future payment/business gates remain undecided. Frozen Sprint0 documents outside the1A allowlist are historical snapshots; current owner authorization prevails.
+Original 1A closure tại1910394 đã được xác minh lại trực tiếp từ GitHub: PR1 merged; full main CI37450151247 SUCCESS,57 DB/22 API. Sandbox Docker blocker giải quyết bằng real GitHub Actions, không mock Supabase.
 
-## Owner closure — 2026-10-06
-**Checkpoint 1A CLOSED / FROZEN.** Owner authorized final review and merge; PR #1 merged into main. Merge/main implementation commit: `7cc481f5f2c58d2d5b04108b14fefd2720920939`.
-Final review:28 changed files, all within exact1A allowlist; no Legacy edits/secrets/1B. Compared with approved88ad708: implementation/tests unchanged; only existing allowlisted CI file adds main to push trigger. Pre-merge full run https://github.com/HAD10202/Volume/actions/runs/37449532177 SUCCESS.
-Post-merge main full run https://github.com/HAD10202/Volume/actions/runs/37449817588 **SUCCESS** on merge commit. Required core covers real startup/reset,57 database assertions,22 API/security/concurrency/recovery tests, scope/secret checks and dependency audit. Main tree equals the pre-merge tested PR head5248f5e; no merge-introduced code change. Legacy235-file byte comparison:zero differences.
-This closure-record commit changes only four allowlisted status/result documents and runs the same full CI on main. The final closure-record SHA and its CI run are recorded in PR #1 after SUCCESS; a failure reopens closure and must be reported. Earlier unmerged/pending-review/preflight statements are historical, superseded by this owner closure.
-No new business implementation, deployment, migration changes or Checkpoint1B. **STOP;1B still NOT AUTHORIZED.**
+Owner authorize read maintenance riêng, PR2 merged. Main mới `68541f8a71a0ae10ac22d819a79f78982cf37abb`, full main CI37453711509 SUCCESS,78 DB/27 API; maintenance CLOSED/FROZEN. Hai minimum read RPC giải quyết Admin no-membership account preview, account status cần thiết và HR target CAS không mở directory. volume_core không đọc Auth schema; narrow private boolean session validator không expose auth.sessions. Provider revoke-all của user khác bằng user_id không có API được hỗ trợ; DB cutoff vẫn authority, old refreshed sessions bị DENY. Xem SPRINT_1A_RESULTS.
+
+1B được owner authorize, branch checkpoint-1b phát triển từ main mới; implementation product surfaces/real Playwright PASS tại84d31472/run37459331909 (78 DB/27 API/3 unit/54 browser); final checkpoint CI SUCCESS mới freeze. Không sửa frozen migrations/RLS/RPC/core tests. Không production deployment, public signup quyết định mới, Sprint2 hoặc future module. Kết quả cuối tại SPRINT_1B_RESULTS; không tự chuyển Sprint sau.
+
+## Owner authorization — CI/main closure 1B
+
+Owner authorize narrow CI maintenance: original56 product paths plus existing sprint1a workflow path only. Original1A runtime/security checks remain unchanged; actual candidate HEAD is tested, not an older snapshot. Strict frozen-core/product baseline checks prevent unrelated implementation changes. Both1A and1B workflows must SUCCESS on PR and post-merge main before CLOSED/FROZEN. Exact SHAs/runs/test counts recorded in merged PR closure record. No production SMTP/domain/deployment. Sprint2 still requires separate authorization and G3–G7.

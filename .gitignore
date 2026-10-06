@@ -6,3 +6,6 @@ supabase/.temp/
 supabase/.branches/
 coverage/
 *.log
+dist/
+playwright-report/
+test-results/

@@ -189,11 +189,11 @@ Fixture profile/venue/membership version starts 1; old/new expected_version, sam
 ## Freeze 1A
 Required database/API/security tests thực PASS; no NOT RUN/BLOCKED required check. Review grants/definer/current session access and clean migration. Secret/client scan+forbidden entity/module scan+legacy unchanged. Record versions/commands/results/risk/file delta in SPRINT_1A_RESULTS.md; commit/tag 1A checkpoint; DỪNG. Không chạy/build UI/Refine/Playwright hoặc bắt đầu 1B khi chưa authorize. UI/browser tests chưa chạy ở 1A không ngăn freeze 1A, nhưng không gọi Sprint1 toàn bộ DONE.
 
-## Checkpoint 1B — Product Surfaces (planned)
+## Checkpoint 1B — Product Surfaces (owner authorized)
 Entry: owner authorize 1B riêng, 1A PASS+freeze. Customer email/password Auth/Profile/recovery UI; Control Center shell; Refine auth/data/access provider; role-aware navigation; venue/access/people/audit đúng permission; preview diff+reason+expected_version confirm; Playwright desktop/mobile. CEO chỉ branch/access overview, không fake revenue/occupancy. Staff minimal scope, USER không internal. Reuse unchanged 1A RPC/schema/security; no database migration/config/function changes in 1B unless deviation reported/approved first.
 
 ### Planned exact file allowlist 1B
-Danh sách dưới chỉ kế hoạch; không cho phép implement bây giờ. Chốt lại khi owner authorize 1B; không tự mở rộng scope.
+Owner đã authorize1B sau preflight và separate read maintenance. Danh sách56 file dưới là exact allowlist hiện tại; không tự mở rộng scope.
 
 - `package.json`
 - `package-lock.json`
@@ -299,3 +299,13 @@ Owner authorized a separate maintenance branch from frozen main1910394 for minim
 account_access(profile_id optional): live ACTIVE Admin only; id/display_name/role/account_status/version and complete minimum membership scopes/status/fixed extras/version for account/access preview. Includes accounts without membership and disabled targets; no Auth contacts/cutoff/timestamps.
 membership_mutation_targets(venue): live MANAGER/STAFF with ACTIVE membership and STAFF_MEMBERSHIP_STATUS_MANAGE at this venue; only other STAFF target memberships at this venue, including INACTIVE for reactivation. Returns target id/name, venue/membership id, account/membership status, membership.version and profile.version; no other roles, other venues, extras or directory grant. Admin uses account_access and existing ACCESS_MANAGE path. No change to existing staff directory read fields.
 Read RPCs use minimum volume_core owner, empty search_path, restricted EXECUTE and live session/cutoff. No broad SELECT grants, schema/table or generic permission builder. Existing57 DB assertions and22 integration tests must PASS plus new projection/negative/CAS/revocation tests. Merge maintenance only after real CI PASS; freeze new main, update1B base, then resume1B. No Sprint2.
+
+## Current owner authorization — Checkpoint1B
+Owner authorized1B after direct base verification and separate minimum read maintenance. New frozen core base68541f8a71a0ae10ac22d819a79f78982cf37abb; maintenance CI37453711509 SUCCESS. Planned56-path1B allowlist above is the exact current allowlist; no expansion. Auth/profile/Refine/navigation/venue/people/audit/confirmation and real Playwright only. Supabase/core integration tests unchanged. Independent sprint1b workflow runs complete core regression plus product tests on checkpoint-1b. No1B main merge or Sprint2 without next owner instruction.
+
+## Checkpoint1B final verification — 2026-10-06
+Implementation84d31472e0b2435ac21a949d6692c86c9d3be990, full run37459331909 SUCCESS:78 DB/27 API/3 unit/54 Playwright,0 skipped/flaky. Exact56-path delta; frozen core/security/tests unchanged; Legacy235 files unchanged. Final status/documentation checkpoint repeats identical full CI; freeze effective only on its SUCCESS. Final tested SHA/run are available in Actions and owner handoff. STOP after freeze; no Sprint2. No1B PR/main merge: frozen sprint1a.yml PR/main scan needs separately approved CI-policy maintenance outside1B allowlist before that future action. See SPRINT_1B_RESULTS for evidence, versions and limits.
+
+## Owner authorization — Checkpoint1B CI maintenance and closure
+Owner authorizes PR review/merge after branch CI SUCCESS, then post-merge main verification. Exact closure exception: `.github/workflows/sprint1a.yml` outside original56-path product allowlist; edit only its scope scanner. Existing `.github/workflows/sprint1b.yml`, README, OPEN_QUESTIONS, SPRINT_1 and SPRINT_1B_RESULTS are already allowed. No other file expansion.
+Original1A runtime/security steps remain byte-identical and test actual candidate HEAD. Original core-stage scope rules remain; approved product ancestry uses immutable9ba allowlist plus this single exception, frozen685 core comparison and no product/dependency/test changes since9ba. 1B adds PR/main triggers and verifies original1A runtime remains intact. Both PR/main workflows required SUCCESS; real78 DB/27 API regression,3 unit and54 Playwright plus allowlist/secrets/typecheck/lint/build/audit. Full57-file PR reviewed before merge. Final branch/main SHA and run evidence recorded in merged PR closure record. CLOSED/FROZEN only after both post-merge main runs SUCCESS; otherwise report not CLOSED. No production deployment/SMTP/domain and no Sprint2.

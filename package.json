@@ -1,20 +1,39 @@
 {
- "name": "volume-v2",
- "version": "0.1.0",
- "private": true,
- "type": "module",
- "scripts": {
-  "test:integration": "vitest run",
-  "typecheck": "tsc --noEmit -p tsconfig.base.json"
- },
- "engines": {
-  "node": ">=22"
- },
- "devDependencies": {
-  "@types/node": "22.18.6",
-  "@types/pg": "8.15.5",
-  "pg": "8.16.3",
-  "typescript": "5.9.3",
-  "vitest": "5.0.3"
- }
+  "name": "volume-v2",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.base.json",
+    "lint": "eslint --no-config-lookup --ext .ts,.tsx --parser @typescript-eslint/parser --parser-options '{\"ecmaFeatures\":{\"jsx\":true}}' --rule 'no-debugger:error' --rule 'no-constant-condition:error' 'apps/**/src/**/*.{ts,tsx}' 'packages/**/src/**/*.{ts,tsx}' 'tests/e2e/**/*.ts'",
+    "build": "npm run build -w @volume/customer && npm run build -w @volume/control-center",
+    "test:integration": "vitest run tests/integration",
+    "test:unit": "vitest run packages/shared",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.117.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "@refinedev/core": "5.0.12",
+    "@tanstack/react-query": "5.104.1",
+    "@radix-ui/react-dialog": "1.2.0"
+  },
+  "devDependencies": {
+    "pg": "8.16.3",
+    "@types/pg": "8.15.5",
+    "@types/node": "22.18.6",
+    "typescript": "5.9.3",
+    "vitest": "5.0.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "vite": "8.3.3",
+    "@playwright/test": "1.63.0",
+    "eslint": "10.12.0",
+    "@typescript-eslint/parser": "8.71.1"
+  }
 }
