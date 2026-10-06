@@ -93,3 +93,4 @@ jobs:
       - name: Stop local stack
         if: always()
         run: supabase stop --no-backup
+

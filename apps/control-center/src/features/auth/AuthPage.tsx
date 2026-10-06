@@ -7,7 +7,7 @@ export default function AuthPage({notice=''}:{notice?:string}){
   if(recovery){const{error}=await client.auth.updateUser({password});if(error)throw new Error('Không thể đổi mật khẩu. Hãy yêu cầu email khôi phục mới.');await logout();window.location.assign('/login');return;}
   if(forgot){const redirect=(import.meta.env.VITE_CUSTOMER_URL||window.location.origin)+'/recovery';const{error}=await client.auth.resetPasswordForEmail(email,{redirectTo:redirect});if(error)throw new Error('Chưa thể gửi email. Vui lòng thử lại.');setMessage('Nếu email đã có tài khoản, bạn sẽ nhận được hướng dẫn khôi phục.');return;}
   const result=await login.mutateAsync({email,password});if(!result.success)throw new Error(result.error?.message||'Không thể đăng nhập.');
-  await readAccess();window.location.assign(window.location.port==='3000'?'/profile':'/overview');
+  await readAccess();window.location.assign('/overview');
  }catch(e){setMessage(errorMessage(e));}finally{setBusy(false);}}
  return <main className="auth-card"><p className="brand">VOLUME</p><h1>{recovery?'Đặt mật khẩu mới':forgot?'Khôi phục mật khẩu':'Đăng nhập'}</h1><p>{recovery?'Chọn mật khẩu mới cho tài khoản của bạn.':forgot?'Nhập email bạn dùng để đăng nhập.':'Chỉ cần email và mật khẩu của bạn.'}</p>
  <form onSubmit={submit}>{!recovery&&<label>Email<input type="email" autoComplete="email" required value={email} onChange={e=>setEmail(e.target.value)}/></label>}{(!forgot||recovery)&&<label>{recovery?'Mật khẩu mới':'Mật khẩu'}<input type="password" autoComplete={recovery?'new-password':'current-password'} required minLength={recovery?12:undefined} value={password} onChange={e=>setPassword(e.target.value)}/></label>}
