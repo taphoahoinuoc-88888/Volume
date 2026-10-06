@@ -285,3 +285,17 @@ Final review:28 changed files, all within exact1A allowlist; no Legacy edits/sec
 Post-merge main full run https://github.com/HAD10202/Volume/actions/runs/37449817588 **SUCCESS** on merge commit. Required core covers real startup/reset,57 database assertions,22 API/security/concurrency/recovery tests, scope/secret checks and dependency audit. Main tree equals the pre-merge tested PR head5248f5e; no merge-introduced code change. Legacy235-file byte comparison:zero differences.
 This closure-record commit changes only four allowlisted status/result documents and runs the same full CI on main. The final closure-record SHA and its CI run are recorded in PR #1 after SUCCESS; a failure reopens closure and must be reported. Earlier unmerged/pending-review/preflight statements are historical, superseded by this owner closure.
 No new business implementation, deployment, migration changes or Checkpoint1B. **STOP;1B still NOT AUTHORIZED.**
+
+## Authorized Checkpoint1A read maintenance — 2026-10-06
+Owner authorized a separate maintenance branch from frozen main1910394 for minimum read contract only. Existing migrations/writes/RLS/Auth helpers, four entities, role vocabulary, fixed extras, audit and CAS remain immutable. No1B app work here.
+### Exact maintenance file allowlist
+- `supabase/migrations/20261006000300_access_read_projections.sql`
+- `supabase/tests/sprint1_projections.test.sql`
+- `tests/integration/sprint1-projections.test.ts`
+- `.github/workflows/sprint1a.yml`
+- `docs/sprints/SPRINT_1.md`
+- `docs/sprints/SPRINT_1A_RESULTS.md`
+### Maintenance read contract
+account_access(profile_id optional): live ACTIVE Admin only; id/display_name/role/account_status/version and complete minimum membership scopes/status/fixed extras/version for account/access preview. Includes accounts without membership and disabled targets; no Auth contacts/cutoff/timestamps.
+membership_mutation_targets(venue): live MANAGER/STAFF with ACTIVE membership and STAFF_MEMBERSHIP_STATUS_MANAGE at this venue; only other STAFF target memberships at this venue, including INACTIVE for reactivation. Returns target id/name, venue/membership id, account/membership status, membership.version and profile.version; no other roles, other venues, extras or directory grant. Admin uses account_access and existing ACCESS_MANAGE path. No change to existing staff directory read fields.
+Read RPCs use minimum volume_core owner, empty search_path, restricted EXECUTE and live session/cutoff. No broad SELECT grants, schema/table or generic permission builder. Existing57 DB assertions and22 integration tests must PASS plus new projection/negative/CAS/revocation tests. Merge maintenance only after real CI PASS; freeze new main, update1B base, then resume1B. No Sprint2.

@@ -1,4 +1,4 @@
-# Checkpoint 1B — BLOCKED BEFORE APPLICATION IMPLEMENTATION
+# Checkpoint 1B — AUTHORIZED / IN PROGRESS
 
 Date:2026-10-06. Owner conditionally authorized1B after direct GitHub preflight. Branch checkpoint-1b starts exactly at frozen main `1910394b2c446c031109da6f170ead83169ff015`. Checkpoint1A CLOSED/FROZEN remains unchanged. No1B application code, dependencies or CI configuration created.
 
@@ -25,3 +25,6 @@ Exact new migration/test paths and maintenance allowlist must be owner-approved 
 ## Tests / handoff status
 1A preflight evidence PASS;1B typecheck/lint/build/unit/route/Playwright/backend browser integration/CI NOT RUN because implementation is stopped at contract blocker.1B is BLOCKED, never PASS/frozen.
 Changed file: docs/sprints/SPRINT_1B_RESULTS.md only. No dependency/version delta, no1B app/CI/tests, no main/history rewrite, no1A maintenance implementation, no Sprint2 or future module. Do not proceed until owner resolves maintenance scope. STOP.
+
+## Owner resolution — resume1B
+Owner authorized separate1A maintenance; PR2 merged and CLOSED/FROZEN at68541f8a71a0ae10ac22d819a79f78982cf37abb, complete main CI37453711509 SUCCESS(78 DB/27 integration). Missing read projections resolved by minimum account_access and membership_mutation_targets; no broader role/security model. Previous blocker section is historical.1B updated from this exact main without rewriting1A history. Resume only56-path1B allowlist; all Supabase migrations/config/RLS/RPC and core tests unchanged. No Sprint2.
