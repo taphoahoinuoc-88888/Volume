@@ -1,6 +1,6 @@
 # Sprint 1 — Bốn entity, hai checkpoint độc lập
 
-Trạng thái: **1A AUTHORIZED / BLOCKED_AUTH_COMPATIBILITY; 1B PLANNED / NOT AUTHORIZED**. Sprint0 owner approved; G1 CLOSED_OWNER_AUTHORIZED_1A; G2 CLOSED. Chưa app/migration/dependency project/Supabase deployment. 1A PASS không authorize 1B.
+Trạng thái: **1A AUTHORIZED / PASS / FROZEN; 1B PLANNED / NOT AUTHORIZED**. Sprint0 owner approved; G1 CLOSED_OWNER_AUTHORIZED_1A; G2 CLOSED. Chưa app/migration/dependency project/Supabase deployment. 1A PASS không authorize 1B.
 
 ## Business scope không đổi
 profiles, venues, staff_memberships, audit_events. Supabase-managed auth.users/auth.sessions không business entity mới; không expose Auth schema. Năm role/matrix giữ nguyên. Auth mọi role Email + Password, recovery email. Không phone/SMS/social/Telegram/passkey/MFA; không schema chuẩn bị provider.
@@ -274,11 +274,7 @@ Record evidence/file delta in SPRINT_1B_RESULTS.md; checkpoint/tag and STOP. Onl
 ## Execution update 2026-10-06
 Đã thực hiện runtime preflight; chưa chạy local stack hoặc matrix DB/API. Kết quả và các bước còn lại ghi SPRINT_1A_RESULTS.md. Không thay allowlist/scope/schema/test contract. Không freeze 1A.
 
-## Execution update — GitHub Actions
-Owner authorized real Supabase on ubuntu-latest CI. Branch checkpoint-1a from375379a; runtime/session preflight PASS at2a1c8a2, run37439354568. Core/matrix implementation under test; not complete/frozen. Original sandbox blocker is superseded by CI execution; previous notes retain historical evidence. No contract/allowlist change, no main merge, no1B. See SPRINT_1A_RESULTS.md.
-
-## STOP — actual CI compatibility findings
-Latest tested implementation240e159; workflow37442226921: startup/reset PASS, DB security suite FAIL (Auth schema USAGE missing for private definer owner; auth.sessions RLS enabled), API/security suite NOT RUN. Provider revoke-by-user-id also needs owner contract decision. See docs/sprints/SPRINT_1A_RESULTS.md (from repository root). No privilege escalation workaround applied.1A not complete/frozen; main unmerged;1B not authorized.
-
-## Owner resolution — resume1A
-Owner accepted provider revoke limit and authorized a narrow private session helper. Core has no direct Auth schema access. Resume full real CI; no1A PASS/freeze yet. Previous blocker notes are historical; no1B authorization or main merge. See SPRINT_1A_RESULTS.md.
+## Checkpoint 1A — PASS / frozen / STOP
+Real complete GitHub Actions https://github.com/HAD10202/Volume/actions/runs/37445694355 PASS at2db65c8d0e5a0c4155b1357a25ef991d8dd1d603:57 database assertions and22 real API/security/concurrency/recovery tests. Final report commit repeats full CI. See docs/sprints/SPRINT_1A_RESULTS.md for evidence, versions, exact file delta, narrow reader privilege bootstrap and owner-accepted provider limitation.
+volume_core has no Auth grants; private boolean validator has a dedicated NOLOGIN three-column reader. Old provider sessions/refresh cannot bypass database cutoff; provider revoke-all-by-other-user-id is not implemented or required by owner decision.
+Branch checkpoint-1a; draft PR1 unmerged; main unchanged. No production deployment.1B NOT AUTHORIZED; STOP. Production signup/email/SMTP settings and future payment/business gates remain undecided. Frozen Sprint0 documents outside the1A allowlist are historical snapshots; current owner authorization prevails.

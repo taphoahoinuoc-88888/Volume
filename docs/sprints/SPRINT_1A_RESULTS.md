@@ -1,55 +1,58 @@
-# Checkpoint 1A — BLOCKED_PROVIDER_REVOKE_CONTRACT / NOT FROZEN
+# Checkpoint 1A — PASS / FROZEN — CHECKPOINT 1A ONLY
 
-Owner authorized GitHub Actions ubuntu-latest as the real Supabase execution environment. Base: 375379a72ee49a644bb58301a99eb7ebaf4e80e2; working branch checkpoint-1a; draft PR https://github.com/HAD10202/Volume/pull/1. No merge or 1B authorization.
+Scope: Data/Auth/Security Core only. Owner authorized Checkpoint 1A and real Supabase on GitHub Actions ubuntu-latest. Base/main: `375379a72ee49a644bb58301a99eb7ebaf4e80e2`. Branch `checkpoint-1a`; draft PR https://github.com/HAD10202/Volume/pull/1. No merge or Checkpoint 1B authorization.
 
-## Real runtime compatibility evidence
-Preflight commit 2a1c8a2777522520df0166592236071d63ef373c; workflow https://github.com/HAD10202/Volume/actions/runs/37439354568; job112188957380 PASS. Startup/reset and actual email/password signup/login/refresh/re-login PASS. Refresh preserves session_id and auth.sessions.created_at; re-login creates distinct session. This preflight does NOT prove the complete 1A matrix.
-Actual stack: Supabase CLI2.119.0; PostgreSQL image17.11.0.002; GoTruev2.197.0; PostgRESTv16.4; Mailpitv1.31.3. Runner Ubuntu24.04.5/Node22.23.3. Initial ECR rate limits recovered automatically. CLI npm global install is supported by this verified version despite older documentation; no production deploy.
+## Runtime and dependencies
+Real stack: Supabase CLI **2.119.0**, PostgreSQL image **17.11.0.002**, GoTrue **v2.197.0**, PostgREST **v16.4**, Mailpit **v1.31.3**; Ubuntu 24.04.5, Node 22.23.3, npm 10.9.9. Local sandbox does not run Docker; required runtime evidence comes from GitHub Actions, not mocks or static inspection.
+Development/test dependencies only, exactly pinned and locked: `pg` 8.16.3 (SQL fixtures, observations, independent transaction connections), `@types/pg` 8.15.5 and `@types/node` 22.18.6 (typing), TypeScript 5.9.3 (typecheck), Vitest 5.0.3 (headless API/security integration). No new dependencies for the session helper. Older Vitest 3.2.4 was upgraded before full execution; npm audit reports zero vulnerabilities. Actual Auth/Data APIs use native Node fetch with anon key and real user JWTs.
 
-## Dependencies
-All development/test only: pg8.16.3 for PostgreSQL fixture setup, observations and independent transaction connections; @types/pg8.15.5 and @types/node22.18.6 for static typing; TypeScript5.9.3 for test typechecking; Vitest5.0.3 for headless integration suites. Initial3.2.4 audit reported vulnerabilities, upgraded to5.0.3 before full CI; npm audit reports zero vulnerabilities. Exact package-lock required. Auth tests call real Supabase HTTP endpoints with Node fetch; no custom Auth implementation or mocked provider.
+## Migrations, RPCs and transaction contract
+Migrations: `20261006000100_identity_scope.sql`, `20261006000200_permissions_rpc_audit.sql`. Exactly four business entities: profiles, venues, staff_memberships, audit_events. Supabase-managed Auth tables are not business entities.
+RPCs: public_venues, current_access, staff_directory, membership_directory, audit_feed, update_own_profile, update_venue, update_access, set_account_status, set_staff_membership_status, revoke_own_sessions. Private helpers validate live profiles, sessions, authority, scope, fixed permissions, expected versions and audit payloads.
+Mutable entities use positive bigint version, updated_at only for time. Mutations serialize through one transaction advisory lock, lock caller/target, recheck live authority, compare expected versions, update/version+1/cutoff/audit atomically. Multirow changes require every existing row version. Current-version no-op returns NO_CHANGE without version increase or success audit. Stale/missing version is VERSION_CONFLICT. Audit failure rolls back data, version and cutoff. Bigint versions return decimal strings for exact values beyond JavaScript safe integer. Global mutation serialization favors simple V1 correctness and limits write throughput.
 
-## Implementation under test
-Two migrations: 20261006000100_identity_scope.sql and 20261006000200_permissions_rpc_audit.sql. Four business tables only. Non-login/non-superuser/non-BYPASSRLS volume_core owner; private helpers, restricted grants and RLS. RPCs: public_venues, current_access, staff_directory, membership_directory, audit_feed, update_own_profile, update_venue, update_access, set_account_status, set_staff_membership_status, revoke_own_sessions. Fixed search_path and schema-qualified references; private functions revoked by default. Versions return decimal strings for exact bigint values beyond JavaScript safe integer.
-Sensitive mutations serialize using one transaction advisory lock, lock caller/target and recheck live session/authority. Multirow change-sets include each expected version; non-staff role transition requires explicit inactivation versions for existing memberships. Account/membership/role/scope/extra changes set cutoff. Self revoke audits before its own cutoff inside the same transaction. Audit failure rolls back domain data/version/cutoff.
+## Session validation security boundary
+Application role `volume_core` has **no USAGE on auth and no SELECT on auth.sessions**. Business helper/RPC owner volume_core is NOLOGIN, non-superuser and non-BYPASSRLS.
+`private.session_valid(cutoff)` returns only a boolean. User/session identifiers come from verified PostgREST request claims, not a caller-selected user argument. Objects are schema-qualified, search_path is empty, no dynamic SQL. Private schema is not exposed. PUBLIC/anon/authenticated/service_role cannot execute the helper; only volume_core can. Clients cannot read Auth schema through the Data API.
+Owner is dedicated technical role `volume_session_reader`, NOLOGIN/NOINHERIT, not superuser. It has Auth schema USAGE and SELECT only on auth.sessions(id,user_id,created_at), no other session columns, Auth users or business table access/write. No application role inherits it. Managed auth.sessions RLS requires BYPASSRLS for this reader, but object/column grants limit its effective surface. Trusted local CI operator initializes only those explicit privileges after clean reset using the stock supabase_admin connection; no embedded operator credential, Auth service-role inheritance or production deployment. Managed Auth lifecycle strips arbitrary Auth schema grants, so this explicit local bootstrap is required and tested.
+Protected Auth-role ownership transfer failed in run37444275577. Automatic approval review rejected staging a postgres-owned definer as too broad; that design was never pushed. The narrow reader is the approved safer alternative. These are historical failed attempts, not acceptance evidence.
 
-## Tests and status
-Local typecheck PASS; YAML parsing/allowlist checks PASS. Full GitHub Actions matrix ran partially and FAILS. Latest tested implementation commit240e1595f2f22da66017ae517787cecb3e878482, run37442226921, job112198489719. Database suite FAIL; API suite SKIPPED / NOT RUN because database step failed. No freeze/completion claim. Required tests are not replaced by static checks or preflight.
-Database files cover constraints, grants/RLS, RPC/audit, revocation, versions, last-Admin invariant and bootstrap. Integration suites cover actual tokens, full role/scope matrix, metadata forgery, HR limits, direct audit denial, old refresh/new session/cutoff boundaries, injected bootstrap/audit faults, bigint exactness/overflow/multirow rollback, concurrent CAS/Admin protection/authority recheck, and captured email recovery/replay/expiry.
-Privileged SQL is confined to isolated local fixture setup, fault injection and observations; allow/deny requests always use anon key and real user JWTs. Provider revoke failure is modeled by deliberately leaving real old Auth sessions alive after DB cutoff, proving application denial independent of provider success.
+## Provider revocation limitation accepted by owner
+Pinned Supabase has no Admin API to revoke all sessions of another user by user_id alone. We do not store target JWTs, write/delete production auth.sessions or ban accounts to force logout. Provider-side administrative revoke is not claimed implemented.
+Database live rows and cutoff remain authoritative. Role/scope/extra/membership/account changes advance cutoff. Old sessions and refreshed JWTs from those sessions cannot access VOLUME private/internal data after commit. Re-login creates a new session using current rights. Tests deliberately leave old provider sessions alive; application denial must hold even if refresh succeeds. Session created_at must be strictly after cutoff. Test-only Auth-row fault injection verifies missing/wrong-user session denial and does not create a production session-write path.
 
-## Security / limits
-No full security acceptance: database suite FAIL and API suite NOT RUN.1A is incomplete; no freeze/tag. No Auth schema exposure; no service-role key used by allow/deny clients. Startup logs suppressed to avoid CLI printing local generated keys. No production credentials. Provisioning Edge Function is optional and not implemented: test operator uses real signup plus controlled SQL fixture bootstrap/reconciliation audit; no generic privileged API proxy.
-No architectural deviation applied. Global mutation serialization is intentionally simple for V1 and may limit write throughput; no extra entity/service. No production SMTP/signup policy decision is implied by local auto-confirm/rate-limit settings.
+## Tests and evidence
+Tested implementation commit **`2db65c8d0e5a0c4155b1357a25ef991d8dd1d603`**. Real complete workflow **https://github.com/HAD10202/Volume/actions/runs/37445694355**, job112209851447: **SUCCESS**. Final report commit reruns the same complete workflow; no implementation changes after this tested SHA. Branch is the review checkpoint; no tag/main merge required.
 
-## File delta / checkpoint
-Source changes must remain within the frozen exact allowlist. Final file list, commit SHA and all group results will be recorded after actual CI. Frozen documents/Legacy unchanged. Do not label this checkpoint PASS or create freeze tag before all required tests pass.
+| Required group | Actual result |
+| --- | --- |
+| Supabase startup; clean migration/reset | PASS |
+| Exactly four entities; constraints; bootstrap USER/ACTIVE/version1 | PASS |
+| RLS allow/deny; cross-venue; USER isolation; CEO security denial | PASS |
+| Unknown permissions; escalation; direct audit modification denial | PASS |
+| Narrow reader grants; private helper/direct Auth access denial | PASS |
+| Session/role/scope/extra/membership/account cutoff; old refresh denied; new login | PASS |
+| Missing/wrong-user session and exact cutoff boundary | PASS |
+| Bigint CAS; stale/missing version; no-op; overflow; multirow rollback | PASS |
+| Concurrent CAS; last active Admin; locked authority recheck | PASS |
+| Audit atomicity; injected audit failure rollback | PASS |
+| Actual API/security integration | PASS |
+| Headless email recovery; replay/expiry; target-only password update | PASS |
+| Allowlist/frozen documents; forbidden surfaces; secret scan | PASS |
+| Typecheck; npm dependency audit | PASS; zero vulnerabilities |
+| Legacy ZIP/extracted byte comparison | PASS;235 files, zero mismatches |
+
+**57 database assertions across seven files PASS;22 integration tests across five files PASS.** No required group SKIPPED/BLOCKED/NOT RUN. All allow/deny evidence uses actual Supabase, not service-role bypass or mocks.
+Historical run37445004705 had53 DB assertions PASS and five API failures from ambiguous PL/pgSQL alias. The alias was fixed; four reader privilege assertions and direct Data API denial test were added. The complete rerun above supersedes those failures. Earlier runtime/provider blocker runs do not count as acceptance evidence; owner resolved provider contract explicitly.
+
+Database suites cover exactly four entities/constraints, bootstrap USER/ACTIVE/version1, grants/RLS, venue/customer isolation, privilege escalation, fixed permissions, direct audit denial, CEO security denial, live cutoff, version CAS/no-op and audit atomicity. API suites additionally use real signed tokens, old refresh/new login, boundary/wrong-user/missing sessions, injected audit/bootstrap failure rollback, exact bigint/overflow, multirow constraints, parallel CAS/last Admin/authority recheck and email recovery. Privileged SQL is confined to isolated fixtures/fault injection/observations; RLS allow/deny never uses service-role.
+
+## Security and limits
+No public/client service-role key; generated local startup credentials are not logged. No production secrets or user data. Optional admin provisioning Edge Function omitted: test-only real signup plus trusted fixture bootstrap/reconciliation audit is sufficient. No custom Auth or generic privileged API proxy. Production SMTP, email verification/public signup policy, password/redirect settings remain owner decisions before live use; local settings are isolated test settings.
+Frozen architecture/permissions/Blueprint/AGENTS/ADR and Legacy remain unchanged. Legacy ZIP SHA256 `f0b0cf8372b1a127a30362bd1a584bb0c1e8a4d3346de6f3113cfdb4d007837b`; final extracted235-file byte comparison: zero mismatches.
 
 ## Not implemented
-No Customer/Control Center UI, Refine/React/shadcn/Playwright, future business module/schema/menu, invitation module, production deployment, main merge or Checkpoint1B.
-
-## Architectural blocker — reported, not silently changed
-Pinned GoTruev2.197.0 source routes expose /logout with authenticated target-user JWT; no Admin revoke-all-by-user-id endpoint. Admin signOut SDK also takes target JWT. After Admin changes another profile role/membership/account, the server has the Admin caller JWT, not the target user's JWT. Four-entity/minimum-Auth-read contract does not authorize storing target tokens, minting impersonation JWTs or deleting managed Auth session rows. Ban/delete/temporary ban is not equivalent to membership disabling and may block new login. Therefore automatic post-commit provider revoke for all administrative changes cannot be claimed implemented under this exact contract.
-Database cutoff/session lifecycle itself was verified compatible. This blocker is specifically the provider-call orchestration, not auth.sessions.created_at. Do not weaken database cutoff or reopen role/scope rules. Required CI includes an explicit failing compatibility gate; no green workflow may be used to claim complete1A while this decision remains unresolved. Further implementation of the affected provider step stops pending owner decision.
-Owner decision needed: clarify provider revoke as best-effort only when a supported target JWT is available (self revoke), while administrative changes always enforce DB cutoff; or authorize a specific supported privileged provider/session mechanism and its exact files/grants. No alternative applied.
-Primary pinned sources: https://github.com/supabase/auth/blob/v2.197.0/internal/api/api.go and https://github.com/supabase/auth/blob/v2.197.0/internal/api/logout.go; SDK https://supabase.com/docs/reference/javascript/auth-admin-signout.
-
-## Actual CI outcomes / stop reason
-- Run37439040918 (b65751d): runtime startup/reset/session-column preflight PASS only.
-- Run37439354568 (2a1c8a2): real Auth session lifecycle preflight PASS only.
-- Run37441213252 (385812c): startup FAIL; DB/API skipped; first run suppressed credential-bearing startup logs.
-- Run37441459062 (f1227d3): redacted diagnostics revealed migration ownership failure: must be able to SET ROLE volume_core.
-- Run37441754525 (5dd2f77): fixed migration operator membership and temporary schema CREATE (revoked at migration end); startup and clean reset PASS; DB suite FAIL; API skipped.
-- Run37442226921 (240e159): startup/reset, allowlist/frozen docs/secret scan, typecheck and npm audit PASS; Auth privilege diagnostics PASS as an observation; DB suite FAIL; API skipped.
-
-Diagnostics on actual runner AFTER reset: volume_core Auth schema USAGE=false; SELECT privileges on auth.sessions(id,user_id,created_at)=true; live_self/writer/live_profile owner=volume_core and SECURITY DEFINER=true; auth.sessions RLS=true, FORCE=false. Protected calls fail42501 permission denied for schema auth. Merely documenting grants or assuming managed-Auth accessibility is insufficient. Schema bootstrap/defaults, constraints/exactly-four entities and static minimum-owner/last-Admin guard files PASS. RLS/revocation/version/RPC-audit files FAIL; last-Admin/CAS concurrency via real APIs, audit failure rollback, recovery and Auth Admin404 probe remain NOT RUN.
-
-Second compatibility blocker: the least-privilege reader as currently implemented cannot access managed Auth after actual lifecycle/reset. Before applying an alternative privileged reader, managed-schema policy, BYPASSRLS role, broad Auth-role inheritance or post-start regrant workaround, stop and request owner review. None of those alternatives has been applied. The session lifecycle itself preserves created_at; do not claim that all Supabase versions inherently cannot implement cutoff. Required acceptance A1A02–A1A09 remains FAIL/BLOCKED/NOT RUN; completeA1A01 includes startup/reset/four-table checks PASS, but that does not make the checkpoint complete.
-
-Owner must resolve (1) supported minimum-privilege Auth session reader under actual managed schema/RLS lifecycle and (2) administrative post-commit provider revocation without possessing target JWT. Database authority/cutoff must remain; no frontend logout substitute, token storage, impersonation, ban/delete or new business entity implemented.
-
-## Legacy / checkpoint limits
-Legacy ZIP SHA256=f0b0cf8372b1a127a30362bd1a584bb0c1e8a4d3346de6f3113cfdb4d007837b; extracted235-file byte comparison:0 mismatches. Frozen Sprint0 source documents remain unchanged; only four progress/result documents changed within allowlist. No PASS/freeze tag. Draft PR1 remains unmerged; main375379a unchanged. Code is draft, not a security-certified deliverable. Provider compatibility gate deliberately cannot PASS until contract resolution; actual probe has not executed yet.
+No Customer/Control Center UI, Refine/React/shadcn/Playwright, Player/Match/Table/Session/Payment/Task/Tournament/Shop/Media/Telegram/CRM/AI/invitation schema/module/menu, animation, production deployment, main merge or Checkpoint 1B.
 
 ## Exact file delta against375379a
 - `.env.example`
@@ -83,11 +86,6 @@ Legacy ZIP SHA256=f0b0cf8372b1a127a30362bd1a584bb0c1e8a4d3346de6f3113cfdb4d00783
 
 28 files, all in exact1A allowlist. Optional provisioning Edge Function files omitted.
 
-## Owner resolution — resume1A (2026-10-06)
-Owner authorizes narrow private session-validation helper instead of broad Auth access for volume_core. Application core has no Auth schema USAGE or session SELECT. private.session_valid(cutoff) returns only boolean, binds user/session to verified PostgREST claims, fixed empty search_path, schema-qualified objects, no client EXECUTE. Helper owner is existing migration/operator postgres; only this read-only adapter uses that native Auth owner; business RPC owners remain volume_core (non-superuser/non-BYPASSRLS). No new Auth schema, Auth role inheritance, token store, Auth writes or provider prepared schema. Supabase Auth owner naturally holds managed-schema privileges; adapter code is the narrow boundary, not a new broad role granted to application code.
-Provider limit accepted: no Admin revoke-all-by-user-id; no target JWT storage, Auth-session writes or account ban to force logout. Database live profile/cutoff + real session-created-at remains mandatory authority. Old provider refresh may succeed but old VOLUME private/internal requests must deny; new login uses current rights. Removed obsolete intentionally failing provider gate; no success claim before new complete CI. Prior failures above are historical evidence, not current acceptance.1A IN PROGRESS, not frozen;1B remains unauthorized.
 
-Runtime correction: run37444275577 rejected ownership transfer to protected supabase_auth_admin (SET ROLE42501). No Auth-role membership or protected-role escalation added. The adapter retains existing migration/operator owner postgres, which already successfully reads Auth session columns in real preflight/fixtures. Only boolean-returning three-column adapter uses that owner; business functions remain non-BYPASSRLS volume_core. This stock operator owner has broader operational privileges, so fixed code/empty search_path/no dynamicSQL/restricted EXECUTE/private schema are critical boundaries; no broad Auth privilege is granted to application reader.
-
-Safer adapter owner: volume_session_reader NOLOGIN/NOINHERIT, only Auth schema usage + SELECT(id,user_id,created_at) on auth.sessions; no Auth/business writes, no contacts/user-table select, no application membership. Private boolean helper owner is this restricted reader, never postgres or protected Auth service role. Managed auth.sessions RLS necessitates BYPASSRLS for this non-login reader; effective read surface is limited by three-column grants. Trusted local CI operator supabase_admin initializes only those explicit privileges after clean reset (actual managed lifecycle strips arbitrary Auth schema usage). No client/operator credential is embedded or exposed. Operator bootstrap is CI/local only; production privilege bootstrap is not a production deploy in1A.
-Automatic approval review rejected staging the broad postgres-owned adapter; that design was not pushed. Narrow reader is the safer alternative.
+## Freeze and handoff
+Checkpoint1A implementation is frozen at the tested commit above. Results/status documentation is the only subsequent delta and triggers a final complete CI rerun. Any failed final rerun reopens the checkpoint; no owner-facing completion claim before final branch-head CI succeeds. Preserve both migrations/contracts in future checkpoints. Draft PR1 remains unmerged and main375379a unchanged. STOP; owner review and separate authorization required for1B.

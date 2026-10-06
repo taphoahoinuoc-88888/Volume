@@ -1,6 +1,6 @@
 # VOLUME V2 — Sprint 0
 
-Trạng thái: **Sprint 0 đã được owner chấp thuận. Checkpoint 1A AUTHORIZED / BLOCKED_AUTH_COMPATIBILITY; 1B chưa được phép bắt đầu.**
+Trạng thái: **Sprint 0 đã được owner chấp thuận. Checkpoint 1A AUTHORIZED / PASS / FROZEN; 1B chưa được phép bắt đầu.**
 
 Project mới hoàn toàn. F6.1 chỉ là LEGACY / REFERENCE; không sửa, không import runtime, không chuyển dữ liệu/credentials tự động.
 
@@ -26,7 +26,7 @@ Stack: React/TypeScript, Refine + shadcn/ui cho Control Center, Supabase Auth/Po
 20 quyết định chủ dự án duyệt ngày 2026-10-06 là căn cứ. Chi tiết kỹ thuật được cụ thể hóa trong bộ Sprint 0 này để duyệt; không diễn giải rằng mọi chi tiết mới đã được chủ dự án phê chuẩn riêng. Sau duyệt, đổi role/entity/state/quyền ngoài contract phải báo lý do và cập nhật quyết định trước khi code.
 
 ## Gate tiếp theo
-G2 đã chốt Email + Password mọi role và email recovery, không provider khác hoặc prep schema ở Sprint1. G1 đã đóng: owner authorize Checkpoint 1A ngày 2026-10-06. 1A đang BLOCKED, chưa hoàn thành/freeze. 1A PASS+freeze phải DỪNG; 1B cần authorization riêng. G1–G14 có definition/status trong `docs/OPEN_QUESTIONS.md`. Không tự chạy checkpoint/Sprint tiếp theo. Payment/open-table chưa có business rule; phải chốt trước Sprint 2.
+G2 đã chốt Email + Password mọi role và email recovery, không provider khác hoặc prep schema ở Sprint1. G1 đã đóng: owner authorize Checkpoint 1A ngày 2026-10-06. 1A PASS/frozen; evidence ở docs/sprints/SPRINT_1A_RESULTS.md. 1A PASS+freeze phải DỪNG; 1B cần authorization riêng. G1–G14 có definition/status trong `docs/OPEN_QUESTIONS.md`. Không tự chạy checkpoint/Sprint tiếp theo. Payment/open-table chưa có business rule; phải chốt trước Sprint 2.
 
 ## Final correction đã ghi nhận
 updated_at chỉ thời gian. Mutable profiles/venues/staff_memberships có version bigint + expected_version. ADR-004 ghi Auth policy, version và checkpoint split. ZIP final chứa toàn repository volume-v2 gồm 16 tài liệu tracked và lịch sử Git docs-only; không runtime/app/dependency/legacy.
@@ -36,11 +36,7 @@ updated_at chỉ thời gian. Mutable profiles/venues/staff_memberships có vers
 
 Blueprint/AGENTS/ADR và FREEZE_MANIFEST của Sprint0 giữ nguyên snapshot lịch sử vì ngoài allowlist sửa 1A. Authorization hiện tại ở owner instruction và G1 OPEN_QUESTIONS; không lấy flag authorization cũ trong snapshot để phủ định quyết định owner. FREEZE_MANIFEST chỉ mô tả snapshot Sprint0, không là manifest của working tree 1A.
 
-## Execution update — GitHub Actions
-Owner authorized real Supabase on ubuntu-latest CI. Branch checkpoint-1a from375379a; runtime/session preflight PASS at2a1c8a2, run37439354568. Core/matrix implementation under test; not complete/frozen. Original sandbox blocker is superseded by CI execution; previous notes retain historical evidence. No contract/allowlist change, no main merge, no1B. See SPRINT_1A_RESULTS.md.
-
-## STOP — actual CI compatibility findings
-Latest tested implementation240e159; workflow37442226921: startup/reset PASS, DB security suite FAIL (Auth schema USAGE missing for private definer owner; auth.sessions RLS enabled), API/security suite NOT RUN. Provider revoke-by-user-id also needs owner contract decision. See docs/sprints/SPRINT_1A_RESULTS.md (from repository root). No privilege escalation workaround applied.1A not complete/frozen; main unmerged;1B not authorized.
-
-## Owner resolution — resume1A
-Owner accepted provider revoke limit and authorized a narrow private session helper. Core has no direct Auth schema access. Resume full real CI; no1A PASS/freeze yet. Previous blocker notes are historical; no1B authorization or main merge. See SPRINT_1A_RESULTS.md.
+## Checkpoint 1A — PASS / frozen / STOP
+Real complete GitHub Actions https://github.com/HAD10202/Volume/actions/runs/37445694355 PASS at2db65c8d0e5a0c4155b1357a25ef991d8dd1d603:57 database assertions and22 real API/security/concurrency/recovery tests. Final report commit repeats full CI. See docs/sprints/SPRINT_1A_RESULTS.md for evidence, versions, exact file delta, narrow reader privilege bootstrap and owner-accepted provider limitation.
+volume_core has no Auth grants; private boolean validator has a dedicated NOLOGIN three-column reader. Old provider sessions/refresh cannot bypass database cutoff; provider revoke-all-by-other-user-id is not implemented or required by owner decision.
+Branch checkpoint-1a; draft PR1 unmerged; main unchanged. No production deployment.1B NOT AUTHORIZED; STOP. Production signup/email/SMTP settings and future payment/business gates remain undecided. Frozen Sprint0 documents outside the1A allowlist are historical snapshots; current owner authorization prevails.
