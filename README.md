@@ -1,4 +1,4 @@
-# VOLUME V2 — Sprint 0
+# VOLUME V2
 
 Trạng thái: **Sprint 0 đã được owner chấp thuận. Checkpoint 1A AUTHORIZED / PASS / FROZEN; 1B chưa được phép bắt đầu.**
 
@@ -28,7 +28,7 @@ Stack: React/TypeScript, Refine + shadcn/ui cho Control Center, Supabase Auth/Po
 ## Gate tiếp theo
 G2 đã chốt Email + Password mọi role và email recovery, không provider khác hoặc prep schema ở Sprint1. G1 đã đóng: owner authorize Checkpoint 1A ngày 2026-10-06. 1A PASS/frozen; evidence ở docs/sprints/SPRINT_1A_RESULTS.md. 1A PASS+freeze phải DỪNG; 1B cần authorization riêng. G1–G14 có definition/status trong `docs/OPEN_QUESTIONS.md`. Không tự chạy checkpoint/Sprint tiếp theo. Payment/open-table chưa có business rule; phải chốt trước Sprint 2.
 
-## Final correction đã ghi nhận
+## Historical Sprint0 deliverable
 updated_at chỉ thời gian. Mutable profiles/venues/staff_memberships có version bigint + expected_version. ADR-004 ghi Auth policy, version và checkpoint split. ZIP final chứa toàn repository volume-v2 gồm 16 tài liệu tracked và lịch sử Git docs-only; không runtime/app/dependency/legacy.
 
 ## Trạng thái thực thi 1A — 2026-10-06

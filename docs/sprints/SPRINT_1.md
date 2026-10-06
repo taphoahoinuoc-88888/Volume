@@ -1,6 +1,6 @@
 # Sprint 1 — Bốn entity, hai checkpoint độc lập
 
-Trạng thái: **1A AUTHORIZED / PASS / FROZEN; 1B PLANNED / NOT AUTHORIZED**. Sprint0 owner approved; G1 CLOSED_OWNER_AUTHORIZED_1A; G2 CLOSED. Chưa app/migration/dependency project/Supabase deployment. 1A PASS không authorize 1B.
+Trạng thái: **1A AUTHORIZED / PASS / FROZEN; 1B PLANNED / NOT AUTHORIZED**. Sprint0 owner approved; G1 CLOSED_OWNER_AUTHORIZED_1A; G2 CLOSED. Data/Auth/Security Core đã được kiểm thử bằng local Supabase trên CI; chưa UI hoặc production deployment. 1A PASS không authorize 1B.
 
 ## Business scope không đổi
 profiles, venues, staff_memberships, audit_events. Supabase-managed auth.users/auth.sessions không business entity mới; không expose Auth schema. Năm role/matrix giữ nguyên. Auth mọi role Email + Password, recovery email. Không phone/SMS/social/Telegram/passkey/MFA; không schema chuẩn bị provider.
@@ -271,7 +271,7 @@ B1B04: Chromium/WebKit desktop 1440/mobile 390/320px screenshots/tests PASS; kh�
 B1B05: 1A DB/API/security regression vẫn PASS mà không sửa contract; cache/old tab revoke xử lý đúng.
 Record evidence/file delta in SPRINT_1B_RESULTS.md; checkpoint/tag and STOP. Only after 1B PASS can Sprint1 be called DONE. No next Sprint until owner authorization; payment still gated before Sprint2.
 
-## Execution update 2026-10-06
+## Historical preflight — superseded by final CI below
 Đã thực hiện runtime preflight; chưa chạy local stack hoặc matrix DB/API. Kết quả và các bước còn lại ghi SPRINT_1A_RESULTS.md. Không thay allowlist/scope/schema/test contract. Không freeze 1A.
 
 ## Checkpoint 1A — PASS / frozen / STOP
