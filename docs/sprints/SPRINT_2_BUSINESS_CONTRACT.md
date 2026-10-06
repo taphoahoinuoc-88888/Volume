@@ -1,19 +1,19 @@
 # VOLUME V2 — Sprint 2 Business Contract
-Version: DRAFT 2 — owner decisions incorporated; final owner review required
+Version: FINAL — owner decisions incorporated; APPROVED / FROZEN FOR IMPLEMENTATION
 Date: 2026-10-07 (Asia/Bangkok)
 Frozen Sprint1 base: main `2b47f0a619f494a811c94e41697f7d09dcb19e3a`
 Previous contract: `3afc4fe898a1a51487cb821b127f80745dbe7fb9`
-Status: DOCUMENT ONLY. Sprint1 CLOSED/FROZEN. Sprint2 implementation NOT AUTHORIZED.
+Status: APPROVED / FROZEN FOR IMPLEMENTATION. Sprint1 CLOSED/FROZEN. Implementation conditionally authorized after exact preflight plan; no material Sprint1 architecture/security change authorized.
 
 ## 1. Authority, scope và trạng thái review
 
 16 quyết định owner hiện tại thay các đề xuất DRAFT1: deadline inclusive thay strict-<; server transition timestamp thay provider threshold timestamp; MANUAL là override đã chốt; cho phép hủy hold; bắt buộc một hold mỗi customer. Không giữ quy tắc cũ như lựa chọn còn mở.
 
-Nguồn luật: owner hiện tại → AGENTS → Blueprint → permissions/architecture/ADR → Sprint contract. Header lịch sử Sprint0 không thay authorization hiện tại. Không sửa frozen source/schema/RPC/RLS/CI/dependency/Auth/Legacy.
+Nguồn luật: owner hiện tại → AGENTS → Blueprint → permissions/architecture/ADR → Sprint contract. Header lịch sử Sprint0 không thay authorization hiện tại. Không sửa frozen migrations/Auth/RLS/security RPC/Legacy. Chỉ các extension additive tối thiểu đã được owner cho phép và CI scope chính xác trong preflight plan; mọi security guarantee Sprint1 vẫn bắt buộc.
 
 Exact DOCUMENT-ONLY allowlist: `docs/sprints/SPRINT_2_BUSINESS_CONTRACT.md`, trên branch `sprint2-contract`; không merge main. Đây không phải implementation allowlist.
 
-OWNER DECIDED = quy tắc nghiệp vụ đã chốt. DESIGN PROPOSAL = cách biểu diễn kỹ thuật cần review trước code. Section14 phân loại những điểm thực sự còn mở; không tiếp tục coi 16 quyết định owner đã trả lời là business blockers.
+OWNER DECIDED = quy tắc nghiệp vụ đã chốt. TECHNICAL PLAN = cách biểu diễn kỹ thuật phải xác định chính xác trước code; owner đã authorize implementation nếu không material broadening Sprint1. Section14 phân loại những điểm thực sự còn mở; không tiếp tục coi 16 quyết định owner đã trả lời là business blockers.
 
 Sprint2 gồm định nghĩa bàn/service, availability derived, online opening request/payment, hold5 phút, một hold/customer và/table, QR/partial/full, cancellation/expiry/recovery, auto-open60 phút, MANUAL và operational reads đúng quyền.
 Không gồm final closing/billing, overtime/extension, final receipt/refund/settlement automation, automated reversal/chargeback, Player/Match/Video/Tournament/Shop/Telegram/CRM/AI hoặc production deployment/SMTP/domain. Provider integration cần authorization riêng.
@@ -65,7 +65,7 @@ Bốn entity đã được owner chấp thuận: billiard_tables, table_sessions
 | Entity | Trách nhiệm / proposed fields |
 |---|---|
 | billiard_tables | id, venue_id, code/label, status ACTIVE/MAINTENANCE/DISABLED chỉ khả năng phục vụ; hourly_price_vnd; timestamps/version bigint NOT NULL DEFAULT1, positive. Không busy/free/lock copy. |
-| table_sessions | Cùng row là opening request PENDING_PAYMENT rồi session ACTIVE; table/venue, owner_profile_id, opening_method PAYMENT/MANUAL, state PENDING_PAYMENT/ACTIVE/CANCELLED, acquired_at/expires_at, authoritative rate/required60-minute snapshot, started_at, cancellation cause/time, manual actor/reason, request_actor_profile_id/request_key/digest, timestamps/version. |
+| table_sessions | Cùng row là opening request PENDING_PAYMENT rồi session ACTIVE; table/venue, customer_profile_id, opening_method PAYMENT/MANUAL, state PENDING_PAYMENT/ACTIVE/CANCELLED, acquired_at/expires_at, authoritative rate/required60-minute snapshot, started_at, cancellation cause/time, opened_by/reason, request_actor_profile_id/request_key/digest, timestamps/version. |
 | payments | Unique initial intent/session cho PAYMENT, unique server reference, state WAITING/SUCCESS/CANCELLED/PAYMENT_NEEDS_RESOLUTION, payment_success_at và resolution cause; timestamps/version. Tham chiếu authoritative required snapshot tại session, không duy trì giá thứ hai. |
 | payment_receipts | Append-only normalized validated evidence, immutable external event/transaction identity và provider/recipient scope, exact reference/payment_id, integer amountVND, immutable provider timestamps, trusted callback_received_at và processing metadata/digest. Unique real transfer toàn hệ thống; unmatched trusted receipt có thể NULL payment_id. Không raw bank/PII mặc định. |
 
@@ -75,25 +75,25 @@ Provider nonfinal/reversal notice không là thêm CREDIT hoặc automatic netti
 Reference không tái sử dụng giữa attempts. Partial/QR refresh giữ cùng reference.
 Receipts/audit append-only không version. Mutable rows dùng bigint version; interactive existing-row writes có expected_version, updated_at chỉ thời gian. Mỗi changed row tăng một lần/command; replay/no-change không mutation/success audit.
 
-### Manual ownership proposal — không đổi identity
+### Manual ownership CLOSED — không đổi identity
 
-- PAYMENT: owner_profile_id NOT NULL từ auth.uid(), live ACTIVE; client không chọn owner khác.
+- PAYMENT: customer_profile_id NOT NULL từ auth.uid(), live ACTIVE; client không chọn owner khác.
 - MANUAL authenticated customer: tham chiếu profile hiện có sau targeted validation; actor tách beneficiary.
-- MANUAL walk-in: owner_profile_id=NULL; bắt buộc authenticated authorized actor, venue/table/reason/audit. Không auth.users/profiles giả, guest role hoặc anonymous identity mới.
+- MANUAL walk-in: customer_profile_id=NULL; bắt buộc authenticated authorized opened_by, venue/table/reason/server timestamp/audit. Không auth.users/profiles giả, guest role hoặc anonymous identity mới.
 - NULL không cấp public/anonymous/own access. Management vẫn venue-bound; chưa có claim/linking/invitation module.
 - Manual preview chỉ trả minimum target id/display_name/account status khi cần, không bulk customer directory/Auth contacts.
 - Nếu implementation cần fake profiles/new Auth/roles/linking, STOP và report material identity deviation trước.
 
 ### Minimal venue business contact
 
-Frozen venues chưa có contact. Đề xuất một `venues.management_contact` nullable plain text business-support value, tối đa500 ký tự, safe validation/rendering, không HTML/secret; Admin cấu hình theo VENUES_MANAGE và venue.version.
+Frozen venues chưa có contact. Owner cho phép minimal venue-level extension; xác minh source hiện tại không có field phù hợp. Chọn một `venues.management_contact` nullable plain text business-support value, tối đa500 ký tự, safe validation/rendering, không HTML/secret; Admin cấu hình theo VENUES_MANAGE và venue.version.
 Chỉ đưa vào Sprint2 public projection của published enabled venue/table, own payment-case projection và authorized scoped operations. Không broad SELECT/Auth contact duplication. Own case có thể hiện business contact của venue đã disabled; account DISABLED vẫn không đọc private case.
-Sau approval mới có additive migration/write/read paths trong exact allowlist. Không sửa old migration/RPC/public projection ở tác vụ này; không generic configuration entity. Thiếu contact chỉ hướng dẫn liên hệ quản lý tại chi nhánh, không bịa/hard-code số cá nhân.
+Additive migration/write/read paths phải nằm trong exact preflight allowlist, có regression tests. Không sửa old migration/security RPC/public projection; không generic configuration entity. Thiếu contact chỉ hướng dẫn liên hệ quản lý tại chi nhánh, không bịa/hard-code số cá nhân.
 
 ### Durable pre-success invalidation
 
 Account/table/venue unavailable phải kết thúc pending hold vĩnh viễn; re-enable không khôi phục hold cũ.
-Đề xuất narrow additive Sprint2 DB hook/dependency khi DISABLED/service transition: cancel PENDING, preserve money/resolution và BUSINESS audit atomically, giữ nguyên Sprint1 account/scope/cutoff/audit. Không auto-close ACTIVE.
+Chọn narrow additive Sprint2 DB hook/dependency khi DISABLED/service transition: cancel PENDING, preserve money/resolution và BUSINESS audit atomically, giữ nguyên Sprint1 account/scope/cutoff/audit. Không auto-close ACTIVE.
 Trước code phải chứng minh lock compatibility với frozen profile/venue mutations. Không tự thay Auth/security RPC để làm hook. Nếu cần sửa frozen contract thực sự, STOP/report narrow maintenance scope.
 Projection/acquire/ingest cũng kiểm tra authority/service hiện tại; không phụ thuộc worker để ngăn mở bàn không hợp lệ.
 
@@ -199,7 +199,7 @@ Original28 retained with explicitowner corrections, not dropped. I04/I05/I08/I12
 | I29 | At most one live table-payment hold per customer globally and one per table; different tables/different keys cannot bypass this under concurrency. |
 | I30 | Own pending cancellation releases ownership;0 received cancels normally, any received money is preserved as PAYMENT_NEEDS_RESOLUTION. ACTIVE sessions cannot be self-cancelled through Sprint2 hold cancellation. |
 | I31 | QR failure before payment cancels/releases the broken attempt; concurrent/late credits are preserved and handled by current terminal state, never discarded or applied to a new attempt. |
-| I32 | Walk-in is a MANUAL session with owner_profile_id NULL, mandatory actor/venue/reason/audit. No dummy auth.users/profiles/new role/anonymous access or implicit later claim. |
+| I32 | Walk-in is a MANUAL session with customer_profile_id NULL, mandatory actor/venue/reason/audit. No dummy auth.users/profiles/new role/anonymous access or implicit later claim. |
 | I33 | MANUAL bypasses online prepayment only; authorized transaction starts60min immediately, never fabricates payment SUCCESS or extra play time. |
 | I34 | Customer management-contact presentation comes from authorized venue/business configuration, not hard-coded personal information; published/own/internal projection boundaries remain explicit. |
 | I35 | VND-only integer required initial amount equals snapshotted authoritative hourly rate for60min; no added tax/service/transfer fee; existing hold retains price, new hold uses new price. |
@@ -221,11 +221,11 @@ G=global business; V=active assigned venue; S=own customer path; P=safe public; 
 | TABLE_DEFINITIONS_MANAGE | G | - | - | - | - |
 | TABLE_SESSION_OPEN_MANUAL | G | G(explicit owner action) | V | E(V) | - |
 
-TABLE_SESSION_OPEN_MANUAL và role defaults đã owner chốt. Các fixed action names khác là technical proposals, chưa runtime grant.
+TABLE_SESSION_OPEN_MANUAL và role defaults đã owner chốt. Các fixed action names khác là minimum Sprint2 action contract, chưa runtime grant; không mở rộng extra whitelist ngoài TABLE_SESSION_OPEN_MANUAL.
 OPENING_PAYMENTS_READ gồm unresolved financial cases/balances/timestamps; không cần generic builder. Nếu cần tách quyền đọc resolution sau này, phải đề xuất fixed permission cụ thể trước.
 STAFF/USER mặc định không manual. HR designation không là role/quyền. Eligible MANAGER/STAFF có thể nhận manual extra qua existing mechanism do ADMIN cấp, vẫn venue-bound. USER không nhận extra theo frozen role model; không global bypass.
 Manual extra không grant finance/customer directory/security writes. CEO manual không suy ra ACCESS_MANAGE/account/config/security writes. Grant/revoke extra+cutoff+audit atomic; old session/old refreshed JWT DENY, relogin current rights.
-Existing two-extra whitelist cần approved additive extension; không old migration edit hoặc RBAC builder. Provider ingestion không là browser permission để ADMIN tự grant/forge money.
+Existing two-extra whitelist chỉ additive thêm TABLE_SESSION_OPEN_MANUAL theo owner approval; không old migration edit hoặc RBAC builder. Provider ingestion không là browser permission để ADMIN tự grant/forge money.
 
 Projection:
 - Public: published enabled venue/table, giá và availability; không occupant/private finance.
@@ -245,7 +245,7 @@ Projection:
 6. Callback sau trusted validation: lock owner/service/session/payment, receipt và processing <= deadline, binding/state; dedupe/insert credit/sum; atomic SUCCESS+ACTIVE+server start hoặc financial resolution; versions+audit.
 7. Own cancellation dùng dedicated RPC/expected versions. Partial cancel trả bàn và financial resolution; full transition thắng race thì ACTIVE, hold-cancel denied. Stale cancel không báo new success; mất response đọc authoritative state.
 8. QR failure là trusted attempt failure hoặc authorized own cancellation, không client grant để hủy người khác. Dưới lock0 cancel, positive resolution; delayed error không close ACTIVE.
-9. Account/table/venue invalidation terminally ends PENDING, giữ tiền. Re-enable không revive. Safe additive durable hook được review trước code; không dựa chỉ worker hoặc boolean có thể bật lại.
+9. Account/table/venue invalidation terminally ends PENDING, giữ tiền. Re-enable không revive. Safe additive durable hook phải được xác định trong exact preflight trước code; không dựa chỉ worker hoặc boolean có thể bật lại.
 10. Projections và writes kiểm tra deadline/current authority cả khi worker down. Lazy expiry/worker materialize rows, không kéo deadline; unresolved payment không giữ bàn.
 11. Sensitive writes có preview/diff/reason/confirm+bigint CAS. Provider/expiry dùng locked live state, không client actor/version. No provider network inside DB locks; bounded same-identity retry.
 12. Mỗi unique attributed credit cập nhật payment.version/updated_at một lần để invalidate financial preview, kể cả state còn WAITING; không lưu duplicate amount authority. Nếu cùng command chuyển SUCCESS cũng chỉ tăng row version một lần. Duplicate không bump version. Receipt/payment/session/start/audit atomic rollback; money ở bank không phải DB transaction. Replay/reconcile giữ true money, không fake cross-service rollback.
@@ -307,7 +307,7 @@ Audit failure rollback business effects. Duplicate replay không new transition 
 Management được đọc table availability, current holds, ACTIVE sessions, payment state/required/received/remaining/excess/unresolved, operational timestamps và safe contact. Manager chỉ assigned venue; CEO/Admin safe global business. Staff default chỉ operations tối thiểu.
 OPENING_PAYMENTS_READ gồm unresolved cases; manual extra không cấp finance read. Own read không customer khác. Không provider secrets/raw Auth/unnecessary bank/private fields.
 Count distinct requests/sessions; sum unique credits. Nhãn “đã nhận/tiền vượt/khoản cần xử lý”, không final revenue/profit/bill. Accounting business-day policy không chặn minimum operational read.
-Initial60 phút kết thúc không charge/close/extend/release; dữ liệu giữ cho Sprint3. Contact/schema/projection/invalidation hook mới là proposals, không code.
+Initial60 phút kết thúc không charge/close/extend/release; dữ liệu giữ cho Sprint3. Contact/schema/projection/invalidation hook là additive implementation requirements trong preflight; chưa có code.
 Notifications chỉ web/app, Telegram Sprint8 và production external channels không required. Future cooldown/rate limit có thể gate acquire trước core transaction, không đổi ownership/payment model; không invent ban/scoring.
 
 ## 13. Test matrix —90 implementation requirements, NOT RUN
@@ -382,7 +382,7 @@ DB = real PostgreSQL constraints/RLS/RPC/concurrency; API = real Supabase Auth/b
 | T63 | Countdown60:00→59:59 and partial balances — E2E | First committed server start only; readable320/390/1440px; UI delivery delay reflects elapsed server time, not reset/backdate. |
 | T64 | Provider replay/reconcile after downtime — API/provider sandbox later | Stable external identities, retained receipts; after-expiry no retro-open; no mark-paid shortcut. Synthetic adapter tests are not actual-provider PASS. |
 | T65 | Full frozen Sprint1 regression — real CI |78 DB/27 API/3 unit/54 existing Playwright retained or intentionally expanded, all required PASS. |
-| T66 | Scope/secrets/dependency/type/lint/build — CI | Exact approved Sprint2 implementation allowlist (not yet created), secret scan/audit/typecheck/lint/build PASS; frozen core/Legacy review. |
+| T66 | Scope/secrets/dependency/type/lint/build — CI | Exact approved Sprint2 preflight implementation allowlist, secret scan/audit/typecheck/lint/build PASS; frozen core/Legacy review. |
 | T67 | CEO counters vs received amounts — DB/API/E2E | Distinct sessions/receipts, unresolved/excess separate; no misleading revenue. |
 | T68 | Reversal/chargeback notice afterACTIVE — API/design boundary | Retain normalized evidence/flag for authorized management; no automated reversal/refund/close/reopen inSprint2. |
 | T69 | Reusing cancelled/resolution money for new request — API | No revived hold or transfer rebind; new attempt has new reference and no borrowed prior credit. |
@@ -427,24 +427,24 @@ Full Sprint1 security regression giữ hoặc intentionally expand/scope dưới
 | O06 overpay | CLOSED: excess retained/flagged, no extra time/refund | Refund action Sprint3+ |
 | O07 unavailable | CLOSED: cancel/release/preserve money, no open | Safe additive implementation B3 |
 | O08 provider | Neutral interface DECIDED; specific provider NOT SELECTED | P1–P3 non-blocking neutral core |
-| O09 manual scope/target | CLOSED: venue-bound existing customer/walk-in support | Nullable ownership proposal B2, không identity change |
+| O09 manual scope/target | CLOSED: venue-bound existing customer/walk-in support | CLOSED B2: nullable MANUAL customer ownership, không identity change |
 | O10 countdown0 | CLOSED: preserve facts, no charges/auto-close | Billing Sprint3+ |
 | O11 cancel/QR/limits | CLOSED: cancel, safe QR failure, one hold/customer | Không business question |
 | O12 recovery/messages | CLOSED: DB correctness independent worker, web/app | Cadence/tuning technical detail |
 | O13 visibility | CLOSED: operational management projections/scoped Manager | Final revenue/business-day Sprint3+ |
-| O14 entities/permission/CI | Four entities/manual fixed permission DECIDED | Exact allowlist/CI/authorization B1 |
-| O15 QR/contact | CLOSED: stable reference, remaining QR, config contact, no fee | Contact proposal B2; provider format P2 |
+| O14 entities/permission/CI | Four entities/manual fixed permission DECIDED | CLOSED B1: exact preflight required, conditional authorization granted |
+| O15 QR/contact | CLOSED: stable reference, remaining QR, config contact, no fee | CLOSED B2: minimal venue business contact; provider format P2 |
 | O16 abuse | CLOSED: one customer/table hold,5min, no extension | Future cooldown later approval |
 
-### A. Implementation blockers — cụ thể
+### A. Implementation blockers — CLOSED by owner, subject to technical preflight
 
-| ID | Chưa được review/authorize | Lý do |
+| ID | Status | Binding resolution |
 |---|---|---|
-| B1 | Owner re-review DRAFT2, explicit implementation authorization, checkpoint scope, exact file allowlist và CI scope | Hiện chỉ docs; CI vẫn pin approved1B/frozen core. Không sửa/giảm guarantees âm thầm. |
-| B2 | Review additive venues.management_contact/projections và nullable customer ownership chỉ cho MANUAL | Venue chưa có contact; walk-in không đổi identity nhưng schema/write/read constraints và files phải nằm trong approval trước code. |
-| B3 | Review durable pending invalidation và lock/unique/CAS compatibility với frozen profile/venue mutations | Phải ngăn disabled→re-enabled revive và races, giữ Auth/RLS/RPC/audit. Nếu thực sự cần sửa frozen contract, report narrow maintenance trước. |
+| B1 | CLOSED | Owner approves contract and conditionally authorizes a new implementation branch from current main after exact plan/allowlist/CI/test mapping. No real provider, production or Sprint3. |
+| B2 | CLOSED | MANUAL customer_profile_id may be NULL for walk-in; opened_by/reason/venue/table/server time/audit mandatory. No synthetic profile/Auth/CRM. Existing venue projections inspected: public_address is not business contact; minimal nullable public venues.management_contact plus separate safe Sprint2 projections and Sprint1 regression permitted. |
+| B3 | CLOSED | Database exclusive hold/customer/session guards, deterministic row locks, live authoritative expiry checks and durable pending invalidation. No occupancy flags or worker/browser correctness dependency. Exact compatible locking and additive hooks must be defined in preflight. |
 
-B2/B3 là technical/design approvals, không hỏi lại ý nghĩa manual/deadline đã chốt. Không có authorization kiến trúc rộng hơn.
+No remaining business implementation blocker. A material change to frozen Sprint1 identity/auth/security/RPC authority discovered during preflight or implementation remains a STOP condition; this is not permission to rewrite security.
 
 ### B. Provider-dependent, không chặn contract/neutral core
 
@@ -471,17 +471,14 @@ Không thêm USER manual-extra/HR role/guest Auth identity/free-tier pricing. Fu
 
 G3 prepaid CLOSED; G4 amount/currency/authority CLOSED, provider choice riêng; G5 duration/cancel/late/boundary CLOSED; G6 snapshot/server start CLOSED; G7 minimum operations visibility CLOSED, accounting deferred. G8 billing Sprint3; G9–G14 unchanged future modules/production. Không sửa frozen Blueprint/OPEN_QUESTIONS snapshots trong tác vụ này.
 
-## 15. Validation, delta và STOP
+## 15. Validation, freeze và implementation boundary
 
-Document validation:
--15 numbered sections,36 consecutive unique invariants:28 retained/owner-corrected+8 new.
--90 consecutive unique test cases:70 IDs retained/expected outcomes updated+20 new.
--16 owner decisions mapped to invariants/tests; không giữ các quyết định đã trả lời như OPEN. Remaining B1–B3/P1–P3/S1–S4 có category và definition.
--No normative strict-< cutoff/provider-threshold backdating/manual-funding OPEN/no-early-cancel/missing per-customer uniqueness.
--Provider-neutral interface, scope/least privilege/direct-write DENY, central identity/no HR role/fixed extras, bigint CAS/audit/cutoff và frozen1A/1B security giữ nguyên.
--Walk-in không auth identity mới. Contact và durable invalidation là additive proposals cần review, không code.
--Chỉ một DOCUMENT-ONLY file; không schema/migration/RPC/UI/provider/dependency/CI/Legacy edit, không merge main.
--Document consistency checks thôi. Cả90 implementation/runtime cases **NOT RUN**; không gọi Sprint2 CI/runtime PASS.
+- 15 numbered sections; 36 unique consecutive invariants; original 28 retained/owner-corrected.
+- 90 unique consecutive contract test cases; provider-specific live evidence explicitly deferred, never represented as neutral-fixture PASS.
+- All 16 original owner decisions and latest walk-in/contact/durable-lock decisions incorporated. B1–B3 CLOSED; P1–P3 non-blocking provider-dependent; S1–S4 deferred.
+- customer_profile_id NULL allowed only MANUAL; mandatory opened_by/reason/server start/audit; no fake identity or CRM.
+- Minimum public venue contact extension, fixed manual permission, safe additive invalidation and exact CI scope must be documented before code. Frozen Auth/session cutoff/role/scope/audit/CAS guarantees remain mandatory.
+- Document checks are not runtime evidence. All 90 runtime cases remain NOT RUN at this freeze.
+- Approved business semantics cannot be changed during implementation without owner authorization. No real provider integration, production deployment or Sprint3.
 
-DRAFT2 sẵn sàng cho owner re-review. **STOP. Chưa bắt đầu Sprint2 implementation; chỉ sau owner review và authorize contract/allowlist/checkpoint mới code.**
-
+**APPROVED / FROZEN FOR IMPLEMENTATION.** Owner conditionally authorizes implementation after exact preflight only if no material broadening of frozen Sprint1 architecture/security is needed. Otherwise STOP / BLOCKED and report the exact change.
