@@ -76,6 +76,12 @@ jobs:
           fi
           supabase db reset
           docker exec supabase_db_volume-v2 psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c "alter role volume_session_reader bypassrls; grant usage on schema auth to volume_session_reader; grant select(id,user_id,created_at) on auth.sessions to volume_session_reader;"
+      - name: Record actual local runtime versions without credentials
+        run: |
+          supabase --version
+          node --version
+          docker inspect --format '{{.Name}} {{.Config.Image}}' supabase_db_volume-v2 supabase_auth_volume-v2 supabase_edge_runtime_volume-v2
+          docker exec supabase_db_volume-v2 psql -U postgres -d postgres -At -v ON_ERROR_STOP=1 -c "select version();"
       - name: Serve JWT-verified local opening function
         run: |
           supabase functions serve open-table-payment > "$RUNNER_TEMP/edge-serve.log" 2>&1 &
