@@ -1,10 +1,10 @@
 # Gate definitions và status — Sprint 0 cuối cùng
 
-G2 đã được owner chốt; architecture cơ bản được chấp thuận. **Checkpoint 1A chưa authorize; 1B chưa authorize.** Gate là điều kiện trước công việc tương ứng, không cho phép tạo schema/module tương lai.
+G2 đã được owner chốt; architecture cơ bản được chấp thuận. **Checkpoint 1A đã authorize, runtime preflight BLOCKED; 1B chưa authorize.** Gate là điều kiện trước công việc tương ứng, không cho phép tạo schema/module tương lai.
 
 | Gate | Definition | Status | Phải giải quyết trước | Điều kiện đóng |
 |---|---|---|---|---|
-| G1 | Owner reviews final Sprint0 contract and explicitly authorizes Checkpoint 1A; basic architecture approval alone is insufficient | PENDING_OWNER_AUTHORIZATION_1A | Checkpoint 1A | Explicit owner approval to implement 1A; does not authorize 1B |
+| G1 | Owner reviews final Sprint0 contract and explicitly authorizes Checkpoint 1A; basic architecture approval alone is insufficient | CLOSED_OWNER_AUTHORIZED_1A | Checkpoint 1A | Owner authorize 1A ngày 2026-10-06; không authorize 1B |
 | G2 | V1 internal ADMIN/CEO/MANAGER/STAFF and customer USER authenticate email+password; email password recovery; Supabase Auth only; no phone/SMS/social/Telegram/passkey/MFA or prep schema in Sprint1 | CLOSED_OWNER_DECIDED | Checkpoint 1A | Owner decided 2026-10-06; operational email/signup settings separately documented, not an undecided provider gate |
 | G3 | Meaning of open-table payment: deposit, prepaid amount or operational confirmation | OPEN | Sprint 2 | Owner-approved payment business meaning |
 | G4 | Amount/currency, payment method, who may confirm and confirmation responsibility | OPEN | Sprint 2 | Owner-approved amount/method/authority rules |
@@ -38,3 +38,6 @@ Version Supabase/dependency và local Docker môi trường phải được ki�
 
 ## Các việc chưa có write action được duyệt
 CEO V1 không có quyền ghi nội bộ mặc định. Mỗi write action tương lai cần yêu cầu/scope/audit/tests cụ thể. F6.1 business rules không tự áp dụng. G3–G14 chỉ chốt trước công việc liên quan; không cần giải quyết toàn bộ để làm Auth Core.
+
+## Runtime blocker sau authorization 1A
+G1 đã đóng; không reopen gate kiến trúc. Local runtime chưa chạy: không Docker/Podman; Supabase CLI 2.119.0 native lỗi download artifact getaddrinfo ETIMEOUT; curl tới official S3 manifest trả HTTP200, nên không kết luận domain hoàn toàn không truy cập được. Native PostgreSQL còn cần non-root; uid_map chỉ UID0, runuser và os.setuid(1001) bị từ chối. Cần môi trường có Docker hoạt động hoặc native runtime có non-root hợp lệ và artifact downloads được CLI hỗ trợ. Không thay đổi schema/provider/session contract.
