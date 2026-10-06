@@ -1,0 +1,536 @@
+version: 1.0-sprint0
+date: '2026-10-06'
+status: DOCUMENT_SNAPSHOT_FROZEN_PENDING_OWNER_REVIEW
+implementation_authorized: false
+authority:
+  user_decisions: 20 approved decisions in conversation 2026-10-06
+  technical_contract: this file after owner review
+  legacy: reference only
+  changes: report rationale and obtain approval before architectural deviation
+principles:
+- one_business_identity
+- one_role_at_profiles
+- one_data_core_per_environment_for_all_clients
+- minimum_permissions_and_screens
+- backend_enforcement
+- no_ai_business_core
+- no_demo_real_runtime_forks
+- reuse_stable_libraries_before_build
+- no_future_modules_in_initial_schema
+- freeze_and_stop_each_sprint
+identity:
+  authentication: Supabase auth.users
+  business: profiles.id equals auth.users.id
+  staff: staff_memberships; no separate staff_profile entity in V1
+  player_future: player_profiles.profile_id equals profiles.id
+  signup_default_role: USER
+  auth_contact_data: kept in Auth; no default duplicate email/phone in profiles
+account_status:
+  values:
+  - ACTIVE
+  - DISABLED
+  disabled_effect: deny private/internal actions globally; public data remains public
+  reactivate: new login required; old sessions remain revoked
+membership_status:
+  values:
+  - ACTIVE
+  - INACTIVE
+  inactive_effect: deny internal access to this venue only; retain customer/player account and history
+roles:
+  ADMIN:
+    scope: global
+    defaults:
+    - OWN_PROFILE_READ
+    - OWN_PROFILE_UPDATE
+    - PUBLIC_VENUES_READ
+    - INTERNAL_VENUES_READ
+    - MEMBERSHIPS_READ
+    - STAFF_DIRECTORY_READ
+    - BUSINESS_AUDIT_READ
+    - SECURITY_AUDIT_READ
+    - VENUES_MANAGE
+    - ACCESS_MANAGE
+    - ACCOUNT_STATUS_MANAGE
+    - AUTH_ACCOUNTS_PROVISION
+    - OWN_SESSIONS_REVOKE
+    extra_eligible: false
+  CEO:
+    scope: global_business_read
+    defaults:
+    - OWN_PROFILE_READ
+    - OWN_PROFILE_UPDATE
+    - PUBLIC_VENUES_READ
+    - OWN_SESSIONS_REVOKE
+    - INTERNAL_VENUES_READ
+    - MEMBERSHIPS_READ
+    - STAFF_DIRECTORY_READ
+    - BUSINESS_AUDIT_READ
+    extra_eligible: false
+  MANAGER:
+    scope: active_membership_venues
+    defaults:
+    - OWN_PROFILE_READ
+    - OWN_PROFILE_UPDATE
+    - PUBLIC_VENUES_READ
+    - OWN_SESSIONS_REVOKE
+    - INTERNAL_VENUES_READ
+    - MEMBERSHIPS_READ
+    - STAFF_DIRECTORY_READ
+    - BUSINESS_AUDIT_READ
+    extra_eligible: true
+  STAFF:
+    scope: active_membership_venues_minimum_fields
+    defaults:
+    - OWN_PROFILE_READ
+    - OWN_PROFILE_UPDATE
+    - PUBLIC_VENUES_READ
+    - OWN_SESSIONS_REVOKE
+    - INTERNAL_VENUES_READ
+    - MEMBERSHIPS_READ
+    extra_eligible: true
+  USER:
+    scope: self_and_public
+    defaults:
+    - OWN_PROFILE_READ
+    - OWN_PROFILE_UPDATE
+    - PUBLIC_VENUES_READ
+    - OWN_SESSIONS_REVOKE
+    extra_eligible: false
+permission_vocabulary:
+  OWN_PROFILE_READ:
+    scope: self
+    description: Read own profile; sensitive field projection excluded
+  OWN_PROFILE_UPDATE:
+    scope: self
+    description: Update own display_name only
+  PUBLIC_VENUES_READ:
+    scope: public
+    description: Published enabled venue safe projection
+  INTERNAL_VENUES_READ:
+    scope: global_or_venue
+    description: Internal venue fields in authorized scope
+  MEMBERSHIPS_READ:
+    scope: global_or_venue_or_self
+    description: Admin full; CEO/Manager roster; Staff own only
+  STAFF_DIRECTORY_READ:
+    scope: global_or_venue
+    description: Safe staff projection only; no Auth/session fields
+  BUSINESS_AUDIT_READ:
+    scope: global_or_venue
+    description: Redacted BUSINESS audit only
+  SECURITY_AUDIT_READ:
+    scope: global
+    description: SECURITY audit Admin only
+  VENUES_MANAGE:
+    scope: global
+    description: Create/update/disable venue; no hard delete
+  ACCESS_MANAGE:
+    scope: global
+    description: Manage another profile role, membership scope, extra permission
+  ACCOUNT_STATUS_MANAGE:
+    scope: global
+    description: Disable/reactivate another account
+  AUTH_ACCOUNTS_PROVISION:
+    scope: global
+    description: Server Auth provisioning; default USER
+  OWN_SESSIONS_REVOKE:
+    scope: self
+    description: Revoke own sessions, audit and DB cutoff
+  STAFF_MEMBERSHIP_STATUS_MANAGE:
+    scope: venue
+    description: 'HR extra: toggle other STAFF membership only; no grants/scope/role change'
+extra_permissions:
+  storage: staff_memberships.extra_permissions
+  whitelist:
+  - STAFF_DIRECTORY_READ
+  - STAFF_MEMBERSHIP_STATUS_MANAGE
+  eligible_roles:
+  - MANAGER
+  - STAFF
+  grant_actor: ADMIN via ACCESS_MANAGE
+  effective_when: account ACTIVE and membership ACTIVE at venue
+  prohibited: security/global writes, unknown permission, UI-defined permission, CEO global write via venue extras
+  hr_status_limit: another STAFF at same authorized venue only; toggle status, no role/scope/extra changes
+scope:
+  global_roles:
+  - ADMIN
+  - CEO
+  venue_roles:
+  - MANAGER
+  - STAFF
+  customer_role: USER
+  wildcard_membership: false
+  role_to_USER: inactivate memberships atomically; retain rows
+  authorization: current role+account+session+membership+action+field projection
+data_classification:
+  public:
+  - published enabled venue safe projection only in Sprint1
+  private:
+  - own profile safe projection
+  - own membership projection
+  internal:
+  - staff directory
+  - internal venues
+  - memberships
+  - BUSINESS audit
+  restricted_security:
+  - role/scope/extra writes
+  - account disable
+  - session cutoff
+  - SECURITY audit
+  - Auth management
+  no_public_profiles_in_sprint1: true
+session_revocation:
+  authority: DB live rows, never user-editable metadata/JWT role
+  field: profiles.sessions_revoked_before
+  validation: verified session_id; auth.sessions user_id matches auth.uid(); exists and created_at > cutoff; profile
+    ACTIVE
+  on_change:
+  - role
+  - scope
+  - extra_permissions
+  - membership.status
+  - account_status
+  - own_sessions_revoke
+  transaction: business change + cutoff + audit atomic
+  auth_api: revoke after DB commit; DB blocks even if Auth provider call fails
+  refresh: new iat on old session does not bypass cutoff
+  boundary: new requests starting after commit denied for old sessions; in-flight reads may finish
+  membership_disable: does not ban account; re-login permits customer/current venue scope
+  provider_spike: Sprint1 test required; incompatible mechanism => report before alternative implementation
+audit:
+  writer: trusted DB trigger/RPC; never client direct write
+  categories:
+  - SECURITY
+  - BUSINESS
+  actor: auth.uid DB role snapshot; SYSTEM only trusted server
+  atomic: true
+  mutable: false
+  reads:
+    ADMIN: all with redaction
+    CEO: BUSINESS global
+    MANAGER: BUSINESS active venues
+    STAFF: none
+    USER: none
+  sensitive_payload: allowlisted before/after; no credentials/tokens/passwords/Auth contact details
+  failure: rollback business mutation
+  denials: no success event; minimal server security log
+  system_actor: null actor_id/role with source SYSTEM and approved fixed action only
+audit_actions:
+  SECURITY:
+  - ROLE_CHANGED
+  - MEMBERSHIP_CREATED
+  - MEMBERSHIP_UPDATED
+  - MEMBERSHIP_STATUS_CHANGED
+  - ACCOUNT_STATUS_CHANGED
+  - SESSIONS_REVOKED
+  - AUTH_ACCOUNT_PROVISIONED
+  - AUTH_PROVISION_RECONCILED
+  - BOOTSTRAP_ADMIN_CREATED
+  BUSINESS:
+  - VENUE_CREATED
+  - VENUE_UPDATED
+audit_fields:
+  profiles:
+  - id
+  - role
+  - account_status
+  staff_memberships:
+  - id
+  - profile_id
+  - venue_id
+  - status
+  - extra_permissions
+  venues:
+  - id
+  - code
+  - name
+  - public_address
+  - timezone
+  - is_public
+  - is_enabled
+  auth_user:
+  - id
+  sessions:
+  - profile_id
+  - revoked
+database:
+  business_entities_sprint1:
+  - profiles
+  - venues
+  - staff_memberships
+  - audit_events
+  schema_plan:
+    profiles:
+      columns:
+        id: uuid PK FK auth.users.id; restrict deletion to approved future maintenance
+        display_name: text nonempty <=100; self editable
+        role: text one of five roles; default USER; privileged write only
+        account_status: text ACTIVE|DISABLED; default ACTIVE
+        sessions_revoked_before: timestamptz nullable; DB server write
+        created_at: timestamptz server immutable
+        updated_at: timestamptz server monotonic version for stale protection
+      client_writable_columns:
+      - display_name
+      delete: not exposed
+    venues:
+      columns:
+        id: uuid PK server generated
+        code: text unique nonempty <=32
+        name: text nonempty <=150
+        public_address: text nullable <=500; public information only
+        timezone: text validated IANA identifier; no assumed global default
+        is_public: boolean default false
+        is_enabled: boolean default true
+        created_at: timestamptz server immutable
+        updated_at: timestamptz server monotonic
+      public_projection:
+      - id
+      - code
+      - name
+      - public_address
+      - timezone
+      delete: not exposed
+    staff_memberships:
+      columns:
+        id: uuid PK server generated
+        profile_id: uuid FK profiles.id
+        venue_id: uuid FK venues.id
+        status: text ACTIVE|INACTIVE; default ACTIVE
+        extra_permissions: text[] default empty; fixed whitelist, no duplicates
+        created_at: timestamptz server immutable
+        updated_at: timestamptz server monotonic
+      unique:
+      - profile_id
+      - venue_id
+      role_column: false
+      eligibility: Only MANAGER/STAFF can receive active membership/HR extras; profile.role authoritative; old inactive
+        rows retained
+      delete: not exposed
+    audit_events:
+      columns:
+        id: uuid PK server generated
+        actor_id: uuid FK profiles.id nullable only trusted SYSTEM event
+        actor_role: text snapshot from DB; null for SYSTEM
+        source: text CUSTOMER_WEB|CONTROL_CENTER|SYSTEM; trusted entrypoint
+        category: text SECURITY|BUSINESS
+        action: text fixed Sprint1 action vocabulary
+        target_type: text profiles|venues|staff_memberships|auth_user
+        target_id: uuid; typed target correlation, historical record not generic entity system
+        venue_id: uuid FK venues.id nullable for global events
+        reason: text required for sensitive change <=500
+        before_data: jsonb redacted allowlist
+        after_data: jsonb redacted allowlist
+        correlation_id: uuid server generated; tracing not generic idempotency store
+        created_at: timestamptz server immutable
+      append_only: true
+      client_write: false
+      retention: no automated delete in V1; production policy TBD
+  default: explicit grants+RLS deny by default
+  mutations: own display_name column grant/RLS; privileged changes RPC
+  views: public field predicate checked; internal security_invoker or reviewed authorized RPC
+  definer: minimum privileges, fixed safe search_path, explicit schema, restricted EXECUTE, private helpers
+  service_role: server only; no generic DB proxy
+  integrity:
+  - FK
+  - unique profile/venue membership
+  - role/status whitelist
+  - extra-permission whitelist
+  - last-active-Admin serialization invariant
+  - no UI hard delete
+  indexes: PK/unique plus membership profile/venue and audit venue/created_at, actor/created_at; justify actual
+    query need
+planned_rpcs:
+  read:
+  - current_access
+  - public_venues
+  - staff_directory
+  - membership_directory
+  - audit_feed
+  write:
+  - update_venue
+  - update_access
+  - set_account_status
+  - set_staff_membership_status
+  - revoke_own_sessions
+  not_a_generic_command_engine: true
+privileged_writes:
+  expected_version: server updated_at exact; locks+recheck; reject stale mutation
+  sensitive_confirmation: preview diff+explicit confirm; reason required
+  self_change: no self security/role/scope/membership changes; self profile/session revoke allowed
+  last_admin: no disable/demote/remove last ACTIVE ADMIN; concurrency tested
+  auth_creation: external provider not cross-service atomic; idempotent defaults USER and reconcile procedure
+surfaces_sprint1:
+  customer:
+  - auth
+  - own_profile
+  control_center:
+  - auth
+  - access_overview
+  - venues
+  - people_if_permitted
+  - audit_if_permitted
+  staff_overview: own membership and permitted venue data only; no tasks/tables fake
+  ceo_overview: authorized branch overview only; no revenue/occupancy fake
+repository:
+  root: volume-v2
+  legacy: outside V2; immutable original ZIP
+  future_paths:
+  - apps/customer
+  - apps/control-center
+  - packages/shared
+  - supabase/migrations
+  - supabase/tests
+  - supabase/functions
+  - tests/e2e
+  - tests/integration
+  current: documents only
+  workspace: simple npm workspaces, one package-lock at implementation; no dependency installed now
+sprint1:
+  business_entities:
+  - profiles
+  - venues
+  - staff_memberships
+  - audit_events
+  exact_file_allowlist:
+  - package.json
+  - package-lock.json
+  - tsconfig.base.json
+  - .gitignore
+  - .env.example
+  - .github/workflows/sprint1.yml
+  - apps/customer/package.json
+  - apps/customer/tsconfig.json
+  - apps/customer/vite.config.ts
+  - apps/customer/index.html
+  - apps/customer/src/main.tsx
+  - apps/customer/src/App.tsx
+  - apps/customer/src/styles.css
+  - apps/customer/src/lib/supabase.ts
+  - apps/customer/src/features/auth/AuthPage.tsx
+  - apps/customer/src/features/profile/ProfilePage.tsx
+  - apps/control-center/package.json
+  - apps/control-center/tsconfig.json
+  - apps/control-center/vite.config.ts
+  - apps/control-center/index.html
+  - apps/control-center/src/main.tsx
+  - apps/control-center/src/App.tsx
+  - apps/control-center/src/styles.css
+  - apps/control-center/src/providers/auth-provider.ts
+  - apps/control-center/src/providers/data-provider.ts
+  - apps/control-center/src/providers/access-control-provider.ts
+  - apps/control-center/src/components/Shell.tsx
+  - apps/control-center/src/components/ConfirmChange.tsx
+  - apps/control-center/src/components/ui/button.tsx
+  - apps/control-center/src/components/ui/input.tsx
+  - apps/control-center/src/components/ui/dialog.tsx
+  - apps/control-center/src/components/ui/table.tsx
+  - apps/control-center/src/lib/utils.ts
+  - apps/control-center/src/features/auth/AuthPage.tsx
+  - apps/control-center/src/features/overview/AccessOverviewPage.tsx
+  - apps/control-center/src/features/venues/VenuesPage.tsx
+  - apps/control-center/src/features/people/PeoplePage.tsx
+  - apps/control-center/src/features/audit/AuditPage.tsx
+  - packages/shared/package.json
+  - packages/shared/tsconfig.json
+  - packages/shared/src/index.ts
+  - packages/shared/src/database.types.ts
+  - packages/shared/src/permissions.ts
+  - packages/shared/src/supabase-client.ts
+  - packages/shared/src/permissions.test.ts
+  - vitest.config.ts
+  - supabase/config.toml
+  - supabase/migrations/20261006000100_identity_scope.sql
+  - supabase/migrations/20261006000200_permissions_rpc_audit.sql
+  - supabase/seed.sql
+  - supabase/tests/sprint1_constraints.test.sql
+  - supabase/tests/sprint1_rls.test.sql
+  - supabase/tests/sprint1_rpc_audit.test.sql
+  - supabase/tests/sprint1_revocation.test.sql
+  - supabase/functions/admin-auth/index.ts
+  - supabase/functions/_shared/authorize.ts
+  - playwright.config.ts
+  - tests/e2e/fixtures/auth.ts
+  - tests/e2e/sprint1-auth.spec.ts
+  - tests/e2e/sprint1-permissions.spec.ts
+  - tests/e2e/sprint1-admin.spec.ts
+  - tests/e2e/sprint1-mobile.spec.ts
+  - tests/integration/sprint1-api.test.ts
+  - tests/integration/sprint1-revocation.test.ts
+  - tests/integration/sprint1-concurrency.test.ts
+  - README.md
+  - docs/sprints/SPRINT_1.md
+  - docs/sprints/SPRINT_1_RESULTS.md
+  - docs/OPEN_QUESTIONS.md
+  forbidden_modules:
+  - player
+  - match
+  - table
+  - table_session
+  - payment
+  - task
+  - tournament
+  - shop
+  - order
+  - product
+  - media
+  - video
+  - telegram
+  - crm
+  - ai
+  - new_animation
+  - invitation_module
+  gate: owner approval Sprint0 + auth policy G2
+  no_extra_file_by_folder: folder allows only files explicitly named
+  evidence: db+API+Playwright actual PASS; NOT RUN blocks freeze
+future:
+  table_service_status:
+  - ACTIVE
+  - MAINTENANCE
+  - DISABLED
+  occupancy: available/pending/playing derived from table_sessions, not table status
+  table_session_states:
+  - PAYMENT_PENDING
+  - ACTIVE
+  - CLOSED
+  - CANCELLED
+  payment_rules: UNDECIDED; no amounts/method/hold-time assumptions
+  player_relation: profiles -> player_profiles -> match_players -> matches -> match_media
+  match_multiple_players: true
+  media_belongs_to: match
+  other_state_machines: draft reference only; revisit and approve at module Sprint; do not generate schema now
+roadmap:
+  '0': documents and legacy freeze
+  '1': Auth/Profile/Role/Scope/Branch/Permission/RLS/Audit
+  '2': open table to ACTIVE after payment rules approved
+  '3': close bill and release table after time/money rules approved
+  '4': Player Core
+  '5': Match Media external first
+  '6': Tournament reuses Match Core
+  '7': Shop
+  '8': Telegram adapter
+  '9': Production integrations and operations
+agent_rules:
+- exact_allowlist
+- no_legacy_edit
+- no_schema_role_state_change_without_review
+- no_unapproved_dependency
+- no_fake_menus
+- no_multi_module_work
+- no_following_sprint_without_authorization
+- report_files_tests_limits_checkpoint_and_stop
+open_gates:
+- G1
+- G2
+- G3
+- G4
+- G5
+- G6
+- G7
+- G8
+- G9
+- G10
+- G11
+- G12
+- G13
+- G14

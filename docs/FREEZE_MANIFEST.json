@@ -1,0 +1,89 @@
+{
+  "project": "VOLUME V2",
+  "sprint": 0,
+  "date": "2026-10-06",
+  "status": "DOCUMENT_SNAPSHOT_FROZEN_PENDING_OWNER_REVIEW",
+  "sprint1_authorized": false,
+  "input_sha256": {
+    "VOLUME_F6_1_MACOS(1).zip": "f0b0cf8372b1a127a30362bd1a584bb0c1e8a4d3346de6f3113cfdb4d007837b",
+    "VOLUME_F6_1_AUDIT_V2_PLAN.md": "daf72ad056f6d96e760134ec763ae609804dd8f202763f32c7183144ddeef1f4",
+    "VOLUME_V2_BLUEPRINT_DRAFT.yaml": "d1180b3baadb7dce76b871de4c8b846f8c977d59467a571f05a329eac4c18c2b"
+  },
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "e43e99d0d7b5dc49c6bc98bb4887a5bb1f5755f486e70dc35c12bb7215237df1",
+      "bytes": 3438
+    },
+    {
+      "path": "README.md",
+      "sha256": "606040af6d22e8aa76b8dc345aae5bf40bdd6dd48cab5e94c33cb56a4c23d71b",
+      "bytes": 2557
+    },
+    {
+      "path": "docs/LEGACY_REFERENCE.md",
+      "sha256": "5bf892c0cc3b0f3432ba3ae83c63378df5ad7d26222b701c98ba1e085c42546a",
+      "bytes": 2792
+    },
+    {
+      "path": "docs/OPEN_QUESTIONS.md",
+      "sha256": "97b8cb06b02f495cb1b88a02b35a3d9480de05000be2f7fcc229d3ad25c539c2",
+      "bytes": 2744
+    },
+    {
+      "path": "docs/SPRINT_0_VALIDATION.md",
+      "sha256": "337e17b10c4089a64166b8519681d2996725ae7f03cc1a56f2b6fbb7c0033071",
+      "bytes": 3611
+    },
+    {
+      "path": "docs/architecture.md",
+      "sha256": "63309346c1b8091f77db0f499adac98f30235febe6b0b1cf32249cbd74a7caa8",
+      "bytes": 9042
+    },
+    {
+      "path": "docs/blueprint.yaml",
+      "sha256": "30ef16aa789c298ddea1e97d0d826c864b81d55ad7b5b5c6c8a618104450fbce",
+      "bytes": 17140
+    },
+    {
+      "path": "docs/decisions/ADR-001-identity-role-scope.md",
+      "sha256": "0521448c4340f455a7f3dd4c08242d877e5d255aea19f81c91a93460660a896b",
+      "bytes": 1914
+    },
+    {
+      "path": "docs/decisions/ADR-002-enforcement-revocation-audit.md",
+      "sha256": "3bc41850acbc483026bf06bffc0ecd425776d0bd7a29890b0ae055c079e78273",
+      "bytes": 2175
+    },
+    {
+      "path": "docs/decisions/ADR-003-repository-sprint-gates.md",
+      "sha256": "000a9ac9eba7161b56f9f10a2ab6fd85e236afa6e6aa44697c762052b589771b",
+      "bytes": 1588
+    },
+    {
+      "path": "docs/decisions/README.md",
+      "sha256": "ee7935f671aadcb03362ac5b69f79f63458da3d94cfa8c22bd0dc00cfbca6841",
+      "bytes": 531
+    },
+    {
+      "path": "docs/permissions.md",
+      "sha256": "fa5be310c7cd9e60f2ce2f0a774b92a12b57ae58835225ed834daa325fcd4c5f",
+      "bytes": 4883
+    },
+    {
+      "path": "docs/sprints/SPRINT_0.md",
+      "sha256": "3981c09c0b92a27cab4e64e2f1735a133e122466f857bf30b2a8ac9c9193035d",
+      "bytes": 3033
+    },
+    {
+      "path": "docs/sprints/SPRINT_1.md",
+      "sha256": "b0856b173f2ffb0fde6831893cfb83b5aab93fe33ffed59eb42c7c29c245fd2e",
+      "bytes": 15819
+    }
+  ],
+  "notes": [
+    "Manifest excludes itself",
+    "No runtime test execution in Sprint0",
+    "Legacy unchanged; not included in delivery"
+  ]
+}
