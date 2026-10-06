@@ -189,11 +189,11 @@ Fixture profile/venue/membership version starts 1; old/new expected_version, sam
 ## Freeze 1A
 Required database/API/security tests thực PASS; no NOT RUN/BLOCKED required check. Review grants/definer/current session access and clean migration. Secret/client scan+forbidden entity/module scan+legacy unchanged. Record versions/commands/results/risk/file delta in SPRINT_1A_RESULTS.md; commit/tag 1A checkpoint; DỪNG. Không chạy/build UI/Refine/Playwright hoặc bắt đầu 1B khi chưa authorize. UI/browser tests chưa chạy ở 1A không ngăn freeze 1A, nhưng không gọi Sprint1 toàn bộ DONE.
 
-## Checkpoint 1B — Product Surfaces (planned)
+## Checkpoint 1B — Product Surfaces (owner authorized)
 Entry: owner authorize 1B riêng, 1A PASS+freeze. Customer email/password Auth/Profile/recovery UI; Control Center shell; Refine auth/data/access provider; role-aware navigation; venue/access/people/audit đúng permission; preview diff+reason+expected_version confirm; Playwright desktop/mobile. CEO chỉ branch/access overview, không fake revenue/occupancy. Staff minimal scope, USER không internal. Reuse unchanged 1A RPC/schema/security; no database migration/config/function changes in 1B unless deviation reported/approved first.
 
 ### Planned exact file allowlist 1B
-Danh sách dưới chỉ kế hoạch; không cho phép implement bây giờ. Chốt lại khi owner authorize 1B; không tự mở rộng scope.
+Owner đã authorize1B sau preflight và separate read maintenance. Danh sách56 file dưới là exact allowlist hiện tại; không tự mở rộng scope.
 
 - `package.json`
 - `package-lock.json`

@@ -77,14 +77,23 @@ jobs:
         run: npx playwright install --with-deps chromium webkit
       - name: Actual browser/backend Auth, roles, venue scope and confirmations
         run: npm run test:e2e
+      - name: Redact test credentials before artifact upload
+        if: always()
+        run: |
+          python - <<'PY'
+          import pathlib,re
+          for p in pathlib.Path('test-results').rglob('*'):
+            if p.suffix in {'.json','.md','.txt'}:
+              content=p.read_text()
+              content=re.sub(r'Local-[0-9a-f-]+!|Recovered-browser-password-2026!|eyJ[A-Za-z0-9_.-]+|sb_secret_[A-Za-z0-9_-]+','[REDACTED]',content)
+              p.write_text(content)
+          PY
       - name: Browser screenshots and report evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: checkpoint-1b-browser-evidence
-          path: |
-            playwright-report/
-            test-results/
+          path: test-results/
           if-no-files-found: ignore
           retention-days: 7
       - name: Required evidence summary

@@ -25,4 +25,11 @@ test('PW06: status-only HR gets target CAS without directory, cross-venue or oth
  const target=await f.membership('staffA');await page.getByTestId('membership-'+target.id).getByRole('button',{name:'Đổi trạng thái làm việc'}).click();await expect(page.getByRole('dialog')).toContainText('Ngừng tại chi nhánh');await page.getByLabel('Lý do').fill('Ngừng làm việc tại chi nhánh A');await page.getByRole('button',{name:'Xác nhận lưu'}).click();await expect(page.getByRole('dialog')).toHaveCount(0);
  const after=await f.membership('staffA');expect(after.status).toBe('INACTIVE');expect(after.version).toBe('2');expect((await f.db.query('select account_status,version from public.profiles where id=$1',[f.users.staffA.id])).rows[0]).toEqual({account_status:'ACTIVE',version:'2'});
  await page.goto(control+'/people?venue='+f.B);await expect(page.getByRole('heading',{name:'Không có quyền truy cập'})).toBeVisible();
+ await page.goto(control+'/people');
+ const current=await f.membership('hrA');
+ const revoked=await f.changeRole('hrA','STAFF','admin1',[{id:current.id,venue_id:f.A,status:'ACTIVE',extra_permissions:[],expected_version:current.version}]);expect(revoked.status).toBe(200);
+ await page.getByRole('button',{name:'Tải lại dữ liệu'}).click();await expect(page.getByRole('heading',{name:'Đăng nhập',exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'staffA',exact:true})).toHaveCount(0);
+ await login(page,f,'hrA');await expect(page.getByRole('link',{name:'Nhân sự & truy cập',exact:true})).toHaveCount(0);
+ await f.login('hrA');expect((await f.rpc('hrA','membership_mutation_targets',{p_venue:f.A})).status).toBeGreaterThanOrEqual(400);
 });
+
