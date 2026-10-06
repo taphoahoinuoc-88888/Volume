@@ -1,9 +1,11 @@
 {
   "project": "VOLUME V2",
+  "revision": "1.1-sprint0-final",
   "sprint": 0,
   "date": "2026-10-06",
-  "status": "DOCUMENT_SNAPSHOT_FROZEN_PENDING_OWNER_REVIEW",
-  "sprint1_authorized": false,
+  "status": "FINAL_DOCS_IMPLEMENTATION_NOT_AUTHORIZED",
+  "checkpoint_1a_authorized": false,
+  "checkpoint_1b_authorized": false,
   "input_sha256": {
     "VOLUME_F6_1_MACOS(1).zip": "f0b0cf8372b1a127a30362bd1a584bb0c1e8a4d3346de6f3113cfdb4d007837b",
     "VOLUME_F6_1_AUDIT_V2_PLAN.md": "daf72ad056f6d96e760134ec763ae609804dd8f202763f32c7183144ddeef1f4",
@@ -12,13 +14,13 @@
   "files": [
     {
       "path": "AGENTS.md",
-      "sha256": "e43e99d0d7b5dc49c6bc98bb4887a5bb1f5755f486e70dc35c12bb7215237df1",
-      "bytes": 3438
+      "sha256": "1e99770c06f953169343c7845f16d519e1a6b1a69927f0599b159c3377ddac10",
+      "bytes": 4424
     },
     {
       "path": "README.md",
-      "sha256": "606040af6d22e8aa76b8dc345aae5bf40bdd6dd48cab5e94c33cb56a4c23d71b",
-      "bytes": 2557
+      "sha256": "7bd27481706b611845739752b66381bf33a3a1457a23807edbd67e4301dda2f3",
+      "bytes": 3119
     },
     {
       "path": "docs/LEGACY_REFERENCE.md",
@@ -27,23 +29,23 @@
     },
     {
       "path": "docs/OPEN_QUESTIONS.md",
-      "sha256": "97b8cb06b02f495cb1b88a02b35a3d9480de05000be2f7fcc229d3ad25c539c2",
-      "bytes": 2744
+      "sha256": "5ca7266ad488b5574958c9d74a991d03e34f329b1ee6fdd94fdb30f8b834abdc",
+      "bytes": 5357
     },
     {
       "path": "docs/SPRINT_0_VALIDATION.md",
-      "sha256": "337e17b10c4089a64166b8519681d2996725ae7f03cc1a56f2b6fbb7c0033071",
-      "bytes": 3611
+      "sha256": "610f513dfa9fd8088e86db29f64fb96a247ab6423eb11539526ec462ad5578e0",
+      "bytes": 4379
     },
     {
       "path": "docs/architecture.md",
-      "sha256": "63309346c1b8091f77db0f499adac98f30235febe6b0b1cf32249cbd74a7caa8",
-      "bytes": 9042
+      "sha256": "e41f2e16c004d6f27407ef2c8fe8d1d6f97ff750d251354138ed98f6c6306ee3",
+      "bytes": 10721
     },
     {
       "path": "docs/blueprint.yaml",
-      "sha256": "30ef16aa789c298ddea1e97d0d826c864b81d55ad7b5b5c6c8a618104450fbce",
-      "bytes": 17140
+      "sha256": "510ad1315f8a11e8c8bd252cebd0ffa71f5ead52ea0fb2bccd319851c8c39a9f",
+      "bytes": 26777
     },
     {
       "path": "docs/decisions/ADR-001-identity-role-scope.md",
@@ -52,38 +54,47 @@
     },
     {
       "path": "docs/decisions/ADR-002-enforcement-revocation-audit.md",
-      "sha256": "3bc41850acbc483026bf06bffc0ecd425776d0bd7a29890b0ae055c079e78273",
-      "bytes": 2175
+      "sha256": "eef27635ef2a2da7c42d579028eca82da277d54cf65f476e195f16a97800972d",
+      "bytes": 2311
     },
     {
       "path": "docs/decisions/ADR-003-repository-sprint-gates.md",
-      "sha256": "000a9ac9eba7161b56f9f10a2ab6fd85e236afa6e6aa44697c762052b589771b",
-      "bytes": 1588
+      "sha256": "59a0396fc668057392d0dd7920ed18958040ce9dd2ad147d50d29f7579c580c8",
+      "bytes": 1795
+    },
+    {
+      "path": "docs/decisions/ADR-004-auth-version-checkpoints.md",
+      "sha256": "27f13d55a11168991c7f25654c63321f5d4e47f77168bd521740752fb8ca77a2",
+      "bytes": 1866
     },
     {
       "path": "docs/decisions/README.md",
-      "sha256": "ee7935f671aadcb03362ac5b69f79f63458da3d94cfa8c22bd0dc00cfbca6841",
-      "bytes": 531
+      "sha256": "d1f424c8e4ba7ebc53a05cd25e9c5edf32de191ba6f3db1bfca8ece77ab0e66b",
+      "bytes": 646
     },
     {
       "path": "docs/permissions.md",
-      "sha256": "fa5be310c7cd9e60f2ce2f0a774b92a12b57ae58835225ed834daa325fcd4c5f",
-      "bytes": 4883
+      "sha256": "a7ce41ab8216fa76daba657ab0fa6680c2f2ebee39371badd58337c600fb2506",
+      "bytes": 5906
     },
     {
       "path": "docs/sprints/SPRINT_0.md",
-      "sha256": "3981c09c0b92a27cab4e64e2f1735a133e122466f857bf30b2a8ac9c9193035d",
-      "bytes": 3033
+      "sha256": "3bc46a8c5580eaa32f8accc0dd5bee6dd5886cfcbd8636cc3f4404a654391d29",
+      "bytes": 3517
     },
     {
       "path": "docs/sprints/SPRINT_1.md",
-      "sha256": "b0856b173f2ffb0fde6831893cfb83b5aab93fe33ffed59eb42c7c29c245fd2e",
-      "bytes": 15819
+      "sha256": "d3fc54cb19b4b862bbdf7309b28e81293909a81794a37b59f01edbb5834723fc",
+      "bytes": 19043
     }
   ],
+  "checkpoint_contract": {
+    "1A_exact_file_count": 30,
+    "1B_planned_file_count": 56
+  },
   "notes": [
-    "Manifest excludes itself",
-    "No runtime test execution in Sprint0",
-    "Legacy unchanged; not included in delivery"
+    "Manifest excludes itself and dynamic Git metadata",
+    "Final ZIP includes entire repository including documentation Git history",
+    "No runtime tests or implementation in Sprint0"
   ]
 }

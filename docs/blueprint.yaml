@@ -1,9 +1,10 @@
-version: 1.0-sprint0
+version: 1.1-sprint0-final
 date: '2026-10-06'
-status: DOCUMENT_SNAPSHOT_FROZEN_PENDING_OWNER_REVIEW
+status: SPRINT0_FINAL_DOCUMENTS_IMPLEMENTATION_NOT_AUTHORIZED
 implementation_authorized: false
 authority:
-  user_decisions: 20 approved decisions in conversation 2026-10-06
+  user_decisions: 20 approved architecture decisions plus final Auth/version/checkpoint corrections 2026-10-06;
+    no implementation authorization
   technical_contract: this file after owner review
   legacy: reference only
   changes: report rationale and obtain approval before architectural deviation
@@ -102,7 +103,7 @@ permission_vocabulary:
     description: Read own profile; sensitive field projection excluded
   OWN_PROFILE_UPDATE:
     scope: self
-    description: Update own display_name only
+    description: Update own display_name only through RPC + expected_version
   PUBLIC_VENUES_READ:
     scope: public
     description: Published enabled venue safe projection
@@ -235,12 +236,14 @@ audit_fields:
   - id
   - role
   - account_status
+  - version
   staff_memberships:
   - id
   - profile_id
   - venue_id
   - status
   - extra_permissions
+  - version
   venues:
   - id
   - code
@@ -249,6 +252,7 @@ audit_fields:
   - timezone
   - is_public
   - is_enabled
+  - version
   auth_user:
   - id
   sessions:
@@ -269,10 +273,12 @@ database:
         account_status: text ACTIVE|DISABLED; default ACTIVE
         sessions_revoked_before: timestamptz nullable; DB server write
         created_at: timestamptz server immutable
-        updated_at: timestamptz server monotonic version for stale protection
-      client_writable_columns:
-      - display_name
+        updated_at: timestamptz NOT NULL; server update time only; NOT a concurrency token
+        version: bigint NOT NULL DEFAULT 1; positive; atomically increment once per successful persisted row mutation
+      client_writable_columns: []
       delete: not exposed
+      self_rpc_editable_columns:
+      - display_name
     venues:
       columns:
         id: uuid PK server generated
@@ -283,7 +289,8 @@ database:
         is_public: boolean default false
         is_enabled: boolean default true
         created_at: timestamptz server immutable
-        updated_at: timestamptz server monotonic
+        updated_at: timestamptz NOT NULL; server update time only; NOT a concurrency token
+        version: bigint NOT NULL DEFAULT 1; positive; atomically increment once per successful persisted row mutation
       public_projection:
       - id
       - code
@@ -299,7 +306,8 @@ database:
         status: text ACTIVE|INACTIVE; default ACTIVE
         extra_permissions: text[] default empty; fixed whitelist, no duplicates
         created_at: timestamptz server immutable
-        updated_at: timestamptz server monotonic
+        updated_at: timestamptz NOT NULL; server update time only; NOT a concurrency token
+        version: bigint NOT NULL DEFAULT 1; positive; atomically increment once per successful persisted row mutation
       unique:
       - profile_id
       - venue_id
@@ -327,7 +335,8 @@ database:
       client_write: false
       retention: no automated delete in V1; production policy TBD
   default: explicit grants+RLS deny by default
-  mutations: own display_name column grant/RLS; privileged changes RPC
+  mutations: All mutable writes through dedicated authorized RPC with expected_version; no direct client writes
+    to version or mutable tables; safe reads grants+RLS
   views: public field predicate checked; internal security_invoker or reviewed authorized RPC
   definer: minimum privileges, fixed safe search_path, explicit schema, restricted EXECUTE, private helpers
   service_role: server only; no generic DB proxy
@@ -338,6 +347,7 @@ database:
   - extra-permission whitelist
   - last-active-Admin serialization invariant
   - no UI hard delete
+  - positive bigint version on profiles/venues/staff_memberships; append-only audit has no version
   indexes: PK/unique plus membership profile/venue and audit venue/created_at, actor/created_at; justify actual
     query need
 planned_rpcs:
@@ -348,6 +358,7 @@ planned_rpcs:
   - membership_directory
   - audit_feed
   write:
+  - update_own_profile
   - update_venue
   - update_access
   - set_account_status
@@ -355,11 +366,14 @@ planned_rpcs:
   - revoke_own_sessions
   not_a_generic_command_engine: true
 privileged_writes:
-  expected_version: server updated_at exact; locks+recheck; reject stale mutation
+  expected_version: bigint required for existing mutable target, compare under lock; reject mismatch/missing; never
+    timestamp equality
   sensitive_confirmation: preview diff+explicit confirm; reason required
   self_change: no self security/role/scope/membership changes; self profile/session revoke allowed
   last_admin: no disable/demote/remove last ACTIVE ADMIN; concurrency tested
   auth_creation: external provider not cross-service atomic; idempotent defaults USER and reconcile procedure
+  multi_row_version: expected versions for all existing rows to mutate, including profile cutoff when changing membership;
+    rollback entire command on any mismatch
 surfaces_sprint1:
   customer:
   - auth
@@ -392,76 +406,6 @@ sprint1:
   - venues
   - staff_memberships
   - audit_events
-  exact_file_allowlist:
-  - package.json
-  - package-lock.json
-  - tsconfig.base.json
-  - .gitignore
-  - .env.example
-  - .github/workflows/sprint1.yml
-  - apps/customer/package.json
-  - apps/customer/tsconfig.json
-  - apps/customer/vite.config.ts
-  - apps/customer/index.html
-  - apps/customer/src/main.tsx
-  - apps/customer/src/App.tsx
-  - apps/customer/src/styles.css
-  - apps/customer/src/lib/supabase.ts
-  - apps/customer/src/features/auth/AuthPage.tsx
-  - apps/customer/src/features/profile/ProfilePage.tsx
-  - apps/control-center/package.json
-  - apps/control-center/tsconfig.json
-  - apps/control-center/vite.config.ts
-  - apps/control-center/index.html
-  - apps/control-center/src/main.tsx
-  - apps/control-center/src/App.tsx
-  - apps/control-center/src/styles.css
-  - apps/control-center/src/providers/auth-provider.ts
-  - apps/control-center/src/providers/data-provider.ts
-  - apps/control-center/src/providers/access-control-provider.ts
-  - apps/control-center/src/components/Shell.tsx
-  - apps/control-center/src/components/ConfirmChange.tsx
-  - apps/control-center/src/components/ui/button.tsx
-  - apps/control-center/src/components/ui/input.tsx
-  - apps/control-center/src/components/ui/dialog.tsx
-  - apps/control-center/src/components/ui/table.tsx
-  - apps/control-center/src/lib/utils.ts
-  - apps/control-center/src/features/auth/AuthPage.tsx
-  - apps/control-center/src/features/overview/AccessOverviewPage.tsx
-  - apps/control-center/src/features/venues/VenuesPage.tsx
-  - apps/control-center/src/features/people/PeoplePage.tsx
-  - apps/control-center/src/features/audit/AuditPage.tsx
-  - packages/shared/package.json
-  - packages/shared/tsconfig.json
-  - packages/shared/src/index.ts
-  - packages/shared/src/database.types.ts
-  - packages/shared/src/permissions.ts
-  - packages/shared/src/supabase-client.ts
-  - packages/shared/src/permissions.test.ts
-  - vitest.config.ts
-  - supabase/config.toml
-  - supabase/migrations/20261006000100_identity_scope.sql
-  - supabase/migrations/20261006000200_permissions_rpc_audit.sql
-  - supabase/seed.sql
-  - supabase/tests/sprint1_constraints.test.sql
-  - supabase/tests/sprint1_rls.test.sql
-  - supabase/tests/sprint1_rpc_audit.test.sql
-  - supabase/tests/sprint1_revocation.test.sql
-  - supabase/functions/admin-auth/index.ts
-  - supabase/functions/_shared/authorize.ts
-  - playwright.config.ts
-  - tests/e2e/fixtures/auth.ts
-  - tests/e2e/sprint1-auth.spec.ts
-  - tests/e2e/sprint1-permissions.spec.ts
-  - tests/e2e/sprint1-admin.spec.ts
-  - tests/e2e/sprint1-mobile.spec.ts
-  - tests/integration/sprint1-api.test.ts
-  - tests/integration/sprint1-revocation.test.ts
-  - tests/integration/sprint1-concurrency.test.ts
-  - README.md
-  - docs/sprints/SPRINT_1.md
-  - docs/sprints/SPRINT_1_RESULTS.md
-  - docs/OPEN_QUESTIONS.md
   forbidden_modules:
   - player
   - match
@@ -480,9 +424,138 @@ sprint1:
   - ai
   - new_animation
   - invitation_module
-  gate: owner approval Sprint0 + auth policy G2
+  gate: G1 explicit owner authorization for 1A; G2 CLOSED; 1B requires its own later authorization and 1A PASS/freeze
   no_extra_file_by_folder: folder allows only files explicitly named
-  evidence: db+API+Playwright actual PASS; NOT RUN blocks freeze
+  evidence: 1A actual DB/API/security PASS then freeze+STOP; 1B actual browser/Playwright PASS only after separate
+    owner authorization
+  checkpoints:
+    1A:
+      status: NOT_AUTHORIZED
+      scope:
+      - Supabase local config
+      - four business entities only
+      - constraints/grants/RLS/safe views/helpers/RPC
+      - Auth identity/profile bootstrap
+      - optional server admin provisioning needed for tests
+      - session revocation/audit/seed
+      - database/API integration/security tests
+      exact_file_allowlist:
+      - package.json
+      - package-lock.json
+      - tsconfig.base.json
+      - .gitignore
+      - .env.example
+      - .github/workflows/sprint1a.yml
+      - vitest.config.ts
+      - supabase/config.toml
+      - supabase/migrations/20261006000100_identity_scope.sql
+      - supabase/migrations/20261006000200_permissions_rpc_audit.sql
+      - supabase/seed.sql
+      - supabase/tests/sprint1_constraints.test.sql
+      - supabase/tests/sprint1_rls.test.sql
+      - supabase/tests/sprint1_rpc_audit.test.sql
+      - supabase/tests/sprint1_revocation.test.sql
+      - supabase/tests/sprint1_versions.test.sql
+      - supabase/tests/sprint1_concurrency.test.sql
+      - supabase/tests/sprint1_auth_bootstrap.test.sql
+      - supabase/functions/admin-auth/index.ts
+      - supabase/functions/_shared/authorize.ts
+      - tests/integration/fixtures/auth.ts
+      - tests/integration/sprint1-api.test.ts
+      - tests/integration/sprint1-revocation.test.ts
+      - tests/integration/sprint1-concurrency.test.ts
+      - tests/integration/sprint1-versions.test.ts
+      - tests/integration/sprint1-auth-recovery.test.ts
+      - README.md
+      - docs/sprints/SPRINT_1.md
+      - docs/sprints/SPRINT_1A_RESULTS.md
+      - docs/OPEN_QUESTIONS.md
+      forbidden:
+      - Customer UI
+      - Control Center business UI
+      - Refine/UI dependencies
+      - all Sprint1 forbidden modules
+      tests:
+      - clean migration
+      - permission/RLS matrix
+      - cross-venue denial
+      - privilege escalation
+      - revocation
+      - stale bigint version
+      - last Admin concurrency
+      - audit atomicity
+      - no service-role in client/source UI
+      - no forbidden module
+      freeze: record evidence/checkpoint then STOP; do not auto-start 1B
+    1B:
+      status: PLANNED_NOT_AUTHORIZED
+      scope:
+      - Customer email/password Auth/Profile UI and email recovery
+      - Control Center shell and Refine integration
+      - role-aware navigation
+      - venue/access/people/audit surfaces according to permissions
+      - expected_version confirmation UX
+      - Playwright desktop/mobile Chromium+WebKit tests
+      planned_exact_file_allowlist:
+      - package.json
+      - package-lock.json
+      - tsconfig.base.json
+      - .gitignore
+      - .env.example
+      - .github/workflows/sprint1b.yml
+      - vitest.config.ts
+      - apps/customer/package.json
+      - apps/customer/tsconfig.json
+      - apps/customer/vite.config.ts
+      - apps/customer/index.html
+      - apps/customer/src/main.tsx
+      - apps/customer/src/App.tsx
+      - apps/customer/src/styles.css
+      - apps/customer/src/lib/supabase.ts
+      - apps/customer/src/features/auth/AuthPage.tsx
+      - apps/customer/src/features/profile/ProfilePage.tsx
+      - apps/control-center/package.json
+      - apps/control-center/tsconfig.json
+      - apps/control-center/vite.config.ts
+      - apps/control-center/index.html
+      - apps/control-center/src/main.tsx
+      - apps/control-center/src/App.tsx
+      - apps/control-center/src/styles.css
+      - apps/control-center/src/providers/auth-provider.ts
+      - apps/control-center/src/providers/data-provider.ts
+      - apps/control-center/src/providers/access-control-provider.ts
+      - apps/control-center/src/components/Shell.tsx
+      - apps/control-center/src/components/ConfirmChange.tsx
+      - apps/control-center/src/components/ui/button.tsx
+      - apps/control-center/src/components/ui/input.tsx
+      - apps/control-center/src/components/ui/dialog.tsx
+      - apps/control-center/src/components/ui/table.tsx
+      - apps/control-center/src/lib/utils.ts
+      - apps/control-center/src/features/auth/AuthPage.tsx
+      - apps/control-center/src/features/overview/AccessOverviewPage.tsx
+      - apps/control-center/src/features/venues/VenuesPage.tsx
+      - apps/control-center/src/features/people/PeoplePage.tsx
+      - apps/control-center/src/features/audit/AuditPage.tsx
+      - packages/shared/package.json
+      - packages/shared/tsconfig.json
+      - packages/shared/src/index.ts
+      - packages/shared/src/database.types.ts
+      - packages/shared/src/permissions.ts
+      - packages/shared/src/supabase-client.ts
+      - packages/shared/src/permissions.test.ts
+      - playwright.config.ts
+      - tests/e2e/fixtures/auth.ts
+      - tests/e2e/sprint1-auth.spec.ts
+      - tests/e2e/sprint1-permissions.spec.ts
+      - tests/e2e/sprint1-admin.spec.ts
+      - tests/e2e/sprint1-mobile.spec.ts
+      - README.md
+      - docs/sprints/SPRINT_1.md
+      - docs/sprints/SPRINT_1B_RESULTS.md
+      - docs/OPEN_QUESTIONS.md
+      database_contract: 1A immutable; deviation must be reported and approved before any change
+      entry: separate owner authorization + 1A PASS/freeze
+      freeze: record desktop/mobile/browser evidence and stop before Sprint2
 future:
   table_service_status:
   - ACTIVE
@@ -511,26 +584,138 @@ roadmap:
   '8': Telegram adapter
   '9': Production integrations and operations
 agent_rules:
-- exact_allowlist
+- exact_checkpoint_file_allowlist
 - no_legacy_edit
-- no_schema_role_state_change_without_review
-- no_unapproved_dependency
-- no_fake_menus
-- no_multi_module_work
-- no_following_sprint_without_authorization
+- no_architectural_deviation_without_approval
+- no_future_schema_module
+- no_fake_menu
+- no_dependency_without_justification
+- one_checkpoint_at_a_time
+- actual_tests_before_freeze
+- never_auto_continue_next_checkpoint_or_sprint
 - report_files_tests_limits_checkpoint_and_stop
-open_gates:
-- G1
-- G2
-- G3
-- G4
-- G5
-- G6
-- G7
-- G8
-- G9
-- G10
-- G11
-- G12
-- G13
-- G14
+auth_policy:
+  gate: G2
+  status: CLOSED_OWNER_DECIDED
+  identity_provider: Supabase Auth only
+  internal_roles:
+  - ADMIN
+  - CEO
+  - MANAGER
+  - STAFF
+  internal_authentication: email_password
+  customer_role: USER
+  customer_authentication: email_password
+  recovery: email_password_recovery
+  excluded_sprint1:
+  - phone_otp
+  - sms
+  - google_login
+  - apple_login
+  - facebook_login
+  - telegram_login
+  - passkey
+  - mfa
+  no_future_provider_schema: true
+  future_provider_identity: May add later without changing profiles.id = auth.users.id
+  signup: Any enabled customer signup defaults USER; internal accounts provisioned by authorized server path; opening
+    signup and email-confirmation settings not silently assumed
+  operational_configuration: Decide email confirmation/signup opening, recovery redirect/SMTP and production password
+    settings before corresponding live provisioning/deployment; test local email recovery without UI in 1A
+optimistic_concurrency:
+  mutable_entities:
+  - profiles
+  - venues
+  - staff_memberships
+  column: version bigint NOT NULL DEFAULT 1
+  updated_at: audit/display timestamp only; never equality concurrency token
+  new_row: version starts at 1; create has no prior expected_version; unique checks guard races
+  update: expected_version required; authorization + row lock + current version comparison; mismatched or missing
+    version rejects before write
+  on_mutation: increment each changed row version by 1 atomically with updated_at, audit and cutoff if affected;
+    same row changes once per command increment once
+  multi_row: preview carries expected_version for primary row and expected_profile_version/explicit expected versions
+    for each related row to mutate; all comparison+mutation+audit in same transaction
+  no_op: NO_CHANGE without mutation/version increment; still checks expected_version first; stale retries always
+    VERSION_CONFLICT, never reported successful mutation
+  client: cannot set/reset/decrement version; overflow aborts transaction
+  test: same updated_at but different version still conflicts; a matching timestamp never overrides stale expected_version
+  edit_projections: Return own profile.version, editable venue.version, membership.version and expected_profile_version
+    to authorized editing callers; never expose cutoff via roster
+gates:
+  G1:
+    definition: Owner reviews final Sprint0 contract and explicitly authorizes Checkpoint 1A; basic architecture
+      approval alone is insufficient
+    status: PENDING_OWNER_AUTHORIZATION_1A
+    required_before: Checkpoint 1A
+    resolution: Explicit owner approval to implement 1A; does not authorize 1B
+  G2:
+    definition: V1 internal ADMIN/CEO/MANAGER/STAFF and customer USER authenticate email+password; email password
+      recovery; Supabase Auth only; no phone/SMS/social/Telegram/passkey/MFA or prep schema in Sprint1
+    status: CLOSED_OWNER_DECIDED
+    required_before: Checkpoint 1A
+    resolution: Owner decided 2026-10-06; operational email/signup settings separately documented, not an undecided
+      provider gate
+  G3:
+    definition: 'Meaning of open-table payment: deposit, prepaid amount or operational confirmation'
+    status: OPEN
+    required_before: Sprint 2
+    resolution: Owner-approved payment business meaning
+  G4:
+    definition: Amount/currency, payment method, who may confirm and confirmation responsibility
+    status: OPEN
+    required_before: Sprint 2
+    resolution: Owner-approved amount/method/authority rules
+  G5:
+    definition: Pending table hold duration, expiry/cancellation, late confirmation and retry handling
+    status: OPEN
+    required_before: Sprint 2
+    resolution: Owner-approved pending lifecycle
+  G6:
+    definition: When hourly rate snapshots and playing time start; check-in effect if any
+    status: OPEN
+    required_before: Sprint 2
+    resolution: Owner-approved pricing/time start semantics
+  G7:
+    definition: 'CEO metric definitions: sessions/occupancy vs collected revenue; business day/timezone'
+    status: OPEN
+    required_before: Sprint 2
+    resolution: Owner-approved aggregate metrics
+  G8:
+    definition: Close-session rounding/minimum charge, final amount, close authority, corrections, settlement/refund
+    status: OPEN
+    required_before: Sprint 3
+    resolution: Owner-approved closing/billing rules
+  G9:
+    definition: Player public visibility/rank/achievement, verified results/draws/disputes/corrections and Match
+      Media privacy
+    status: DEFERRED
+    required_before: Player Sprint4; media privacy before Sprint5
+    resolution: Approve each relevant Player/Media rule before module work
+  G10:
+    definition: Tournament formats/eligibility/fees and suitability/storage adapter for brackets-manager.js using
+      same Match Core
+    status: DEFERRED
+    required_before: Sprint 6
+    resolution: Approved tournament contract and justified library choice
+  G11:
+    definition: Shop stock hold/expiry, fulfillment/refund and reuse of central payments
+    status: DEFERRED
+    required_before: Sprint 7
+    resolution: Approved commerce flow/constraints
+  G12:
+    definition: Telegram identity linking/login/handoff security and same data-core adapter
+    status: DEFERRED_EXCLUDED_SPRINT1
+    required_before: Sprint 8
+    resolution: Provider capability verification and approved adapter/linking contract
+  G13:
+    definition: HR onboarding invitation one-time use/expiry/revoke and authorized scope
+    status: DEFERRED_EXCLUDED_SPRINT1
+    required_before: Any future HR invitation implementation
+    resolution: Owner authorizes invitation scope; no invitation/token schema now
+  G14:
+    definition: Production audit retention/privacy, backup/restore SLA, historical import, deployment region/domain/SMTP
+      and operational recovery
+    status: DEFERRED
+    required_before: Production deployment/import/cleanup; local test mail setup not blocked
+    resolution: Approved production operations and data handling policies

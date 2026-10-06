@@ -28,7 +28,7 @@ ADMIN không union mọi permission string: STAFF_MEMBERSHIP_STATUS_MANAGE là H
 | Permission | Scope | Ý nghĩa |
 |---|---|---|
 | OWN_PROFILE_READ | self | Read own profile; sensitive field projection excluded |
-| OWN_PROFILE_UPDATE | self | Update own display_name only |
+| OWN_PROFILE_UPDATE | self | Update own display_name only through RPC + expected_version |
 | PUBLIC_VENUES_READ | public | Published enabled venue safe projection |
 | INTERNAL_VENUES_READ | global_or_venue | Internal venue fields in authorized scope |
 | MEMBERSHIPS_READ | global_or_venue_or_self | Admin full; CEO/Manager roster; Staff own only |
@@ -51,7 +51,7 @@ ADMIN không union mọi permission string: STAFF_MEMBERSHIP_STATUS_MANAGE là H
 6. Read projection/redaction; write lock+recheck+audit transaction.
 
 ## Target/field rules
-- Self profile read không trả session cutoff; self update chỉ display_name.
+- Self profile read không trả session cutoff; self update chỉ display_name qua RPC có expected_version.
 - Own membership read trả id/profile_id/venue_id/status/extra_permissions của chính mình; không danh sách đồng nghiệp.
 - Manager/CEO staff directory/membership projection chỉ id, display_name, role, venue_id, membership id/status; không extra của người khác hoặc auth contact.
 - Admin đọc internal profile/access fields qua authorized RPC, không client Auth schema.
@@ -66,4 +66,9 @@ ADMIN không union mọi permission string: STAFF_MEMBERSHIP_STATUS_MANAGE là H
 Public chỉ venue is_public=true và is_enabled=true, các cột public đã liệt kê. Không public profile/customer list/membership/audit. User đọc profile mình, membership mình nếu hợp lệ, thông tin public; không scan internal venues. Tài khoản DISABLED không truy cập private/internal, kể cả self, nhưng public vẫn public.
 
 ## No direct privilege writes
-Role/scope/account/membership/extra/audit không có direct client INSERT/UPDATE/DELETE. RPC rechecks database authority, expected version, reason và target. Frontend navigation dùng cùng vocabulary, nhưng thay request hoặc bỏ qua UI vẫn bị backend chặn.
+Role/scope/account/membership/extra/audit không có direct client INSERT/UPDATE/DELETE. RPC rechecks database authority, bigint expected_version, reason và target; updated_at chỉ timestamp. All mutable updates, gồm own display_name, dùng authorized RPC; client không ghi version. Frontend navigation dùng cùng vocabulary, nhưng thay request hoặc bỏ qua UI vẫn bị backend chặn.
+
+## Optimistic concurrency
+profiles/venues/staff_memberships có version bigint NOT NULL DEFAULT 1. update_own_profile và các RPC mutable khác yêu cầu expected_version; stale/missing version DENY, transaction rollback không tăng version/audit. Audit append-only không version. Direct write mutable tables không granted cho client; self name edit là dedicated RPC, không generic command engine. Multi-row action kiểm tra version từng row; cutoff tại profile cũng là mutation cần tăng profile.version.
+
+Authorized edit projection trả version cần thiết: self profile.version; Admin venue.version; membership.version và target profile.version cho HR status preview có quyền. Read-only public không cần concurrency field. Before/after audit của mutable entity gồm version để truy vết mutation.

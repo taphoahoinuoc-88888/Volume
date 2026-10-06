@@ -5,3 +5,5 @@
 - ADR-003: repository, module boundaries và gates Sprint.
 
 Trạng thái cả ba: **document snapshot frozen at Sprint 0 delivery; implementation pending owner review**. Các nguyên tắc chủ dự án đã duyệt được phân biệt với chi tiết contract được trình trong Sprint 0. Không sửa ADR cũ âm thầm; quyết định mới ghi ADR kế tiếp và ảnh hưởng Blueprint/test.
+
+- ADR-004: owner chốt Auth, bigint version, tách 1A/1B; supersedes concurrency/UI timing của bản trước.

@@ -1,6 +1,6 @@
 # VOLUME V2 — Sprint 0
 
-Trạng thái: **Sprint 0 hoàn tất tài liệu; chờ chủ dự án duyệt. Sprint 1 chưa được phép bắt đầu.**
+Trạng thái: **Sprint 0 final revision hoàn tất tài liệu; architecture cơ bản đã chấp thuận. Checkpoint 1A và 1B chưa được phép bắt đầu.**
 
 Project mới hoàn toàn. F6.1 chỉ là LEGACY / REFERENCE; không sửa, không import runtime, không chuyển dữ liệu/credentials tự động.
 
@@ -10,7 +10,7 @@ Project mới hoàn toàn. F6.1 chỉ là LEGACY / REFERENCE; không sửa, khô
 3. `docs/permissions.md`: vocabulary quyền, scope và dữ liệu được phép xem.
 4. `docs/decisions/`: các quyết định và lý do.
 5. `docs/sprints/SPRINT_0.md`: phạm vi, kiểm tra và freeze tài liệu.
-6. `docs/sprints/SPRINT_1.md`: allowlist, schema dự kiến, acceptance và test.
+6. `docs/sprints/SPRINT_1.md`: allowlist riêng 1A/1B, schema bigint version, acceptance và test.
 7. `docs/OPEN_QUESTIONS.md`: các mục chưa được chốt và gate tương ứng.
 8. `docs/LEGACY_REFERENCE.md`: nguồn tham khảo, baseline và giới hạn bằng chứng.
 9. `AGENTS.md`: quy tắc bắt buộc cho AI tiếp quản.
@@ -26,4 +26,7 @@ Stack: React/TypeScript, Refine + shadcn/ui cho Control Center, Supabase Auth/Po
 20 quyết định chủ dự án duyệt ngày 2026-10-06 là căn cứ. Chi tiết kỹ thuật được cụ thể hóa trong bộ Sprint 0 này để duyệt; không diễn giải rằng mọi chi tiết mới đã được chủ dự án phê chuẩn riêng. Sau duyệt, đổi role/entity/state/quyền ngoài contract phải báo lý do và cập nhật quyết định trước khi code.
 
 ## Gate tiếp theo
-Chỉ bắt đầu Sprint 1 khi chủ dự án duyệt bộ tài liệu này và giải quyết gate G1/G2 ở `docs/OPEN_QUESTIONS.md`. Không tự chạy Sprint tiếp theo. Payment/open-table chưa có business rule; phải chốt trước Sprint 2.
+G2 đã chốt Email + Password mọi role và email recovery, không provider khác hoặc prep schema ở Sprint1. G1 còn chờ owner authorize Checkpoint 1A. 1A PASS+freeze phải DỪNG; 1B cần authorization riêng. G1–G14 có definition/status trong `docs/OPEN_QUESTIONS.md`. Không tự chạy checkpoint/Sprint tiếp theo. Payment/open-table chưa có business rule; phải chốt trước Sprint 2.
+
+## Final correction đã ghi nhận
+updated_at chỉ thời gian. Mutable profiles/venues/staff_memberships có version bigint + expected_version. ADR-004 ghi Auth policy, version và checkpoint split. ZIP final chứa toàn repository volume-v2 gồm 16 tài liệu tracked và lịch sử Git docs-only; không runtime/app/dependency/legacy.

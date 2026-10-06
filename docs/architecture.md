@@ -24,7 +24,7 @@ React/TypeScript; workspace đơn giản, một lockfile. Không cài stack tron
 ## Database enforcement
 Deny-by-default; explicit grants và RLS cho từng operation. USING và WITH CHECK cho đúng loại action; constraint/FK/unique để bảo đảm consistency. Không dùng metadata người dùng tự sửa làm role. JWT chỉ chứng minh identity/session, không là bản authority role/scope.
 
-profiles chứa cột nhạy cảm nên self update chỉ allow display_name. Không grant SELECT toàn bộ profiles cho Staff/Manager. Danh sách nhân sự qua projection/RPC trả id, display_name, role, membership status tại venue được phép; không Auth email, phone, session cutoff hoặc extra_permissions của người khác.
+profiles chứa cột nhạy cảm nên self update chỉ allow display_name qua dedicated RPC có expected_version. Không grant SELECT toàn bộ profiles cho Staff/Manager. Danh sách nhân sự qua projection/RPC trả id, display_name, role, membership status tại venue được phép; không Auth email, phone, session cutoff hoặc extra_permissions của người khác.
 
 Public venue projection chỉ id, code, name, public_address, timezone của venue is_public=true và is_enabled=true. Không publish toàn profiles/roster/audit. View public phải chỉ chứa cột public và kiểm tra predicate tại database; kiểm thử riêng, không mặc nhiên cho rằng mọi view thừa hưởng RLS. View nội bộ dùng security_invoker khi phù hợp; nếu privileged RPC/view cần quyền cao, review và test boundary cụ thể.
 
@@ -42,7 +42,7 @@ auth.sessions là bảng do Supabase quản lý, chỉ helper đặc quyền đ�
 ## Quản trị và transaction
 Admin provision qua Auth Admin API; credentials luôn thuộc Auth. Auth creation và profile creation không phải distributed transaction: secure profile hook chỉ defaults USER/ACTIVE, idempotent; nếu provisioning lỗi phải reconcile/cleanup Auth test account theo procedure có audit, không rollback giả. Bootstrap Admin đầu tiên qua procedure server/operator có kiểm soát, không public signup parameter.
 
-Sensitive RPC nhận expected updated_at để chặn stale preview; client xem trước thay đổi và xác nhận. RPC kiểm tra lại authority, target, scope, whitelist và version trong transaction. Timestamp/version server; không whole-database snapshot như F6.1.
+Mutable profiles/venues/staff_memberships có version bigint NOT NULL DEFAULT 1. updated_at timestamptz chỉ thời gian cập nhật, không token concurrency. RPC update bắt buộc expected_version; database kiểm tra version dưới row lock và từ chối VERSION_CONFLICT nếu khác hoặc thiếu. Client không được đặt version. Mỗi successful persisted row mutation tăng version atomically đúng một lần/command, cùng updated_at/cutoff/audit; rollback không tăng. Create bắt đầu 1, unique guard; no-op không mutation và không tăng nhưng vẫn kiểm tra expected_version trước. Retry version cũ luôn reject, không báo success chỉ vì payload trùng. Multi-row preview mang expected_version từng existing row liên quan (kể cả profile thay cutoff), sai một row rollback toàn command. Sensitive UI preview diff+reason+confirm ở 1B; 1A chứng minh contract bằng API. Không timestamp equality hay whole-database snapshot.
 
 Không tự cấp/quản lý quyền mình từ giao diện; user chỉ own profile và revoke own sessions. Không cho xóa/disable/demote Admin ACTIVE cuối cùng, kể cả hai request cạnh tranh. Auth provisioning không tự tạo role ADMIN. Không exposed account DELETE Sprint 1.
 
@@ -57,4 +57,9 @@ SECURITY events (role/scope/account/HR status/provisioning) chỉ Admin đọc. 
 Chưa tạo schema Table/Payment/Task/Player/Match/Tournament/Shop/Media/Telegram. Table phục vụ ACTIVE/MAINTENANCE/DISABLED; occupancy suy từ sessions. Sprint 2 đợi business rule payment. Transaction tạo session/pending, xác nhận/activate, idempotency và concurrency phải được contract riêng trước implement. Không tự tính revenue từ thao tác DEMO số tiền 0 legacy.
 
 ## Repository dự kiến
-apps/customer; apps/control-center; packages/shared; supabase/migrations; supabase/tests; supabase/functions; tests/e2e; docs/decisions; docs/sprints. Chỉ docs hiện tồn tại. Legacy bên ngoài repo V2. Không tạo future-module skeleton. Exact Sprint 1 file allowlist nằm trong SPRINT_1.md và blueprint.yaml.
+apps/customer; apps/control-center; packages/shared; supabase/migrations; supabase/tests; supabase/functions; tests/e2e; docs/decisions; docs/sprints. Chỉ docs hiện tồn tại. Legacy bên ngoài repo V2. Không tạo future-module skeleton. Exact allowlist riêng 1A và kế hoạch 1B nằm trong SPRINT_1.md và blueprint.yaml. 1A data/Auth/security only; 1B product surfaces sau authorization riêng, không đổi DB 1A âm thầm.
+
+## Auth Policy và checkpoint entry
+G2 CLOSED: Email + Password cho ADMIN/CEO/MANAGER/STAFF/USER; recovery qua email. Không phone/SMS/social/Telegram/passkey/MFA, không chuẩn bị provider schema. G1 vẫn PENDING authorization 1A. 1A không Customer/Control Center business UI hoặc Refine; local mail/Auth API tests không cần UI. PASS+freeze xong DỪNG. 1B Customer/Control Center/Refine/Playwright chỉ sau owner authorization riêng.
+
+Version phải xuất hiện trong projection riêng được dùng cho edit/preview: self profile.version; venue.version cho Admin edit; membership.version và target profile.version khi HR đổi status/cutoff. Version không là permission grant và không expose session cutoff. Public venue projection không cần version nếu không có edit action.
