@@ -1,6 +1,6 @@
 # Sprint 1 — Bốn entity, hai checkpoint độc lập
 
-Trạng thái: **1A AUTHORIZED / CI_IMPLEMENTATION_IN_PROGRESS; 1B PLANNED / NOT AUTHORIZED**. Sprint0 owner approved; G1 CLOSED_OWNER_AUTHORIZED_1A; G2 CLOSED. Chưa app/migration/dependency project/Supabase deployment. 1A PASS không authorize 1B.
+Trạng thái: **1A AUTHORIZED / BLOCKED_AUTH_COMPATIBILITY; 1B PLANNED / NOT AUTHORIZED**. Sprint0 owner approved; G1 CLOSED_OWNER_AUTHORIZED_1A; G2 CLOSED. Chưa app/migration/dependency project/Supabase deployment. 1A PASS không authorize 1B.
 
 ## Business scope không đổi
 profiles, venues, staff_memberships, audit_events. Supabase-managed auth.users/auth.sessions không business entity mới; không expose Auth schema. Năm role/matrix giữ nguyên. Auth mọi role Email + Password, recovery email. Không phone/SMS/social/Telegram/passkey/MFA; không schema chuẩn bị provider.
@@ -276,3 +276,6 @@ Record evidence/file delta in SPRINT_1B_RESULTS.md; checkpoint/tag and STOP. Onl
 
 ## Execution update — GitHub Actions
 Owner authorized real Supabase on ubuntu-latest CI. Branch checkpoint-1a from375379a; runtime/session preflight PASS at2a1c8a2, run37439354568. Core/matrix implementation under test; not complete/frozen. Original sandbox blocker is superseded by CI execution; previous notes retain historical evidence. No contract/allowlist change, no main merge, no1B. See SPRINT_1A_RESULTS.md.
+
+## STOP — actual CI compatibility findings
+Latest tested implementation240e159; workflow37442226921: startup/reset PASS, DB security suite FAIL (Auth schema USAGE missing for private definer owner; auth.sessions RLS enabled), API/security suite NOT RUN. Provider revoke-by-user-id also needs owner contract decision. See docs/sprints/SPRINT_1A_RESULTS.md (from repository root). No privilege escalation workaround applied.1A not complete/frozen; main unmerged;1B not authorized.

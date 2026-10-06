@@ -47,3 +47,6 @@ Owner authorized real Supabase on ubuntu-latest CI. Branch checkpoint-1a from375
 
 ## 1A blocker needing owner decision
 Administrative post-commit Auth provider revoke needs target JWT in GoTruev2.197.0. No revoke-by-user-id Admin route in pinned source. Database cutoff remains unchanged; session lifecycle spike PASS. Proposed clarification/alternative is NOT applied. See SPRINT_1A_RESULTS.md.1A cannot freeze until owner resolves this provider-orchestration contract. This is not a new symbolic gate.
+
+## STOP — actual CI compatibility findings
+Latest tested implementation240e159; workflow37442226921: startup/reset PASS, DB security suite FAIL (Auth schema USAGE missing for private definer owner; auth.sessions RLS enabled), API/security suite NOT RUN. Provider revoke-by-user-id also needs owner contract decision. See docs/sprints/SPRINT_1A_RESULTS.md (from repository root). No privilege escalation workaround applied.1A not complete/frozen; main unmerged;1B not authorized.

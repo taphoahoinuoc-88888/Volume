@@ -14,12 +14,12 @@ Two migrations: 20261006000100_identity_scope.sql and 20261006000200_permissions
 Sensitive mutations serialize using one transaction advisory lock, lock caller/target and recheck live session/authority. Multirow change-sets include each expected version; non-staff role transition requires explicit inactivation versions for existing memberships. Account/membership/role/scope/extra changes set cutoff. Self revoke audits before its own cutoff inside the same transaction. Audit failure rolls back domain data/version/cutoff.
 
 ## Tests and status
-Local typecheck PASS; YAML parsing/allowlist checks PASS. Full GitHub Actions DB/API/security matrix: NOT RUN at this report revision. No freeze/completion claim. Required tests are not replaced by static checks or preflight.
+Local typecheck PASS; YAML parsing/allowlist checks PASS. Full GitHub Actions matrix ran partially and FAILS. Latest tested implementation commit240e1595f2f22da66017ae517787cecb3e878482, run37442226921, job112198489719. Database suite FAIL; API suite SKIPPED / NOT RUN because database step failed. No freeze/completion claim. Required tests are not replaced by static checks or preflight.
 Database files cover constraints, grants/RLS, RPC/audit, revocation, versions, last-Admin invariant and bootstrap. Integration suites cover actual tokens, full role/scope matrix, metadata forgery, HR limits, direct audit denial, old refresh/new session/cutoff boundaries, injected bootstrap/audit faults, bigint exactness/overflow/multirow rollback, concurrent CAS/Admin protection/authority recheck, and captured email recovery/replay/expiry.
 Privileged SQL is confined to isolated local fixture setup, fault injection and observations; allow/deny requests always use anon key and real user JWTs. Provider revoke failure is modeled by deliberately leaving real old Auth sessions alive after DB cutoff, proving application denial independent of provider success.
 
 ## Security / limits
-No security acceptance yet: full CI must pass. No Auth schema exposure; no service-role key used by allow/deny clients. Startup logs suppressed to avoid CLI printing local generated keys. No production credentials. Provisioning Edge Function is optional and not implemented: test operator uses real signup plus controlled SQL fixture bootstrap/reconciliation audit; no generic privileged API proxy.
+No full security acceptance: database suite FAIL and API suite NOT RUN.1A is incomplete; no freeze/tag. No Auth schema exposure; no service-role key used by allow/deny clients. Startup logs suppressed to avoid CLI printing local generated keys. No production credentials. Provisioning Edge Function is optional and not implemented: test operator uses real signup plus controlled SQL fixture bootstrap/reconciliation audit; no generic privileged API proxy.
 No architectural deviation applied. Global mutation serialization is intentionally simple for V1 and may limit write throughput; no extra entity/service. No production SMTP/signup policy decision is implied by local auto-confirm/rate-limit settings.
 
 ## File delta / checkpoint
@@ -33,3 +33,52 @@ Pinned GoTruev2.197.0 source routes expose /logout with authenticated target-use
 Database cutoff/session lifecycle itself was verified compatible. This blocker is specifically the provider-call orchestration, not auth.sessions.created_at. Do not weaken database cutoff or reopen role/scope rules. Required CI includes an explicit failing compatibility gate; no green workflow may be used to claim complete1A while this decision remains unresolved. Further implementation of the affected provider step stops pending owner decision.
 Owner decision needed: clarify provider revoke as best-effort only when a supported target JWT is available (self revoke), while administrative changes always enforce DB cutoff; or authorize a specific supported privileged provider/session mechanism and its exact files/grants. No alternative applied.
 Primary pinned sources: https://github.com/supabase/auth/blob/v2.197.0/internal/api/api.go and https://github.com/supabase/auth/blob/v2.197.0/internal/api/logout.go; SDK https://supabase.com/docs/reference/javascript/auth-admin-signout.
+
+## Actual CI outcomes / stop reason
+- Run37439040918 (b65751d): runtime startup/reset/session-column preflight PASS only.
+- Run37439354568 (2a1c8a2): real Auth session lifecycle preflight PASS only.
+- Run37441213252 (385812c): startup FAIL; DB/API skipped; first run suppressed credential-bearing startup logs.
+- Run37441459062 (f1227d3): redacted diagnostics revealed migration ownership failure: must be able to SET ROLE volume_core.
+- Run37441754525 (5dd2f77): fixed migration operator membership and temporary schema CREATE (revoked at migration end); startup and clean reset PASS; DB suite FAIL; API skipped.
+- Run37442226921 (240e159): startup/reset, allowlist/frozen docs/secret scan, typecheck and npm audit PASS; Auth privilege diagnostics PASS as an observation; DB suite FAIL; API skipped.
+
+Diagnostics on actual runner AFTER reset: volume_core Auth schema USAGE=false; SELECT privileges on auth.sessions(id,user_id,created_at)=true; live_self/writer/live_profile owner=volume_core and SECURITY DEFINER=true; auth.sessions RLS=true, FORCE=false. Protected calls fail42501 permission denied for schema auth. Merely documenting grants or assuming managed-Auth accessibility is insufficient. Schema bootstrap/defaults, constraints/exactly-four entities and static minimum-owner/last-Admin guard files PASS. RLS/revocation/version/RPC-audit files FAIL; last-Admin/CAS concurrency via real APIs, audit failure rollback, recovery and Auth Admin404 probe remain NOT RUN.
+
+Second compatibility blocker: the least-privilege reader as currently implemented cannot access managed Auth after actual lifecycle/reset. Before applying an alternative privileged reader, managed-schema policy, BYPASSRLS role, broad Auth-role inheritance or post-start regrant workaround, stop and request owner review. None of those alternatives has been applied. The session lifecycle itself preserves created_at; do not claim that all Supabase versions inherently cannot implement cutoff. Required acceptance A1A02–A1A09 remains FAIL/BLOCKED/NOT RUN; completeA1A01 includes startup/reset/four-table checks PASS, but that does not make the checkpoint complete.
+
+Owner must resolve (1) supported minimum-privilege Auth session reader under actual managed schema/RLS lifecycle and (2) administrative post-commit provider revocation without possessing target JWT. Database authority/cutoff must remain; no frontend logout substitute, token storage, impersonation, ban/delete or new business entity implemented.
+
+## Legacy / checkpoint limits
+Legacy ZIP SHA256=f0b0cf8372b1a127a30362bd1a584bb0c1e8a4d3346de6f3113cfdb4d007837b; extracted235-file byte comparison:0 mismatches. Frozen Sprint0 source documents remain unchanged; only four progress/result documents changed within allowlist. No PASS/freeze tag. Draft PR1 remains unmerged; main375379a unchanged. Code is draft, not a security-certified deliverable. Provider compatibility gate deliberately cannot PASS until contract resolution; actual probe has not executed yet.
+
+## Exact file delta against375379a
+- `.env.example`
+- `.github/workflows/sprint1a.yml`
+- `.gitignore`
+- `README.md`
+- `docs/OPEN_QUESTIONS.md`
+- `docs/sprints/SPRINT_1.md`
+- `docs/sprints/SPRINT_1A_RESULTS.md`
+- `package-lock.json`
+- `package.json`
+- `supabase/config.toml`
+- `supabase/migrations/20261006000100_identity_scope.sql`
+- `supabase/migrations/20261006000200_permissions_rpc_audit.sql`
+- `supabase/seed.sql`
+- `supabase/tests/sprint1_auth_bootstrap.test.sql`
+- `supabase/tests/sprint1_concurrency.test.sql`
+- `supabase/tests/sprint1_constraints.test.sql`
+- `supabase/tests/sprint1_revocation.test.sql`
+- `supabase/tests/sprint1_rls.test.sql`
+- `supabase/tests/sprint1_rpc_audit.test.sql`
+- `supabase/tests/sprint1_versions.test.sql`
+- `tests/integration/fixtures/auth.ts`
+- `tests/integration/sprint1-api.test.ts`
+- `tests/integration/sprint1-auth-recovery.test.ts`
+- `tests/integration/sprint1-concurrency.test.ts`
+- `tests/integration/sprint1-revocation.test.ts`
+- `tests/integration/sprint1-versions.test.ts`
+- `tsconfig.base.json`
+- `vitest.config.ts`
+
+28 files, all in exact1A allowlist. Optional provisioning Edge Function files omitted.
