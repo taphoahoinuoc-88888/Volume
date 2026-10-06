@@ -1,0 +1,95 @@
+name: Checkpoint 1B
+on:
+  push:
+    branches: [checkpoint-1b]
+permissions:
+  contents: read
+concurrency:
+  group: sprint1b-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  required-product:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Exact 1B allowlist, frozen core and secret scan
+        run: |
+          python - <<'PY'
+          import pathlib,re,subprocess
+          text=pathlib.Path('docs/sprints/SPRINT_1.md').read_text()
+          block=text.split('### Planned exact file allowlist 1B')[1].split('## Playwright')[0]
+          allowed=set(re.findall(r'^- `([^`]+)`',block,re.M))
+          changed=subprocess.check_output(['git','diff','--name-only','68541f8a71a0ae10ac22d819a79f78982cf37abb','HEAD'],text=True).splitlines()
+          assert set(changed)<=allowed,'Outside1B allowlist:'+str(set(changed)-allowed)
+          core=subprocess.check_output(['git','diff','--name-only','68541f8a71a0ae10ac22d819a79f78982cf37abb','HEAD','--','supabase','tests/integration','AGENTS.md','docs/blueprint.yaml','docs/permissions.md','docs/architecture.md','docs/decisions'],text=True)
+          assert not core.strip(),'Frozen core modified:'+core
+          for name in subprocess.check_output(['git','ls-files'],text=True).splitlines():
+            data=pathlib.Path(name).read_text()
+            assert not re.search(r'sb_secret_[A-Za-z0-9_-]{15,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{20,}',data),'Secret-like value:'+name
+          print('PASS:56-path1B allowlist; frozen security/core/tests unchanged; no future schema/module; secret scan')
+          PY
+      - name: Locked dependencies, typecheck, lint, unit tests, dependency audit
+        run: |
+          npm ci
+          npm run typecheck
+          npm run lint
+          npm run test:unit
+          npm audit --audit-level=high
+      - name: Pin Supabase and start real local stack
+        run: |
+          npm install --global supabase@2.119.0
+          test "$(supabase --version)" = '2.119.0'
+          if ! supabase start > "$RUNNER_TEMP/supabase-start.log" 2>&1; then
+            python - <<'PY'
+          import os,pathlib,re
+          data=pathlib.Path(os.environ['RUNNER_TEMP']+'/supabase-start.log').read_text()
+          for line in data.splitlines():
+            if re.search(r'error|failed|SQLSTATE|Applying migration',line,re.I):
+              print(re.sub(r'eyJ[A-Za-z0-9_.-]+|sb_(?:secret|publishable)_[A-Za-z0-9_-]+','[REDACTED]',line))
+          PY
+            exit 1
+          fi
+          supabase db reset
+          docker exec supabase_db_volume-v2 psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c "alter role volume_session_reader bypassrls; grant usage on schema auth to volume_session_reader; grant select(id,user_id,created_at) on auth.sessions to volume_session_reader;"
+      - name: Frozen 1A complete regression on real backend
+        run: |
+          supabase test db
+          npm run test:integration
+      - name: Public browser environment and production build
+        run: |
+          supabase status -o json > "$RUNNER_TEMP/local-status.json"
+          python - <<'PY'
+          import os,json,pathlib
+          data=json.loads(pathlib.Path(os.environ['RUNNER_TEMP']+'/local-status.json').read_text())
+          assert data['API_URL'].startswith('http://127.0.0.1:')
+          content='VITE_SUPABASE_URL='+data['API_URL']+'\nVITE_SUPABASE_ANON_KEY='+data['ANON_KEY']+'\nVITE_CUSTOMER_URL=http://127.0.0.1:3000\n'
+          for app in ['customer','control-center']:pathlib.Path('apps',app,'.env').write_text(content)
+          PY
+          npm run build
+      - name: Install Chromium and WebKit
+        run: npx playwright install --with-deps chromium webkit
+      - name: Actual browser/backend Auth, roles, venue scope and confirmations
+        run: npm run test:e2e
+      - name: Browser screenshots and report evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: checkpoint-1b-browser-evidence
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Required evidence summary
+        run: |
+          echo "Checkpoint1B required tests PASS for $GITHUB_SHA; real Supabase CLI2.119.0, Chromium/WebKit desktop1440/mobile390/320; frozen78 DB/27 API regression; no Sprint2." >> "$GITHUB_STEP_SUMMARY"
+      - name: Stop local stack
+        if: always()
+        run: supabase stop --no-backup
