@@ -1,7 +1,7 @@
 name: Checkpoint 1A
 on:
   push:
-    branches: [checkpoint-1a]
+    branches: [checkpoint-1a, main]
   pull_request:
     branches: [main]
 permissions:
