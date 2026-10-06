@@ -214,3 +214,5 @@ end $$;
 grant execute on function private.live_self(uuid) to authenticated;
 grant execute on function public.public_venues() to anon,authenticated;
 grant execute on function public.current_access(),public.staff_directory(uuid),public.membership_directory(uuid),public.audit_feed(uuid),public.update_own_profile(text,bigint),public.update_venue(uuid,bigint,text,text,text,text,boolean,boolean,text),public.update_access(uuid,bigint,text,jsonb,text),public.set_account_status(uuid,bigint,text,text),public.set_staff_membership_status(uuid,bigint,bigint,text,text),public.revoke_own_sessions(bigint) to authenticated;
+
+revoke create on schema public,private from volume_core;

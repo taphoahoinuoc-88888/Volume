@@ -2,6 +2,10 @@
 create schema private;
 revoke all on schema private from public;
 create role volume_core nologin noinherit;
+-- Local managed postgres is not superuser: allow migration operator to transfer
+-- ownership, then remove schema CREATE from the runtime owner at migration end.
+grant volume_core to postgres;
+grant create on schema public, private to volume_core;
 grant usage on schema public, private, auth to volume_core;
 grant select (id,user_id,created_at) on auth.sessions to volume_core;
 grant execute on function auth.uid(), auth.jwt() to volume_core;
