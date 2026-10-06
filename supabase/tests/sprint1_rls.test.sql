@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path=public,extensions;
-select plan(19);
+select plan(23);
 
 insert into auth.users(id,email) select ('30000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,'db-test-'||n||'@example.test' from generate_series(1,9) n;
 update public.profiles set role=case right(id::text,1) when '1' then 'ADMIN' when '2' then 'ADMIN' when '3' then 'CEO' when '4' then 'MANAGER' when '5' then 'STAFF' when '8' then 'STAFF' when '9' then 'STAFF' else 'USER' end where id::text like '30000000%';
@@ -36,6 +36,10 @@ select ok(not has_schema_privilege('volume_core','auth','USAGE'),'Application co
 select ok(not has_table_privilege('volume_core','auth.sessions','SELECT') and not has_column_privilege('volume_core','auth.sessions','id','SELECT'),'Application core has no Auth session select');
 select ok(not has_function_privilege('anon','private.session_valid(timestamptz)','EXECUTE') and not has_function_privilege('authenticated','private.session_valid(timestamptz)','EXECUTE') and not has_function_privilege('service_role','private.session_valid(timestamptz)','EXECUTE'),'Only trusted core may execute session adapter');
 select ok((select prosecdef and prorettype='boolean'::regtype and proconfig @> array['search_path=""'] from pg_proc where oid='private.session_valid(timestamptz)'::regprocedure),'Session adapter boolean/definer/empty search_path');
+select ok((select not rolcanlogin and not rolsuper and not rolinherit and rolbypassrls from pg_roles where rolname='volume_session_reader'),'Reader is non-login/non-superuser/noinherit; narrowly granted read bypasses managed RLS');
+select ok(has_column_privilege('volume_session_reader','auth.sessions','id','SELECT') and has_column_privilege('volume_session_reader','auth.sessions','user_id','SELECT') and has_column_privilege('volume_session_reader','auth.sessions','created_at','SELECT') and not has_column_privilege('volume_session_reader','auth.sessions','ip','SELECT'),'Reader selects exactly needed session fields, no IP');
+select ok(not has_table_privilege('volume_session_reader','auth.sessions','INSERT,UPDATE,DELETE') and not has_table_privilege('volume_session_reader','auth.users','SELECT') and not has_table_privilege('volume_session_reader','public.profiles','SELECT,INSERT,UPDATE,DELETE'),'Reader cannot write sessions/read contacts/read or mutate business tables');
+select ok(not pg_has_role('authenticated','volume_session_reader','MEMBER') and not pg_has_role('volume_core','volume_session_reader','MEMBER'),'Clients/core cannot SET ROLE reader');
 set local role anon;
 select throws_ok($$select private.session_valid(null)$$,'42501',null,'Anon direct helper invocation denied');
 select is((select count(*)::int from public.public_venues()),1,'Anon safe published enabled venues');

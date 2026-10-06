@@ -51,3 +51,12 @@ test('API06: provider failure, bootstrap-hook rollback, reconciliation defaults'
  await f.auth('signup',{email,password});expect((await f.db.query('select count(*)::int n from public.profiles where id=$1',[id])).rows[0].n).toBe(1);
  await f.db.query("insert into public.audit_events(source,category,action,target_type,target_id,reason,after_data) values('SYSTEM','SECURITY','AUTH_PROVISION_RECONCILED','auth_user',$1,'Local operator verified bootstrap recovery',jsonb_build_object('id',$1::uuid))",[id]);
 });
+
+test('API09: private helper and managed Auth schemas are not exposed via Data API',async()=>{
+ for(const name of ['admin1','user1']) {
+  for(const schema of ['private','auth']) {
+   const path=schema==='private'?'rpc/session_valid':'sessions?select=id,user_id,created_at';
+   const r=await fetch(`${f.base}/rest/v1/${path}`,{method:schema==='private'?'POST':'GET',headers:{apikey:f.anon,Authorization:`Bearer ${f.users[name].token}`,'Accept-Profile':schema,'Content-Profile':schema,'Content-Type':'application/json'},...(schema==='private'?{body:JSON.stringify({p_cutoff:null})}:{})});expect(r.status).toBeGreaterThanOrEqual(400);
+  }
+ }
+});

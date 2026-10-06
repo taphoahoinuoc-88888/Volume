@@ -152,7 +152,7 @@ begin
   elsif item ? 'expected_version' and item->>'expected_version' is not null then raise exception 'VERSION_CONFLICT'; end if;
  end loop;
  if exists(select 1 from jsonb_array_elements(p_memberships) e group by e->>'venue_id' having count(*)>1) or exists(select 1 from jsonb_array_elements(p_memberships) e where e->>'id' is not null group by e->>'id' having count(*)>1) then raise exception 'DUPLICATE_CHANGE'; end if;
- if p_role not in ('MANAGER','STAFF') and exists(select 1 from public.staff_memberships m where m.profile_id=old.id and (m.status='ACTIVE' or cardinality(m.extra_permissions)>0) and not exists(select 1 from jsonb_array_elements(p_memberships) e where e->>'id'=m.id::text and e->>'status'='INACTIVE' and e->'extra_permissions'='[]'::jsonb)) then raise exception 'MEMBERSHIP_VERSIONS_REQUIRED'; end if;
+ if p_role not in ('MANAGER','STAFF') and exists(select 1 from public.staff_memberships existing_member where existing_member.profile_id=old.id and (existing_member.status='ACTIVE' or cardinality(existing_member.extra_permissions)>0) and not exists(select 1 from jsonb_array_elements(p_memberships) e where e->>'id'=existing_member.id::text and e->>'status'='INACTIVE' and e->'extra_permissions'='[]'::jsonb)) then raise exception 'MEMBERSHIP_VERSIONS_REQUIRED'; end if;
  -- Transition out of staff roles: inactivate first so eligibility trigger remains correct.
  for item in select value from jsonb_array_elements(p_memberships) loop
   if p_role not in ('MANAGER','STAFF') and (item->>'status'<>'INACTIVE' or item->'extra_permissions'<>'[]'::jsonb) then raise exception 'INELIGIBLE_MEMBERSHIP'; end if;
