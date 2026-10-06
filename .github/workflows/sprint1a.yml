@@ -50,7 +50,18 @@ jobs:
           test "$(supabase --version)" = '2.119.0'
       - name: Start real Supabase
         run: |
-          supabase start > "$RUNNER_TEMP/supabase-start.log" 2>&1 || { echo 'Supabase startup failed (no credential-bearing logs published)'; exit 1; }
+          if ! supabase start > "$RUNNER_TEMP/supabase-start.log" 2>&1; then
+            python - <<'PY'
+          import os,pathlib,re
+          data=pathlib.Path(os.environ['RUNNER_TEMP']+'/supabase-start.log').read_text()
+          for line in data.splitlines():
+            if re.search(r'error|failed|SQLSTATE|Applying migration',line,re.I):
+              line=re.sub(r'eyJ[A-Za-z0-9_.-]+|sb_(?:secret|publishable)_[A-Za-z0-9_-]+','[REDACTED]',line)
+              line=re.sub(r'postgres(?:ql)?://[^\\s]+','[DATABASE_URL_REDACTED]',line)
+              print(line)
+          PY
+            exit 1
+          fi
           docker ps --format '{{.Image}} {{.Status}}'
       - name: Clean migration and reset
         run: supabase db reset
