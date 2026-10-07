@@ -1,0 +1,18 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=public,extensions;
+select plan(12);
+select is((select count(*)::int from information_schema.tables where table_schema='public' and table_type='BASE TABLE'),10,'S3-T01/T47 exactly frozen eight plus CASH and conflict evidence');
+select is((select count(*)::int from information_schema.columns where table_schema='public' and column_name='version' and data_type='bigint'),6,'S3-T01 immutable evidence adds no mutable balance/version store');
+select is((select count(*)::int from pg_catalog.pg_class where oid in ('public.session_cash_receipts'::regclass,'public.session_financial_issues'::regclass) and relrowsecurity and relforcerowsecurity),2,'S3-T13 forced RLS on both evidence tables');
+select ok(not has_table_privilege('authenticated','public.session_cash_receipts','SELECT,INSERT,UPDATE,DELETE'),'S3-T13 browser cannot read/write raw cash');
+select ok(not has_table_privilege('anon','public.session_cash_receipts','SELECT,INSERT,UPDATE,DELETE'),'S3-T13 no public cash');
+select ok(not has_table_privilege('service_role','public.session_cash_receipts','SELECT,INSERT,UPDATE,DELETE'),'S3-T13 no generic service financial proxy');
+select ok(not has_table_privilege('volume_core','public.session_cash_receipts','UPDATE,DELETE'),'S3-T45 cash immutable even to normal core runtime');
+select ok(not has_table_privilege('authenticated','public.session_financial_issues','SELECT,INSERT,UPDATE,DELETE'),'S3-T39 no raw conflict evidence read/write');
+select is((select count(*)::int from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid=p.pronamespace where n.nspname='private' and p.proname like 'sprint3_%' and (has_function_privilege('authenticated',p.oid,'EXECUTE') or has_function_privilege('anon',p.oid,'EXECUTE') or has_function_privilege('service_role',p.oid,'EXECUTE'))),0,'S3-T13 private helpers not exposed');
+select is((select count(*)::int from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid=p.pronamespace where n.nspname='private' and p.proname like 'sprint3_%' and not coalesce(p.proconfig @> array['search_path=""'],false)),0,'S3-T13 safe helper search paths');
+select ok(not has_function_privilege('anon','public.own_session_financial(uuid)','EXECUTE'),'S3-T39 no anonymous private projection');
+select ok(has_function_privilege('volume_payment_ingest','private.sprint3_ingest_payment_event(jsonb)','EXECUTE') and not has_function_privilege('authenticated','private.sprint3_ingest_payment_event(jsonb)','EXECUTE'),'S3-T31 neutral ingestion stays server capability');
+select * from finish();
+rollback;

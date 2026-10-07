@@ -12,7 +12,7 @@ insert into public.billiard_tables(id,venue_id,code,label,hourly_price_vnd) valu
 create temporary table scenario(n text primary key,j jsonb);
 grant select,insert,update on scenario to authenticated;
 
-select is((select count(*)::int from information_schema.tables where table_schema='public' and table_type='BASE TABLE'),8,'T65 exactly eight approved business tables');
+select is((select count(*)::int from information_schema.tables where table_schema='public' and table_type='BASE TABLE' and table_name in ('profiles','venues','staff_memberships','audit_events','billiard_tables','table_sessions','payments','payment_receipts')),8,'T65 exactly eight retained Sprint2 business tables');
 select is((select count(*)::int from information_schema.columns where table_schema='public' and column_name='version' and data_type='bigint'),6,'T54 six mutable entities use bigint version');
 select is((select count(*)::int from pg_catalog.pg_class where oid in ('public.billiard_tables'::regclass,'public.table_sessions'::regclass,'public.payments'::regclass,'public.payment_receipts'::regclass) and relrowsecurity and relforcerowsecurity),4,'T59 new tables force RLS');
 select throws_ok($$update public.billiard_tables set hourly_price_vnd=0$$,'23514',null,'T86 positive integer price');
