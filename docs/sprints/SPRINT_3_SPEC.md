@@ -1,12 +1,23 @@
 # VOLUME V2 — Sprint 3 SPEC
 
-Status: **OWNER-DECISION COMPLETE — READY FOR OWNER SPEC APPROVAL**
-Revision: 3 — remaining owner decisions incorporated; SPEC approval still pending
+Status: **APPROVED / FROZEN — GATE 1 CLOSED**
+Revision: 4 — approval/closure metadata only; approved revision 3 business semantics unchanged
 Date: 2026-10-07
 Repository: `HAD10202/Volume`
 Verified frozen base: `1b6f713a990aabb4f705d5f0735856442a59b7db`
 Document-only branch: `sprint3-spec`
 Exact change allowlist: **update `docs/sprints/SPRINT_3_SPEC.md` only**.
+
+### Gate 1 closure metadata — 2026-10-07
+
+The owner's ONE-SHOT OWNER AUTHORIZATION PACKAGE explicitly approves the complete business SPEC at commit `813d41c86f937e8407f6080baaa599b669b62eff`. **APPROVED / FROZEN — GATE 1 CLOSED** records that approval. This revision changes only approval/closure metadata; the approved requirements, numerical oracle, state machines, permissions, invariants and 62 scenario IDs below remain unchanged.
+
+The owner's current authorization supersedes earlier procedural “Gate 1 only / wait for approval” status statements retained below as historical drafting context. It authorizes the document-only SPEC PR/merge, followed by sequential internally reviewed Gates 2–6 within Sprint 3. It does not authorize a material frozen-security deviation, new business decision, future module, real provider or production deployment. Gate 2/3 artifacts, implementation and CI work follow only after the Gate 1 main SHA is recorded.
+
+Verified immediately before this metadata update: main `1b6f713a990aabb4f705d5f0735856442a59b7db`; SPEC branch `813d41c86f937e8407f6080baaa599b669b62eff`; PR #4 merged; all three exact-main workflows SUCCESS. Sprint 2 job logs independently confirm 136 DB assertions, 80 integration, 27 unit and 114 Playwright passes plus static checks. PR #1/#3 closure records independently confirm Sprint 1A/1B CLOSED/FROZEN.
+
+Gate 1 merge/main SHA and subsequent handoff evidence will be recorded in the document PR and later technical-design/implementation-plan artifacts, avoiding a self-referential commit hash. Historical draft status text below does not reopen owner-approved questions.
+
 
 This revision incorporates the owner's explicit Q01–Q16 decisions and subsequent B01–B03 confirmations. No business implementation blocker remains. It is not yet an owner-approved/frozen SPEC, technical design, implementation plan or authorization to code. Obtain explicit approval of this completed SPEC before Gate 2. No production or executable test files are authorized.
 
