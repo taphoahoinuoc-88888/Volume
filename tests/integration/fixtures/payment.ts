@@ -1,7 +1,29 @@
 import {randomUUID} from 'node:crypto';
+import {spawn} from 'node:child_process';
 import {fixture,allowed,type Fixture} from './auth';
 import {validateFinalReceipt,type VerifiedReceipt} from '../../../supabase/functions/_shared/payment-adapter';
-export async function paymentFixture(){return paymentTools(await fixture());}
+/** Real local runtime setup, shared by API/browser fixtures. No mocked handler,
+ * test-only payment authority, JWT disable flag or frozen workflow change. */
+export async function startPaymentRuntime(f:Fixture):Promise<()=>void>{
+ if(process.env.VOLUME_EDGE_RUNTIME_READY==='true')return()=>{};
+ const child=spawn('supabase',['functions','serve','open-table-payment'],{stdio:['ignore','pipe','pipe']});
+ let serving=false;let exited=false;let buffer='';
+ const observe=(chunk:Buffer)=>{buffer=(buffer+chunk.toString()).slice(-4096);if(/Serving functions on|Listening on/.test(buffer))serving=true;};
+ child.stdout.on('data',observe);child.stderr.on('data',observe);
+ child.on('exit',()=>{exited=true;});child.on('error',()=>{exited=true;});
+ const stop=()=>{child.kill('SIGTERM');child.stdout.destroy();child.stderr.destroy();};
+ try{
+  for(let attempt=0;attempt<100;attempt++){
+   if(exited)throw new Error('LOCAL_EDGE_RUNTIME_START_FAILED');
+   if(serving){try{const r=await fetch(f.base+'/functions/v1/open-table-payment',{headers:{apikey:f.anon,Authorization:'Bearer '+f.anon}});if(r.status===405)return stop;}catch{}}
+   await new Promise(resolve=>setTimeout(resolve,250));
+  }
+  throw new Error('LOCAL_EDGE_RUNTIME_NOT_READY');
+ }catch(e){stop();throw e;}
+}
+export async function paymentFixture(){
+ const f=await fixture();try{const stop=await startPaymentRuntime(f);const p=paymentTools(f);p.close=async()=>{stop();await f.close();};return p;}catch(e){await f.close();throw e;}
+}
 export function paymentTools(f:Fixture){
  let tableA='',tableA2='',tableB='';
  const roles:Record<string,string>={admin1:'ADMIN',admin2:'ADMIN',ceo:'CEO',managerA:'MANAGER',managerB:'MANAGER',managerAB:'MANAGER',staffA:'STAFF',staffB:'STAFF',hrA:'STAFF',user1:'USER',user2:'USER',disabled:'USER',inactive:'STAFF'};

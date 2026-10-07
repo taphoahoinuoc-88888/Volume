@@ -86,7 +86,9 @@ jobs:
           docker exec supabase_db_volume-v2 psql -U postgres -d postgres -At -v ON_ERROR_STOP=1 -c "select version();"
       - name: Serve JWT-verified local opening function
         run: |
-          supabase functions serve open-table-payment > "$RUNNER_TEMP/edge-serve.log" 2>&1 &
+          if [ "$TARGETED_EDGE_UI" != 'true' ]; then
+            supabase functions serve open-table-payment > "$RUNNER_TEMP/edge-serve.log" 2>&1 &
+          fi
           node --input-type=module - <<'JS'
           import {execFileSync} from 'node:child_process';
           const local=JSON.parse(execFileSync('supabase',['status','-o','json'],{encoding:'utf8'}));
@@ -98,6 +100,9 @@ jobs:
           if(!ready)throw new Error('JWT-verified Edge handler not ready');
           console.log('Actual JWT-verified Edge function readiness PASS');
           JS
+          if [ "$TARGETED_EDGE_UI" != 'true' ]; then
+            echo 'VOLUME_EDGE_RUNTIME_READY=true' >> "$GITHUB_ENV"
+          fi
       - name: Complete frozen Sprint1 and new Sprint2 DB/API/Edge/security regression
         run: |
           supabase test db
