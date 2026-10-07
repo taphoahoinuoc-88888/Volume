@@ -55,7 +55,7 @@ export async function fixture() {
   const base = config.API_URL;
   const users: Record<string,{id:string,email:string,password:string,token:string,refresh:string,session:string}> = {};
   async function auth(path:string,body:object) {
-    const r=await fetch(`${base}/auth/v1/${path}`,{method:'POST',headers:{apikey:anon,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const r=await fetch(`${base}/auth/v1/${path}`,{method:'POST',headers:{Connection:'close',apikey:anon,'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await r.json(); return {status:r.status,data};
   }
   async function login(name:string) {

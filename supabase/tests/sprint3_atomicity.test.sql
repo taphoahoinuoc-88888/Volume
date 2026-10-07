@@ -1,0 +1,35 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=public,extensions;
+select plan(12);
+insert into auth.users(id,email) select ('30000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,'db-test-'||n||'@example.test' from generate_series(1,9) n;
+update public.profiles set role=case right(id::text,1) when '1' then 'ADMIN' when '2' then 'ADMIN' when '3' then 'CEO' when '4' then 'MANAGER' when '5' then 'STAFF' when '8' then 'STAFF' when '9' then 'STAFF' else 'USER' end where id::text like '30000000%';
+insert into auth.sessions(id,user_id,created_at,updated_at) select ('20000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,('30000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,clock_timestamp()-interval '1 second',clock_timestamp() from generate_series(1,9) n;
+insert into public.staff_memberships(profile_id,venue_id,extra_permissions) select p.id,case when right(p.id::text,1)='8' then '10000000-0000-0000-0000-000000000002'::uuid else '10000000-0000-0000-0000-000000000001'::uuid end,case when right(p.id::text,1)='9' then array['STAFF_DIRECTORY_READ','STAFF_MEMBERSHIP_STATUS_MANAGE'] else '{}'::text[] end from public.profiles p where p.id::text like '30000000%' and p.role in ('MANAGER','STAFF');
+
+
+insert into public.billiard_tables(id,venue_id,code,label,hourly_price_vnd) values('40000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001','A1','Bàn A1',100000),('40000000-0000-0000-0000-000000000002','10000000-0000-0000-0000-000000000001','A2','Bàn A2',100000),('40000000-0000-0000-0000-000000000003','10000000-0000-0000-0000-000000000002','B1','Bàn B1',100000);
+create temporary table scenario(n text primary key,j jsonb);
+grant select,insert,update on scenario to authenticated;
+set local role authenticated;
+select pg_catalog.set_config('request.jwt.claims','{"sub":"30000000-0000-0000-0000-000000000004","session_id":"20000000-0000-0000-0000-000000000004"}',true);
+insert into scenario values('manual',public.open_table_manual('40000000-0000-0000-0000-000000000001',null,1,'50000000-0000-0000-0000-000000000003','Isolated walk-in'));
+insert into scenario values('preview',public.session_financial((select (j->>'session_id')::uuid from scenario where n='manual')));
+select is((select j->>'settlement_status' from scenario where n='preview'),'UNPAID','S3-T06 MANUAL has no invented prepayment');
+select lives_ok($q$select public.record_session_cash((select (j->>'id')::uuid from scenario where n='preview'),1,null,1,1,'50000000-0000-0000-0000-000000000004','50000','Isolated cash')$q$,'S3-T59 ACTIVE cash recorded');
+reset role;
+select is((select state from public.table_sessions),'ACTIVE','S3-T59 cash leaves ACTIVE');
+select ok((select ended_at is null and final_charge_vnd is null from public.table_sessions),'S3-T59 no end or frozen bill');
+select is((select count(*)::int from public.payments),0,'S3-T06 no fake opening intent');
+set local role authenticated;
+select lives_ok($q$select public.close_table_session((select (j->>'id')::uuid from scenario where n='preview'),2,null,1,1,'Close isolated session')$q$,'S3-T52 partial session can close');
+reset role;
+select is((select state from public.table_sessions),'CLOSED','S3-T52 terminal played state');
+select is((select final_charge_vnd from public.table_sessions),100000::bigint,'S3-T02 minimum snapshot frozen');
+select is((select count(*)::int from public.table_sessions where state in ('ACTIVE','PENDING_PAYMENT')),0,'S3-T23 ownership released');
+select throws_ok($q$update public.session_cash_receipts set amount_vnd=1$q$,'P0001','IMMUTABLE_FINANCIAL_EVIDENCE','S3-T45 cash append only');
+select throws_ok($q$update public.table_sessions set closed_by='30000000-0000-0000-0000-000000000001'$q$,'P0001','IMMUTABLE_CLOSED_SESSION','S3-T53 original closer immutable');
+select is((select count(*)::int from public.audit_events where action='TABLE_SESSION_CLOSED'),1,'S3-T40 one close audit');
+set constraints all immediate;
+select * from finish();
+rollback;
