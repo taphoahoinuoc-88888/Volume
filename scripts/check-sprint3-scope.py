@@ -9,8 +9,9 @@ def git(*args):
     return subprocess.check_output(['git', *args], text=True)
 
 plan = pathlib.Path('docs/sprints/SPRINT_3_IMPLEMENTATION_PLAN.md').read_text()
-allowed = set(plan.split('```text\n')[1].split('\n```')[0].splitlines())
-assert len(allowed) == len(list(allowed)) and all('*' not in p for p in allowed)
+allowed_paths = plan.split('```text\n')[1].split('\n```')[0].splitlines()
+allowed = set(allowed_paths)
+assert len(allowed) == len(allowed_paths) and all('*' not in p for p in allowed)
 changed = set(git('diff', '--name-only', BASE, 'HEAD').splitlines())
 assert changed <= allowed, 'Unapproved paths: ' + str(changed - allowed)
 baseline = git('ls-tree', '-r', '--name-only', BASE).splitlines()
@@ -36,5 +37,8 @@ for p in git('ls-files').splitlines():
         assert all(x not in data for x in ['SUPABASE_DB_URL','payment-adapter','service_role']), 'Server capability in client: '+p
 for p,marker in [('.github/workflows/sprint1a.yml','      - name: Install locked core test dependencies\n'),('.github/workflows/sprint1b.yml','      - name: Locked dependencies, typecheck, lint, unit tests, dependency audit\n')]:
     assert git('show',BASE+':'+p).split(marker)[1] == pathlib.Path(p).read_text().split(marker)[1], 'Frozen runtime changed: '+p
+for p,marker in [('.github/workflows/sprint1a.yml','      - name: Scope, frozen documents and secret scan\n'),('.github/workflows/sprint1b.yml','      - name: Exact 1B allowlist, frozen core and secret scan\n')]:
+    assert git('show',BASE+':'+p).split(marker)[0] == pathlib.Path(p).read_text().split(marker)[0], 'Frozen workflow authority changed: '+p
+assert "TARGETED_EDGE_UI: 'false'" in pathlib.Path('.github/workflows/sprint3.yml').read_text(), 'Sprint3 must run full candidate coverage'
 assert {f'T{i:02}' for i in range(1,63)} <= set(re.findall(r'\bT\d\d\b',plan)), 'Missing scenario mapping'
 print(f'PASS Sprint3 exact {len(allowed)}-path scope; frozen migrations/Auth/security/dependencies/regressions; no secrets/future modules')

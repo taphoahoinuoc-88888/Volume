@@ -7,7 +7,7 @@ export default function SessionFinancePanel({sessionId,own=false}:{sessionId:str
  const[data,setData]=useState<SessionFinancial|null>(null),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[preview,setPreview]=useState<SessionFinancial|null>(null),[mode,setMode]=useState<'close'|'cash'|null>(null),[amount,setAmount]=useState(''),[reason,setReason]=useState('Khách thanh toán tiền bàn'),[closeReason,setCloseReason]=useState('Kết thúc phiên chơi'),[draft,setDraft]=useState<CashDraft|null>(null),[receipt,setReceipt]=useState<CashReceipt|null>(null),[storageKey,setStorageKey]=useState<string|null>(null),[unknown,setUnknown]=useState(false);
  const read=()=>rpc<SessionFinancial>(own?'own_session_financial':'session_financial',{p_session:sessionId});
  async function refresh(){try{const s=await read();setData(s);return s;}catch(e){setData(null);setMessage(e instanceof Error?e.message:'Chưa thể tải tiền bàn.');return null;}}
- useEffect(()=>{let live=true;setData(null);setPreview(null);setMode(null);setReceipt(null);setDraft(null);setUnknown(false);setMessage('');
+ useEffect(()=>{let live=true;setData(null);setPreview(null);setMode(null);setReceipt(null);setDraft(null);setStorageKey(null);setUnknown(false);setMessage('');
   void client.auth.getUser().then(({data:u})=>{if(!live||!u.user)return;const key=pendingCashKey(u.user.id,sessionId);setStorageKey(key);try{const saved=JSON.parse(sessionStorage.getItem(key)||'null');if(saved&&typeof saved.id==='string'&&typeof saved.amount==='string'&&typeof saved.reason==='string'){setDraft({...saved,submitted:true});setAmount(saved.amount);setReason(saved.reason);setUnknown(true);setMessage('Có lần ghi tiền chưa rõ kết quả. Hãy kiểm tra trước khi ghi tiếp.');}}catch{sessionStorage.removeItem(key);}});
   const load=async()=>{try{const s=await read();if(live)setData(s);}catch(e){if(live){setData(null);setMessage(e instanceof Error?e.message:'Chưa thể tải tiền bàn.');}}};void load();const timer=setInterval(()=>void load(),3000);return()=>{live=false;clearInterval(timer);};
  },[sessionId,own]);
@@ -17,7 +17,7 @@ export default function SessionFinancePanel({sessionId,own=false}:{sessionId:str
   const s=await read();setData(s);if(!draft)setMessage(s.state==='CLOSED'?'Đã đóng bàn. Kết quả đã được lưu.':'Bàn vẫn đang chơi và tiền giờ tiếp tục tính.');setUnknown(false);setMode(null);setPreview(null);
  }catch{setUnknown(true);setMessage('Chưa xác định kết quả. Kiểm tra kết nối rồi bấm kiểm tra lại; không ghi thêm lần mới.');}finally{setBusy(false);}}
  async function prepare(which:'close'|'cash'){setBusy(true);setMessage('');try{
-  if(which==='cash'){if(own)return;const proposed=cashAmount(amount);if(!reason.trim()||reason.trim().length>500)throw new Error('Nhập ghi chú thu tiền từ 1 đến 500 ký tự.');if(draft&&(draft.amount!==proposed||draft.reason!==reason.trim()))throw new Error('Cần hoàn tất kiểm tra lần ghi tiền trước, không đổi số tiền của lần đang chờ.');}
+  if(which==='cash'){if(own)return;if(!storageKey)throw new Error('Đang kiểm tra tài khoản thu tiền. Vui lòng thử lại.');const proposed=cashAmount(amount);if(!reason.trim()||reason.trim().length>500)throw new Error('Nhập ghi chú thu tiền từ 1 đến 500 ký tự.');if(draft&&(draft.amount!==proposed||draft.reason!==reason.trim()))throw new Error('Cần hoàn tất kiểm tra lần ghi tiền trước, không đổi số tiền của lần đang chờ.');}
   const s=await read();setData(s);setPreview(s);setMode(which);
   if(which==='cash'&&!draft)keepDraft({id:crypto.randomUUID(),amount:cashAmount(amount),reason:reason.trim()});
  }catch(e){setMessage(e instanceof Error?e.message:'Chưa thể xem lại yêu cầu.');}finally{setBusy(false);}}
@@ -33,6 +33,7 @@ export default function SessionFinancePanel({sessionId,own=false}:{sessionId:str
  return <div className="card stack" data-testid="session-finance"><h2>{data.state==='CLOSED'?'Đã đóng bàn':'Đang chơi'}</h2>
  <p>{data.venue_name} · {data.table_label} · {data.opening_method==='MANUAL'?'Mở thủ công — không mặc định đã trả tiền':'Phiên thanh toán mở bàn'}</p>
  <p role="status">{message}</p>{data.is_estimate&&<p className="notice">Ước tính — tiền giờ tiếp tục tính đến khi đóng bàn thành công. Số tiền khi xác nhận có thể cao hơn do thời gian tiếp tục trôi.</p>}
+ {data.is_estimate&&BigInt(data.duration_microseconds)>3600000000n&&<p>Đang tính tiền vượt 60 phút theo giá giờ lúc mở bàn.</p>}
  <h3>{settlementLabel(data.settlement_status)}{data.is_estimate?' · tạm tính':''}</h3>
  <dl className="balances"><dt>{data.is_estimate?'Tiền bàn hiện tại':'Tiền bàn cuối cùng'}</dt><dd data-testid="session-charge">{money(data.charge_vnd)}</dd><dt>Đã nhận cho phiên này</dt><dd>{money(data.validated_received_vnd)}</dd><dt>Đã dùng trả tiền bàn</dt><dd>{money(data.applied_amount_vnd)}</dd><dt>Còn phải thu</dt><dd data-testid="session-due">{money(data.remaining_due_vnd)}</dd><dt>Tiền dư cần xử lý</dt><dd>{money(data.unresolved_excess_vnd)}</dd></dl>
  {data.issues.map(x=><p key={x}>{issueLabels[x]||'Cần quản lý kiểm tra thanh toán.'}</p>)}

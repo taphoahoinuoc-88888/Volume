@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path=public,extensions;
-select plan(47);
+select plan(49);
 select is(private.sprint3_bill(100001,0),jsonb_build_object('duration_microseconds','0','billable_minutes','60','final_charge_vnd','100001'),'S3-T02/T08/T42/T50 duration 0us');
 select is(private.sprint3_bill(100001,1000000),jsonb_build_object('duration_microseconds','1000000','billable_minutes','60','final_charge_vnd','100001'),'S3-T02/T08/T42/T50 duration 1000000us');
 select is(private.sprint3_bill(100001,3599000000),jsonb_build_object('duration_microseconds','3599000000','billable_minutes','60','final_charge_vnd','100001'),'S3-T02/T08/T42/T50 duration 3599000000us');
@@ -49,5 +49,7 @@ select is(private.sprint3_financial(101668,101668,'{}'::text[]),jsonb_build_obje
 select is(private.sprint3_financial(150002,200003,array['LATE_BANK']),jsonb_build_object('validated_received_vnd','200003','applied_amount_vnd','150002','remaining_due_vnd','0','unresolved_excess_vnd','50001','settlement_status','NEEDS_RESOLUTION','issues',to_jsonb(array['LATE_BANK','EXCESS'])),'S3-T09/T42/T58/T61 financial oracle N18 conservation/status');
 select is(private.sprint3_financial(150002,100001,'{}'::text[]),jsonb_build_object('validated_received_vnd','100001','applied_amount_vnd','100001','remaining_due_vnd','50001','unresolved_excess_vnd','0','settlement_status','PARTIAL','issues',to_jsonb('{}'::text[])),'S3-T09/T42/T58/T61 financial oracle N19 conservation/status');
 select is(private.sprint3_financial(150002,150002,array['PROVIDER_CONFLICT'])->>'settlement_status','NEEDS_RESOLUTION','S3-T62 independent conflict survives absorbed excess');
+select is(private.sprint3_bill(100001,extract(epoch from (timestamptz '2026-10-08 01:00:00+07'-timestamptz '2026-10-07 23:30:00+07'))*1000000)->>'final_charge_vnd','150002','S3-T43/T44 midnight does not reset duration or rate');
+select is(private.sprint3_bill(100001,extract(epoch from (timestamptz '2026-11-01 01:30:00.000001-05'-timestamptz '2026-11-01 01:30:00-04'))*1000000)->>'final_charge_vnd','101668','S3-T44/T50 repeated DST wall clock retains true elapsed microsecond');
 select * from finish();
 rollback;

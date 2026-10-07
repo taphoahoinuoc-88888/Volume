@@ -1,5 +1,7 @@
 import {beforeAll,afterAll,beforeEach,describe,it,expect} from 'vitest';
 import {randomUUID} from 'node:crypto';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
 import {financeFixture,type FinanceFixture} from './fixtures/session-finance';
 import {allowed,denied} from './fixtures/auth';
 describe('Sprint3 independent transaction and recovery proofs',()=>{
@@ -14,12 +16,29 @@ describe('Sprint3 independent transaction and recovery proofs',()=>{
  it('S3-T21/T22 simultaneous USER/operator closes have exactly one committed result',async()=>{
   const id=await f.start('PAYMENT');const p=await f.preview(id);const r=await Promise.all([f.closeSession(p,'user1',true),f.closeSession(p,'staffA')]);expect(r.filter(x=>x.status===200)).toHaveLength(1);expect(r.find(x=>x.status!==200)?.data.message).toContain('VERSION_CONFLICT');expect((await f.db.query("select count(*)::int n from public.audit_events where action='TABLE_SESSION_CLOSED'")).rows[0].n).toBe(1);
  });
+ it('S3-T19 PAYMENT requires its own expected payment version as well',async()=>{
+  const id=await f.start('PAYMENT');const p=await f.preview(id);
+  const r=await f.rpc('user1','close_own_table_session',{...f.versions(p),p_expected_payment_version:null});denied(r);expect(r.data.message).toContain('VERSION_CONFLICT');expect((await f.preview(id)).state).toBe('ACTIVE');
+ });
+ it('S3-T19 exact bigint CAS above JS safe range rejects stale version with identical timestamps',async()=>{
+  const id=await f.start();await f.db.query('update public.table_sessions set version=$2 where id=$1',[id,'9007199254740993']);const p=await f.preview(id);
+  const before=(await f.db.query('select updated_at from public.table_sessions where id=$1',[id])).rows[0];await f.db.query('update public.table_sessions set version=version+1 where id=$1',[id]);
+  expect((await f.db.query('select updated_at from public.table_sessions where id=$1',[id])).rows[0]).toEqual(before);const stale=await f.closeSession(p);denied(stale);expect(stale.data.message).toContain('VERSION_CONFLICT');
+  const current=await f.preview(id);expect(current.session_version).toBe('9007199254740994');allowed(await f.closeSession(current));expect((await f.preview(id)).session_version).toBe('9007199254740995');
+ });
  it('S3-T23 close/release invisible before commit then new acquire wins safely',async()=>{
   const id=await f.start();const p=await f.preview(id);const c=await actorTx();let pending:ReturnType<typeof f.acquire>|undefined;
   try{await closeSql(c,p);expect((await f.view(id)).data.state).toBe('ACTIVE');pending=f.acquire('user2',f.tableA,randomUUID(),p.table_version);await f.db.query('select pg_sleep(0.1)');expect((await f.db.query("select count(*)::int n from public.table_sessions where table_id=$1 and state='PENDING_PAYMENT'",[f.tableA])).rows[0].n).toBe(0);await c.query('commit');allowed(await pending);}catch(e){await c.query('rollback');throw e;}finally{c.release();if(pending)await pending.catch(()=>{});}
  });
  it('S3-T25 old retry cannot touch a newer owner',async()=>{
   const id=await f.start();const p=await f.preview(id);allowed(await f.closeSession(p));const next=await f.acquire('user2',f.tableA,randomUUID(),p.table_version);allowed(next);const before=await f.row(next.data.session_id);denied(await f.closeSession(p));denied(await f.closeSession(await f.preview(id)));expect(await f.row(next.data.session_id)).toEqual(before);
+ });
+ it('S3-T23 two new owners contend only after committed release',async()=>{
+  const id=await f.start();const p=await f.preview(id);const c=await actorTx();
+  try{await closeSql(c,p);const payment=f.acquire('user1',f.tableA,randomUUID(),p.table_version);const manual=f.manual('managerA',f.tableA,null,randomUUID(),p.table_version);await c.query('commit');
+   const results=await Promise.all([payment,manual]);expect(results.filter(r=>r.status===200)).toHaveLength(1);expect(results.filter(r=>r.status>=400)).toHaveLength(1);
+   expect((await f.db.query("select count(*)::int n from public.table_sessions where table_id=$1 and state in ('ACTIVE','PENDING_PAYMENT')",[f.tableA])).rows[0].n).toBe(1);
+  }finally{await c.query('rollback');c.release();}
  });
  for(const action of ['TABLE_SESSION_CLOSED','SESSION_CASH_RECORDED'])it('S3-T26/T56 '+action+' audit failure rolls all effects back',async()=>{
   const id=await f.start();const p=await f.preview(id);await f.db.query("create function private.sprint3_test_audit_fail() returns trigger language plpgsql as $$begin if new.action='"+action+"' then raise exception 'TEST_AUDIT_FAILURE';end if;return new;end$$; create trigger sprint3_test_audit_fail before insert on public.audit_events for each row execute function private.sprint3_test_audit_fail()");
@@ -60,4 +79,23 @@ describe('Sprint3 independent transaction and recovery proofs',()=>{
   }finally{await a.query('rollback');await b.query('rollback');a.release();b.release();}
   if(!committed)allowed(await f.closeSession(await f.preview(id)));expect((await f.preview(id)).state).toBe('CLOSED');expect((await f.db.query("select count(*)::int n from public.audit_events where action='TABLE_SESSION_CLOSED'")).rows[0].n).toBe(1);
  });
+ it('S3-T27/T36 real PostgreSQL restart preserves committed close, CASH and accruing ACTIVE time',async()=>{
+  const closedId=await f.start();allowed(await f.cash(await f.preview(closedId),'50000'));allowed(await f.closeSession(await f.preview(closedId)));const before=await f.preview(closedId);
+  const activeId=await f.start('MANUAL',f.tableA2);await f.age(activeId,'5370');const activeBefore=await f.preview(activeId);
+  const disconnects:unknown[]=[];const onDisconnect=(e:unknown)=>disconnects.push(e);f.db.on('error',onDisconnect);
+  try{
+   await promisify(execFile)('docker',['restart','supabase_db_volume-v2'],{timeout:30000});
+   let ready=false;
+   for(let attempt=0;attempt<60;attempt++){
+    try{const r=await f.view(closedId);if(r.status===200){ready=true;break;}}catch{/* Readiness only; assertions follow. */}
+    await new Promise(resolve=>setTimeout(resolve,250));
+   }
+   expect(ready).toBe(true);const after=await f.preview(closedId),activeAfter=await f.preview(activeId);
+   for(const key of ['state','ended_at','charge_vnd','closed_by','close_correlation_id','validated_received_vnd','remaining_due_vnd','session_version'])expect(after[key]).toBe(before[key]);
+   expect(after.closure_financial).toEqual(before.closure_financial);expect(after.released).toBe(true);
+   expect(activeAfter.state).toBe('ACTIVE');expect(activeAfter.started_at).toBe(activeBefore.started_at);expect(activeAfter.ended_at).toBeNull();expect(BigInt(activeAfter.duration_microseconds)).toBeGreaterThan(BigInt(activeBefore.duration_microseconds));expect(BigInt(activeAfter.charge_vnd)).toBeGreaterThanOrEqual(BigInt(activeBefore.charge_vnd));
+   expect((await f.db.query('select count(*)::int n from public.session_cash_receipts')).rows[0].n).toBe(1);denied(await f.closeSession(before));allowed(await f.closeSession(activeAfter));
+   for(const e of disconnects)expect(['57P01','57P02','ECONNRESET',undefined]).toContain((e as {code?:string}).code);
+  }finally{f.db.off('error',onDisconnect);}
+ },60000);
 });

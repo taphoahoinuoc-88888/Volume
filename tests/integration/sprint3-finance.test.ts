@@ -40,11 +40,28 @@ describe('Sprint3 real financial lifecycle',()=>{
  it('S3-T33/T34 provider unavailable does not block close or invent receipts',async()=>{
   const id=await f.start();const p=await f.preview(id);expect(p.provider_available).toBe(false);allowed(await f.closeSession(p));expect((await f.db.query('select count(*)::int n from public.payment_receipts')).rows[0].n).toBe(0);expect((await f.preview(id)).settlement_status).toBe('UNPAID');
  });
+ it('S3-T01/T51 pending and cancelled openings are not played-session close/CASH targets',async()=>{
+  const result=await f.acquire('user1',f.tableA,randomUUID());allowed(result);const id=result.data.session_id;
+  async function forbidden(){const s=await f.row(id);const t=(await f.db.query('select version from public.billiard_tables where id=$1',[f.tableA])).rows[0];const v=(await f.db.query('select version from public.venues where id=$1',[f.A])).rows[0];const versions={id,session_version:s.version,payment_version:s.payment_version,table_version:t.version,venue_version:v.version};denied(await f.closeSession(versions));denied(await f.cash(versions,'1'));}
+  await forbidden();const s=await f.row(id);allowed(await f.rpc('user1','cancel_table_hold',{p_session:id,p_expected_session_version:s.version,p_expected_payment_version:s.payment_version}));await forbidden();
+  expect((await f.db.query('select count(*)::int n from public.session_cash_receipts')).rows[0].n).toBe(0);expect((await f.db.query("select count(*)::int n from public.audit_events where action in ('TABLE_SESSION_CLOSED','SESSION_CASH_RECORDED')")).rows[0].n).toBe(0);
+ });
  it('S3-T42 final API numbers conserve exact V/C with no float',async()=>{
   const id=await f.start();allowed(await f.cash(await f.preview(id),'9223372036854775807'));const p=await f.preview(id);expect(BigInt(p.validated_received_vnd)).toBe(BigInt(p.applied_amount_vnd)+BigInt(p.unresolved_excess_vnd));expect(BigInt(p.charge_vnd)).toBe(BigInt(p.applied_amount_vnd)+BigInt(p.remaining_due_vnd));denied(await f.cash(p,'1'));expect((await f.preview(id)).validated_received_vnd).toBe('9223372036854775807');
  });
  it('S3-T49 time advances without a persisted version conflict or preview backdate',async()=>{
   const id=await f.start();await f.age(id,'3599');const p=await f.preview(id);expect(p.charge_vnd).toBe('100001');await f.db.query('select pg_sleep(1.1)');const c=await f.closeSession(p);allowed(c);expect(c.data.charge_vnd).toBe('101668');expect(Date.parse(c.data.ended_at)).toBeGreaterThan(Date.parse(p.server_now));
+ });
+ it('S3-T42 close overflow rolls back authoritative end, charge, release, version and audit',async()=>{
+  const id=await f.start();
+  // Isolated maximum-price fixture: no runtime price override is exposed.
+  await f.db.query('update public.table_sessions set required_amount_vnd=$2 where id=$1',[id,'9223372036854775807']);
+  const p=await f.preview(id);expect(p.charge_vnd).toBe('9223372036854775807');await f.age(id,'3601');
+  const r=await f.closeSession(p);denied(r);expect(r.data.message).toContain('OVERFLOW');
+  const s=(await f.db.query('select state,ended_at,final_charge_vnd,version from public.table_sessions where id=$1',[id])).rows[0];
+  expect(s).toEqual({state:'ACTIVE',ended_at:null,final_charge_vnd:null,version:p.session_version});
+  expect((await f.db.query("select count(*)::int n from public.audit_events where action='TABLE_SESSION_CLOSED'")).rows[0].n).toBe(0);
+  denied(await f.acquire('user2',f.tableA,randomUUID(),p.table_version));
  });
  it('S3-T56 CASH duplicate requires current CAS and recovers by exact economic identity',async()=>{
   const id=await f.start();const p=await f.preview(id);const key=randomUUID();allowed(await f.cash(p,'50000','managerA',key));denied(await f.cash(p,'50000','managerA',key));const read=await f.rpc('managerA','session_cash_result',{p_session:id,p_receipt_id:key});allowed(read);expect(read.data.amount_vnd).toBe('50000');const replay=await f.cash(await f.preview(id),'50000','managerA',key);allowed(replay);expect(replay.data.status).toBe('NO_CHANGE');denied(await f.cash(await f.preview(id),'50001','managerA',key));expect((await f.db.query("select count(*)::int n from public.audit_events where action='SESSION_CASH_RECORDED'")).rows[0].n).toBe(1);

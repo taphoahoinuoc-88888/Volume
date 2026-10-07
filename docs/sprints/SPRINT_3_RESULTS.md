@@ -27,3 +27,13 @@ Next slice adds customer/operator Vietnamese UI, stable CASH unknown-result reco
 ## Remaining release gates
 
 Full actual-candidate CI, all prior regressions, complete scope/security review, PR CI, merge and exact post-merge green main. Final counts, changed files, migration/function inventory, CI URLs and limitations will be recorded only from verified results.
+
+## Coverage review additions before release
+
+Within the original 30 paths: add actual PostgreSQL container restart/reconnect proof (real Auth tokens retained); missing PAYMENT CAS; bigint CAS above JS safe range with unchanged timestamps; two acquisition contenders after close; rejection of PENDING/CANCELLED close/CASH; atomic close overflow; UTC midnight/DST microsecond oracles. These address explicit T01/T19/T23/T27/T36/T42/T44/T50/T51 requirements, not additional business scope.
+
+The CASH UI now requires its actor/session draft-storage identity to be established before preparing a cash command, preventing a reload recovery gap during initial account loading. Shared active summary explicitly identifies overtime from authoritative duration. Scope guard also checks frozen workflow header authority and duplicate allowlist entries. No allowlist addition, dependency, old migration or frozen security change. Runtime results for these additions remain pending.
+
+## UI candidate verification
+
+Candidate `bb5125dbc5ffea6a122f890cc7e7ae2928fa3205`, [run 37651907159](https://github.com/HAD10202/Volume/actions/runs/37651907159): **FAILED**. Static/type/lint/audit/build, 38 unit, 207 DB, 130 real API tests PASS. Browser **107 PASS / 1 FAIL / 60 NOT RUN**. Failure is the new operator no-horizontal-overflow assertion on WebKit 390px, after close and two CASH settlements succeeded. Fix constrains session selector grid labels to available width; retains the assertion and adds structural width diagnostics. No retry, skipped test, frozen fixture or timeout change. Full rerun required.
