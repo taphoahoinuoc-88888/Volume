@@ -17,10 +17,16 @@ assert changed <= allowed, 'Unapproved paths: ' + str(changed - allowed)
 baseline = git('ls-tree', '-r', '--name-only', BASE).splitlines()
 frozen = ['AGENTS.md','docs/blueprint.yaml','docs/permissions.md','docs/architecture.md','docs/sprints/SPRINT_3_SPEC.md','package.json','package-lock.json','supabase/config.toml','supabase/seed.sql','playwright.config.ts','vitest.config.ts']
 for p in baseline:
-    if p.startswith(('supabase/migrations/','docs/decisions/')) or (p.startswith(('supabase/tests/','tests/integration/','tests/e2e/')) and p not in ['supabase/tests/sprint2_constraints.test.sql','tests/integration/fixtures/payment.ts']):
+    if p.startswith(('supabase/migrations/','docs/decisions/')) or (p.startswith(('supabase/tests/','tests/integration/','tests/e2e/')) and p not in ['supabase/tests/sprint2_constraints.test.sql','tests/integration/fixtures/payment.ts','tests/integration/fixtures/auth.ts']):
         frozen.append(p)
 for p in frozen:
     assert not git('diff','--name-only',BASE,'HEAD','--',p).strip(), 'Frozen file changed: '+p
+auth_fixture='tests/integration/fixtures/auth.ts'
+old=git('show',BASE+':'+auth_fixture)
+source="const r=await fetch(`${base}/auth/v1/${path}`,{method:'POST',headers:{apikey:anon,'Content-Type':'application/json'},body:JSON.stringify(body)});"
+assert old.count(source)==1
+expected=old.replace(source,source.replace("headers:{apikey:anon,","headers:{Connection:'close',apikey:anon,"))
+assert pathlib.Path(auth_fixture).read_text()==expected, 'Only exact Auth fixture connection-lifecycle header allowed; assertions/auth unchanged'
 fixture='tests/integration/fixtures/payment.ts'
 old=git('show',BASE+':'+fixture)
 expected=old.replace('truncate public.payment_receipts,public.payments,public.table_sessions,public.billiard_tables,public.audit_events','truncate public.session_financial_issues,public.session_cash_receipts,public.payment_receipts,public.payments,public.table_sessions,public.billiard_tables,public.audit_events')

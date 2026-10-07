@@ -23,6 +23,7 @@ supabase/tests/sprint3_security.test.sql
 supabase/tests/sprint3_atomicity.test.sql
 supabase/tests/sprint2_constraints.test.sql
 tests/integration/fixtures/payment.ts
+tests/integration/fixtures/auth.ts
 tests/integration/fixtures/session-finance.ts
 tests/integration/sprint3-finance.test.ts
 tests/integration/sprint3-security.test.ts
@@ -194,3 +195,8 @@ Post-merge closure ledger records SPEC/Gate 1/design/plan/implementation/main SH
 None at initial review. Record exact path/reason/required SPEC reference and frozen impact here BEFORE any necessary addition, then continue under owner-authorized narrow scope rules.
 
 Internal review passed: all 62 scenario IDs mapped; initial exact 30-path scope, no dependencies/old migrations/Legacy/future modules; design proof obligations translated into tests; implementation authorized by current owner package. Runtime verification remains NOT RUN until recorded evidence exists.
+
+
+### Pre-edit narrow addition — Auth fixture HTTP transport
+
+Authorized under owner §17 ordinary test/CI fixes; recorded before modification. Add exact path `tests/integration/fixtures/auth.ts` (31 total). PR #7 Checkpoint 1B run 37660994262 attempts 1 and 2 failed at the same fixture Auth fetch with `SocketError: other side closed`, in different scenarios (new anomaly case and frozen cancellation case), before their assertions. Synchronous SQL/Docker fixture work can leave a pooled HTTP socket idle while the server closes it. Send `Connection: close` only on this fixture's Auth POST helper to eliminate reuse of that socket. This is transport setup, not an Auth/security business change: real signup/login, tokens, current-session checks and all assertions remain identical; no retries, fake tokens, timeout increases or ignored errors. The scope guard must compare the entire file against Gate 1 with exactly this one header insertion allowed. Preflight, RPC/direct helpers and production code remain byte-identical. Full actual-head regressions are required again.
