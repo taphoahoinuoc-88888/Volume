@@ -96,6 +96,15 @@ describe('Sprint3 independent transaction and recovery proofs',()=>{
    expect(activeAfter.state).toBe('ACTIVE');expect(activeAfter.started_at).toBe(activeBefore.started_at);expect(activeAfter.ended_at).toBeNull();expect(BigInt(activeAfter.duration_microseconds)).toBeGreaterThan(BigInt(activeBefore.duration_microseconds));expect(BigInt(activeAfter.charge_vnd)).toBeGreaterThanOrEqual(BigInt(activeBefore.charge_vnd));
    expect((await f.db.query('select count(*)::int n from public.session_cash_receipts')).rows[0].n).toBe(1);denied(await f.closeSession(before));allowed(await f.closeSession(activeAfter));
    for(const e of disconnects)expect(['57P01','57P02','ECONNRESET',undefined]).toContain((e as {code?:string}).code);
+   // SQL/API can recover before Docker's periodic health check changes from
+   // starting to healthy. Leave the full stack ready for subsequent suites.
+   let healthy=false;
+   for(let attempt=0;attempt<90;attempt++){
+    const state=await promisify(execFile)('docker',['inspect','--format','{{.State.Health.Status}}','supabase_db_volume-v2']);
+    if(state.stdout.trim()==='healthy'){healthy=true;break;}
+    await new Promise(resolve=>setTimeout(resolve,500));
+   }
+   expect(healthy).toBe(true);
   }finally{f.db.off('error',onDisconnect);}
  },60000);
 });
