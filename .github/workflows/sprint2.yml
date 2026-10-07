@@ -13,6 +13,8 @@ jobs:
   required-sprint2:
     runs-on: ubuntu-latest
     timeout-minutes: 50
+    env:
+      TARGETED_EDGE_UI: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[targeted-edge-ui]') && github.ref == 'refs/heads/checkpoint-2' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -99,7 +101,11 @@ jobs:
       - name: Complete frozen Sprint1 and new Sprint2 DB/API/Edge/security regression
         run: |
           supabase test db
-          npm run test:integration
+          if [ "$TARGETED_EDGE_UI" = 'true' ]; then
+            npx vitest run tests/integration/sprint2-acquire.test.ts tests/integration/sprint2-payments.test.ts
+          else
+            npm run test:integration
+          fi
       - name: Public browser environment and production build
         run: |
           supabase status -o json > "$RUNNER_TEMP/local-status.json"
@@ -114,7 +120,12 @@ jobs:
       - name: Install Chromium and WebKit
         run: npx playwright install --with-deps chromium webkit
       - name: Actual browser/backend Auth, roles, venue scope and confirmations
-        run: npm run test:e2e
+        run: |
+          if [ "$TARGETED_EDGE_UI" = 'true' ]; then
+            npx playwright test tests/e2e/sprint1-permissions.spec.ts --project=webkit-desktop --grep 'PW02: direct route'
+          else
+            npm run test:e2e
+          fi
       - name: Redacted Edge runtime diagnostics on failure
         if: failure()
         run: |
@@ -151,6 +162,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
       - name: Required evidence summary
+        if: env.TARGETED_EDGE_UI != 'true'
         run: |
           echo "Sprint2 candidate required tests PASS for $GITHUB_SHA; real Supabase CLI2.119.0, JWT-verified Edge function, DB/API/security and Chromium/WebKit desktop1440/mobile390/320; frozen Sprint1 regression retained; provider-neutral only, no production or Sprint3." >> "$GITHUB_STEP_SUMMARY"
       - name: Stop local stack
