@@ -12,6 +12,6 @@ export default function SessionsPage({access}:{access:Access}){
  <label style={{minWidth:0}}>Chi nhánh<select style={{maxWidth:'100%'}} aria-label="Chi nhánh phiên" value={venue||''} onChange={e=>window.location.assign('/sessions'+(e.target.value?'?venue='+e.target.value:''))}>{['ADMIN','CEO'].includes(access.profile.role)&&<option value="">Tất cả chi nhánh</option>}{access.venues.map(v=><option key={v.id} value={v.id}>{v.name}</option>)}</select></label>
  <button className="secondary" onClick={()=>void load()}>Tải lại danh sách phiên</button>
  <label style={{minWidth:0}}>Chọn phiên<select style={{maxWidth:'100%'}} aria-label="Chọn phiên" value={selected||''} onChange={e=>setSelected(e.target.value||null)}><option value="">Chọn bàn và phiên cần xử lý</option>{rows.map(s=><option key={s.id} value={s.id}>{s.venue_name} · {s.table_label} · {s.state==='ACTIVE'?'Đang chơi':'Đã đóng'} · {settlementLabel(s.settlement_status)} · {s.id.slice(0,8)}</option>)}</select></label>
- {!rows.length&&<p>Chưa có phiên trong phạm vi này.</p>}{selected&&<SessionFinancePanel key={selected} sessionId={selected}/>}
+ {!rows.length&&<p>Chưa có phiên trong phạm vi này.</p>}{selected&&<SessionFinancePanel key={selected} sessionId={selected} onUpdate={current=>setRows(previous=>previous.map(s=>s.id===current.id?current:s))}/>}
  </section>;
 }
