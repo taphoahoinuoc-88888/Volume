@@ -1,6 +1,6 @@
 # VOLUME V2
 
-Checkpoint 1A + read maintenance **CLOSED / FROZEN** trên main `68541f8a71a0ae10ac22d819a79f78982cf37abb`. Checkpoint 1B implementation **PASS** (78 DB/27 API/3 unit/54 Playwright). Owner authorize CI maintenance + PR review/merge; CLOSED/FROZEN chỉ sau khi cả hai workflow kiểm tra candidate HEAD trên main SUCCESS. Final branch/main SHA và CI links được ghi trong merged PR closure record. Không production deployment/SMTP/domain; Sprint2 chưa bắt đầu.
+Sprint1 **CLOSED / FROZEN** tại main `2b47f0a619f494a811c94e41697f7d09dcb19e3a` (78 DB/27 API/3 unit/54 browser tests). Sprint2 implementation đang trên `checkpoint-2`, theo contract frozen `fd3400aa93f2c365d422b2a50b2a66ee039621dd`, exact allowlist45 paths. Sprint2 chưa PASS/freeze; kết quả và CI được ghi trong `docs/sprints/SPRINT_2_RESULTS.md`. Không production deployment, real provider hoặc Sprint3.
 
 Project mới; F6.1 chỉ LEGACY / REFERENCE. Không sửa hoặc import runtime legacy. Một Supabase Auth identity, `profiles.id = auth.users.id`; một role tại profiles; memberships giữ phạm vi chi nhánh và fixed extra permissions. PostgreSQL/RLS/RPC là authority. UI chỉ phản ánh quyền hiện tại.
 
@@ -12,6 +12,9 @@ Project mới; F6.1 chỉ LEGACY / REFERENCE. Không sửa hoặc import runtime
 - `docs/sprints/SPRINT_1B_RESULTS.md`: product scope, versions, file delta và CI.
 - `docs/OPEN_QUESTIONS.md`: G1–G14 và production/business decisions còn mở.
 - `docs/LEGACY_REFERENCE.md`: baseline reference, không là business rule mặc định.
+- `docs/sprints/SPRINT_2_BUSINESS_CONTRACT.md`:36 invariants/90 cases đã freeze.
+- `docs/sprints/SPRINT_2_IMPLEMENTATION_PLAN.md`:schema/RPC/security/UI/test mapping và exact45 paths.
+- `docs/sprints/SPRINT_2_RESULTS.md`:candidate evidence, failures và giới hạn.
 
 ## Product surfaces 1B
 
@@ -29,4 +32,8 @@ Lệnh: `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:unit
 
 CI 1B chạy full frozen 1A regression và browser/backend thực, không mock. Screenshots/report là Actions artifacts; network traces và video tắt để tránh giữ token. Linux WebKit không chứng nhận physical Safari/iPhone/macOS. NOT RUN/BLOCKED không PASS.
 
-Supabase migrations/RLS/RPC/Auth config/core tests không sửa trong 1B. Player/Table/Payment/Shop/Telegram/CRM/AI và các module Sprint 2+ không có implementation. Payment/open-table vẫn cần chốt G3–G7 trước Sprint 2. Khi đủ required tests mới freeze, rồi DỪNG chờ owner.
+Sprint2 mở bàn: Customer `/tables` và `/table-session`; Control Center `/tables` và `/opening-payments`. Price60 phút/VND, hold300s, một hold/table/customer, partial/expiry/resolution, automatic threshold opening và scoped MANUAL override. Walk-in không có fake profile. Trạng thái bàn suy ra từ sessions; countdown0 không tự close/bill. Public contact do ADMIN cấu hình theo venue, không contact nhân viên riêng.
+
+Provider chưa được chọn: adapter mặc định **không tạo QR ngân hàng hoặc tiền giả**. Khi chưa cấu hình, yêu cầu tạo QR thất bại an toàn và trả bàn. Backend payment/activation tests dùng normalized trusted server fixtures trên Supabase thật; không phải actual-provider evidence. Local orchestration dùng `supabase functions serve open-table-payment`; JWT verification giữ TRUE. Không dùng `--no-verify-jwt`. Server DB credential chỉ trong Edge Runtime; không đưa vào app env/client.
+
+Hai migration mới additive; frozen Auth/RLS/security RPC và các migration Sprint1 giữ nguyên. CI Sprint2 kiểm tra toàn bộ frozen regression cùng test mới, không mock Supabase. Player/Match/Shop/Video/Telegram/CRM/AI, refund/overtime/final billing/Sprint3 không có implementation. Khi đủ required checks mới ghi PASS để owner review; không merge/deploy/tự chuyển Sprint.
