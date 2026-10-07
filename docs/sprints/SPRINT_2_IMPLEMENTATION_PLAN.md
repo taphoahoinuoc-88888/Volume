@@ -1,7 +1,7 @@
 # Sprint 2 — exact implementation preflight
 
 Status: BUSINESS CONTRACT FROZEN; implementation AUTHORIZED / IN PROGRESS. Owner approved exactly two additional paths; runtime evidence pending.
-Base: main `2b47f0a619f494a811c94e41697f7d09dcb19e3a`; new branch `checkpoint-2` starts from that main, then receives the frozen business contract and this plan. Do not merge or deploy without further owner instruction.
+Base: main `2b47f0a619f494a811c94e41697f7d09dcb19e3a`; new branch `checkpoint-2` starts from that main, then receives the frozen business contract and this plan. Owner's current resume instruction authorizes PR/merge only after full green checks and review; production deployment remains forbidden.
 Frozen contract commit: `fd3400aa93f2c365d422b2a50b2a66ee039621dd` on sprint2-contract.
 Contract: `SPRINT_2_BUSINESS_CONTRACT.md`, FINAL, 36 invariants / 90 cases. One Sprint2 implementation checkpoint; no Sprint3 continuation. Changes outside the exact list below require report before creation.
 
@@ -165,7 +165,7 @@ vitest.config.ts
 Keep Supabase CLI 2.119.0 and all pinned dependency versions. Ubuntu GitHub Actions with real local Supabase, clean reset and minimum session reader operator bootstrap as frozen.
 - Existing sprint1a.yml/sprint1b.yml: scope-scanner additive approved Sprint2 phase on checkpoint-2/main/PR into main using pinned frozen base and exact45 paths. Retain prior phase checks and every runtime/security step, ordinary JWT tests, no checkout of old snapshot. Permit only listed new migrations and minimal described constraint-test maintenance; hash-check the three frozen migrations and unchanged Auth/security helper sources. No disabling required jobs/tests/failing audit or relaxing secret scan. Prior CI semantics continue on older phase branches.
 - sprint2.yml: triggers push checkpoint-2/main and PR main; candidate checkout; exact allowlist, immutable core/Legacy diff, forbidden-module scan, secret scan; npm ci; dependency audit; typecheck; lint; unit (shared+server adapter); production customer/control builds; start real Supabase; clean reset; all database tests; all API integrations; browser install; all Playwright desktop/mobile projects. Safe artifacts only redacted reports; no token/QR-secret/network payload traces. Stop-stack always cleanup.
-- Required green main after any later approved merge remains freeze prerequisite; current task does not authorize merge. Branch CI can establish reviewable Sprint2 evidence, not main CLOSED claim. Actual provider integration explicitly excluded/non-blocking.
+- Required green main after any later approved merge remains freeze prerequisite; current owner resume instruction authorizes merge only after full candidate/PR checks and scope review. Branch CI can establish reviewable Sprint2 evidence, not main CLOSED claim. Actual provider integration explicitly excluded/non-blocking.
 - Scope validation checks exact eight business tables, no future schemas, no service-role client secret, no browser import of server module. New CI tests current candidate; no mock Supabase or excluded failed security group.
 
 ## 13. Test mapping and acceptance
@@ -293,7 +293,7 @@ These are authorized minimal operational extensions, not material identity/secur
 ## Preflight outcome / checkpoint
 
 Business blockers: none outstanding. Provider-dependent P1–P3 non-blocking for neutral-core; real QR/provider integration separately authorized. Sprint3+ S1–S4 deferred. Architectural compatibility is a planned test obligation, not runtime PASS. Frozen business semantics cannot drift.
-This plan authorizes only its exact paths under owner's conditional instruction. Contract/plan publication is the preflight checkpoint; no migration/RPC/UI/provider code exists at this checkpoint. Implementation begins only after this plan is committed, on checkpoint-2 from the verified main. CI reports remain NOT RUN until implementation exists and real Actions executes. No merge, production, real provider or Sprint3.
+This plan authorizes only its exact paths under owner's conditional instruction. Contract/plan publication is the preflight checkpoint; no migration/RPC/UI/provider code exists at this checkpoint. Implementation begins only after this plan is committed, on checkpoint-2 from the verified main. CI reports remain NOT RUN until implementation exists and real Actions executes. Merge is conditional on current owner instructions and green checks; no production, real provider or Sprint3.
 
 ## Owner-approved exact two-path extension — CLOSED
 
