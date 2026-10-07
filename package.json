@@ -13,7 +13,7 @@
     "build": "npm run build -w @volume/customer && npm run build -w @volume/control-center",
     "test:integration": "vitest run tests/integration",
     "test:unit": "vitest run packages/shared supabase/functions/_shared",
-    "test:e2e": "playwright test"
+    "test:e2e": "bash -c 'set -e; test -f apps/customer/dist/index.html; test -f apps/control-center/dist/index.html; (cd apps/customer && exec ../../node_modules/.bin/vite preview --host 127.0.0.1 --port 3000 --strictPort) & volume_customer_pid=$!; (cd apps/control-center && exec ../../node_modules/.bin/vite preview --host 127.0.0.1 --port 3001 --strictPort) & volume_control_pid=$!; trap \"kill $volume_customer_pid $volume_control_pid 2>/dev/null || true\" EXIT; node -e \"Promise.all(process.argv.slice(1).map(async url=>{for(let n=0;n<100;n++){try{if((await fetch(url)).ok)return;}catch{}await new Promise(r=>setTimeout(r,250));}throw Error(url);})).catch(()=>process.exit(1))\" http://127.0.0.1:3000 http://127.0.0.1:3001; CI= playwright test --forbid-only \"$@\"' --"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2",

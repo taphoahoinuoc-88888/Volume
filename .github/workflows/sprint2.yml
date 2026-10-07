@@ -127,7 +127,7 @@ jobs:
       - name: Actual browser/backend Auth, roles, venue scope and confirmations
         run: |
           if [ "$TARGETED_EDGE_UI" = 'true' ]; then
-            npx playwright test tests/e2e/sprint1-permissions.spec.ts --project=webkit-desktop --grep 'PW02: direct route'
+            npm run test:e2e -- tests/e2e/sprint1-permissions.spec.ts --project=webkit-desktop --grep 'PW02: direct route'
           else
             npm run test:e2e
           fi
