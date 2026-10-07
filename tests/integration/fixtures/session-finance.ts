@@ -22,7 +22,7 @@ export function financeTools(f:PaymentFixture){
   }catch(e){await c.query('rollback');throw e;}finally{c.release();}
  }
  async function neutral(e:object){const c=await f.db.connect();try{await c.query('begin');await c.query('set local role volume_payment_ingest');const r=await c.query('select private.sprint3_ingest_payment_event($1::jsonb) result',[JSON.stringify(e)]);await c.query('commit');return r.rows[0].result;}catch(e){await c.query('rollback');throw e;}finally{c.release();}}
- return {...f,view,preview,versions,closeSession,cash,start,age,neutral};
+ return {...f,view,preview,versions,closeSession,cash,start,age,neutral,get tableA(){return f.tableA;},get tableA2(){return f.tableA2;},get tableB(){return f.tableB;}};
 }
 export async function financeFixture(){return financeTools(await paymentFixture());}
 export type FinanceFixture=Awaited<ReturnType<typeof financeFixture>>;
