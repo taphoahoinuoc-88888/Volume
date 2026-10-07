@@ -1,14 +1,14 @@
 # VOLUME V2 — Sprint 3 SPEC
 
-Status: **OWNER DECISIONS Q01–Q16 INCORPORATED — GATE 1 ONLY — THREE NARROW CLARIFICATIONS REMAIN**
-Revision: 2 — owner decision update; SPEC approval still pending
+Status: **OWNER-DECISION COMPLETE — READY FOR OWNER SPEC APPROVAL**
+Revision: 3 — remaining owner decisions incorporated; SPEC approval still pending
 Date: 2026-10-07
 Repository: `HAD10202/Volume`
 Verified frozen base: `1b6f713a990aabb4f705d5f0735856442a59b7db`
 Document-only branch: `sprint3-spec`
 Exact change allowlist: **update `docs/sprints/SPRINT_3_SPEC.md` only**.
 
-This revision incorporates the owner's explicit Q01–Q16 business decisions. It is not yet an owner-approved/frozen SPEC, technical design, implementation plan or authorization to code. Decided behavior is binding; only B01–B03 in §12.1 remain unresolved. Do not invent their answers. Finish Gate 1 clarification and obtain explicit SPEC approval before Gate 2. No production or executable test files are authorized.
+This revision incorporates the owner's explicit Q01–Q16 decisions and subsequent B01–B03 confirmations. No business implementation blocker remains. It is not yet an owner-approved/frozen SPEC, technical design, implementation plan or authorization to code. Obtain explicit approval of this completed SPEC before Gate 2. No production or executable test files are authorized.
 
 ## 1. Owner authority decision and process boundary
 
@@ -28,13 +28,13 @@ OD-01 is recorded only in this document. Historical `AGENTS.md`, Blueprint, ADRs
 
 **OD-02 — Current authorization:** Gate 1 only; update this existing file with the Q01–Q16 decisions, complete the oracle and all dependent requirements/tests, preserve a GitHub handoff, and stop for owner review. No implementation, migrations, RPCs, UI, dependencies, CI implementation, technical-design document, implementation-plan document, Sprint 4 work, merge or deployment is authorized by this task. Tests are written as cases in this SPEC; executable tests are not created in Gate 1.
 
-**OD-03 — Sprint 3 owner decisions:** the current owner message resolves Q01–Q16 as recorded in §5. These explicit decisions authorize the new business behavior for specification, not implementation or an automatic SPEC freeze. The former 16-question list is replaced by the decision ledger and only three genuinely narrower clarifications in §12.1. No old question is reopened.
+**OD-03 — Sprint 3 owner decisions:** the current owner message resolves Q01–Q16 as recorded in §5. These explicit decisions authorize the new business behavior for specification, not implementation or an automatic SPEC freeze. The former 16-question list is replaced by the decision ledger. The owner's subsequent B01–B03 confirmations are recorded in §12.1 and incorporated throughout; all business questions are resolved. No old question is reopened.
 
-After blockers are resolved, owner must approve the completed SPEC before Gate 2. Gate 2 must define exact technical contracts; Gate 3 must define branch/base, exact paths/purposes, dependencies, migrations, functions, UI, CI and requirement-to-code-to-test mapping; Gate 4 must authorize implementation. Approval of a draft, branch publication or earlier Sprint does not pass those gates.
+Owner must approve the completed SPEC before Gate 2. Gate 2 must define exact technical contracts; Gate 3 must define branch/base, exact paths/purposes, dependencies, migrations, functions, UI, CI and requirement-to-code-to-test mapping; Gate 4 must authorize implementation. Approval of a draft, branch publication or earlier Sprint does not pass those gates.
 
 ## 2. Independently verified baseline and evidence
 
-GitHub was read directly, including `branches/main`, repository tree, PR metadata, closure ledger, Actions run metadata, Sprint 2 job steps and decoded job logs. For this revision, main was rechecked and still matches the expected SHA; `sprint3-spec` was verified at prior document commit `65562f1c9f3adc0001b1c089ceeed858696e283c` before editing. Repository tree has one root `AGENTS.md` and no existing `SPRINT_3_SPEC.md` at this base.
+GitHub was read directly, including `branches/main`, repository tree, PR metadata, closure ledger, Actions run metadata, Sprint 2 job steps and decoded job logs. For this revision, main was rechecked and still matches the expected SHA; `sprint3-spec` was verified at prior document commit `c5fae70a1c42e24cc17ff54702ef20c9b6d1cd4d` before editing. Repository tree has one root `AGENTS.md` and no existing `SPRINT_3_SPEC.md` at this base.
 
 | Evidence | Verified result / source |
 |---|---|
@@ -65,7 +65,7 @@ Source paths here resolve against the frozen base, not a moving branch. Legacy r
 
 **Problem:** Sprint 2 safely opens a table and records the initial payment or MANUAL override, but cannot yet end play, determine the final bill or return an occupied table to service. Staff and customers need a clear, recoverable way to finish a session without losing money, charging twice or releasing the wrong table.
 
-**Users:** the authenticated customer; authorized venue operators; ADMIN/CEO for permitted business oversight; MANAGER within assigned venues. STAFF may close and record CASH within the approved venue scope; USER may close only their own authenticated PAYMENT session. The disabled-venue operator edge is B03. Walk-ins have no fabricated account or anonymous private access.
+**Users:** the authenticated customer; authorized venue operators; ADMIN/CEO for permitted business oversight; MANAGER within assigned venues. STAFF may close and record CASH within the approved venue scope; USER may close only their own authenticated PAYMENT session. Venue/table disable does not revoke existing-session authority; current account/membership/role/permission/cutoff controls still apply. Walk-ins have no fabricated account or anonymous private access.
 
 **Success:** an authorized close freezes the end and exact charge, creates the financial result and releases the table in one committed transaction, even when unpaid. The charge is reproducible, money is conserved and later settlement cannot reopen or reclaim the table. Concurrent/retried requests cannot duplicate charges, receipts, closure or release. A non-technical user can tell whether play continues, whether a result is merely an estimate, what is owed, and whether the action actually completed.
 
@@ -76,7 +76,7 @@ Source paths here resolve against the frozen base, not a moving branch. Legacy r
 - Final session charge, treatment of the initial payment and additional money, safe release, and resulting session/financial record.
 - Current-state reads, actor/scope rules, failures, races, retries, audit and acceptance tests for this lifecycle.
 - CASH as immutable, audited, operator-recorded financial evidence; partial settlement; truthful provider capability visibility.
-- Only remaining clarifications B01–B03; compatibility review boundary for the later Gate 2.
+- Owner-confirmed B01–B03 settlement, CASH lifecycle and disabled-service rules; compatibility review boundary for later Gate 2.
 
 ### OUT OF SCOPE for this task
 
@@ -129,17 +129,17 @@ F01–F16 describe the frozen baseline. New Sprint 3 continuation/closing/settle
 | Q05 | Started-minute rule: billable_minutes=max(60,ceil(duration_seconds/60)); charge=ceil(hourly_snapshot_vnd*billable_minutes/60). Integer VND; no authoritative floating point. No grace or maximum duration business rule. | R03; oracle §5.3; T08/T42/T50 |
 | Q06 | MANUAL/walk-in uses the same minimum/snapshot/rounding/overtime. MANUAL is not prepaid and creates no fake opening payment or SUCCESS receipt. Collect/settle its actual final charge independently. | R04; T06–T07/T51 |
 | Q07 | Only validated immutable funds bound to the exact same session/payment relationship offset its charge. Initial PAYMENT money and its excess offset same-session overtime. Applied never exceeds charge; surplus remains unresolved_excess. Valid late funds after CLOSED may reduce same-session due but never change start/end/charge/ownership or reopen. No borrowing/rebinding. | R05; §5.4; T09–T12/T30–T32/T53–T54 |
-| Q08 | Two allowed settlement methods: verified provider/bank credits when a real adapter exists, and CASH recorded by an authorized operator. No false online availability. CASH is DB-authorized, integer VND, actor/venue-scoped, preview/confirm, audited and immutable evidence; never fake bank SUCCESS. Partial settlement allowed; no automatic refund/reversal. Cash timing clarification B02 remains. | R06; T10/T13/T30–T34/T51–T56 |
-| Q09 | Settlement is NOT a close/release prerequisite. One committed close freezes ended_at/final charge, records finances, sets played session CLOSED and releases ownership immediately. Unpaid/partial CLOSED sessions never hold the table. Financial status separately uses PAID/PARTIAL/UNPAID/NEEDS_RESOLUTION; exact exception precedence is B01. New acquire only after close commit. | R07; T21–T25/T52/T58 |
-| Q10 | USER own safe reads/preview and close of own authenticated PAYMENT only, no cash/other/walk-in access. STAFF assigned active venue operational finance reads/close/CASH, no price/waiver/refund powers. MANAGER equivalent operations and full operational venue visibility; CEO/ADMIN explicit global close/CASH/business visibility. Nobody edits protected time/snapshot/bank/receipt evidence. No generic permissions builder. | R08; §8; T14–T18/T29/T39–T40/T55–T57 |
-| Q11 | Disabling account/venue/table changes neither historical start nor debt and does not auto-close ACTIVE. Disabled customer has no private self-service; authorized management can still close existing sessions. Abandoned/overnight/forgotten sessions bill until actual authorized close. Downtime adds no free time. Optional long-session warning is not close authority. Disabled-venue Staff/CASH edge is B03. | R09; T24/T29/T35–T36/T57 |
+| Q08 | Two allowed settlement methods: verified provider/bank credits when a real adapter exists, and CASH recorded by an authorized operator. No false online availability. CASH is DB-authorized, integer VND, actor/venue-scoped, preview/confirm, audited and immutable evidence; never fake bank SUCCESS. Partial settlement allowed; no automatic refund/reversal. B02 confirms CASH while ACTIVE or CLOSED without closing/stopping/releasing. | R06; T10/T13/T30–T34/T51–T56 |
+| Q09 | Settlement is NOT a close/release prerequisite. One committed close freezes ended_at/final charge, records finances, sets played session CLOSED and releases ownership immediately. Unpaid/partial CLOSED sessions never hold the table. Financial status separately uses PAID/PARTIAL/UNPAID/NEEDS_RESOLUTION; B01 restricts NEEDS_RESOLUTION to financial anomalies, never ordinary known debt. New acquire only after close commit. | R07; T21–T25/T52/T58 |
+| Q10 | USER own safe reads/preview and close of own authenticated PAYMENT only, no cash/other/walk-in access. STAFF with ACTIVE assigned venue membership operational finance reads/close/CASH, including existing sessions at disabled venue/table under B03, no price/waiver/refund powers. MANAGER equivalent operations and full operational venue visibility; CEO/ADMIN explicit global close/CASH/business visibility. Nobody edits protected time/snapshot/bank/receipt evidence. No generic permissions builder. | R08; §8; T14–T18/T29/T39–T40/T55–T57 |
+| Q11 | Disabling account/venue/table changes neither historical start nor debt and does not auto-close ACTIVE. Disabled customer has no private self-service; authorized management can still close existing sessions. Abandoned/overnight/forgotten sessions bill until actual authorized close. Downtime adds no free time. Optional long-session warning is not close authority. B03 confirms existing-session close/settlement for STAFF with ACTIVE venue membership, scoped MANAGER and global CEO/ADMIN even at disabled venue/table. | R09; T24/T29/T35–T36/T57 |
 | Q12 | Approve minimum final record in §8.2 and scoped visibility. USER own safe summary; STAFF/MANAGER venue operational projection; CEO/ADMIN business projection; public none. No fiscal integration, downloadable accounting document or revenue dashboard required. | R10; T38–T41 |
 | Q13 | Defer reopen/backdate/waive/discount/refund execution/reversal or chargeback resolution/arbitrary corrections. Preserve visible debt/excess; no fake resolution-completed button. | R11; T31–T32/T45/T58 |
 | Q14 | Defer pause/resume, table transfer, beneficiary transfer and split bill. No speculative schema/UI. | R11; T43/T48 |
 | Q15 | Table-time billing, VND only. No tax/service fee/promotions/discount/revenue/profit/business-day/fiscal features. Frozen Sprint 2 opening amount unchanged. | R03/R11; T43/T48 |
 | Q16 | Compatibility review authorized; after SPEC approval Gate 2 identifies exact additive ending/billing changes. No blanket change to frozen foundations/opening semantics/history. If material change required, STOP for separately scoped maintenance/deviation approval before implementation. Never edit frozen migrations. | R14; §13; T47–T48 |
 
-Q01–Q16 above are recorded decisions, not approval of this complete revised SPEC. B01–B03 do not reopen the decided formula, minimum, start, cutoff policy, allowed payment methods, base role powers or release-before-settlement rule.
+Q01–Q16 above are recorded decisions, not approval of this complete revised SPEC. The confirmed B01–B03 decisions do not reopen the decided formula, minimum, start, cutoff policy, allowed payment methods, base role powers or release-before-settlement rule.
 
 ### 5.2 Requirement register
 
@@ -149,12 +149,12 @@ Q01–Q16 above are recorded decisions, not approval of this complete revised SP
 | R02 | Commit-authoritative end; preview never freezes time. Confirmation uses current server cutoff and formula; temporal price increase alone does not require a second preview/confirmation. No client/preview backdate. | Q02 | A01–A02/A06; T02/T04/T20/T35–T36/T49 |
 | R03 | Uniform 60-minute minimum and original hourly snapshot, started-minute duration rounding followed by whole-VND ceiling; exact arithmetic with safe overflow failure, never a hidden duration cap. | Q03–Q05/Q15 | A02; T02/T05/T08/T42–T44/T50 |
 | R04 | Apply R03 equally to PAYMENT, MANUAL and NULL-beneficiary walk-in; MANUAL amount received starts at zero absent real financial evidence. | Q06 | A02–A03; T06–T07/T51 |
-| R05 | Conserved same-session funds, derived application/due/excess; immutable financial identities/bindings, no double counting. Post-close receipt affects only financial settlement. | Q07; B01 status mapping only | A03; T09–T12/T30–T32/T53–T54 |
-| R06 | Audited immutable CASH recording by authorized roles; partial settlement; verified bank credit only through configured trusted provider. No fake bank state or unavailable online offering. | Q08; B02 cash lifecycle; B03 unavailable venue CASH | A03/A05/A07; T10/T13/T30–T34/T51–T57 |
+| R05 | Conserved same-session funds, derived application/due/excess; immutable financial identities/bindings, no double counting. Post-close receipt affects only financial settlement. | Q07; B01 confirmed status rules | A03; T09–T12/T30–T32/T53–T54 |
+| R06 | Audited immutable CASH recording by authorized roles; partial settlement; verified bank credit only through configured trusted provider. No fake bank state or unavailable online offering. | Q08; B02 ACTIVE/CLOSED cash; B03 existing-session authority | A03/A05/A07; T10/T13/T30–T34/T51–T57 |
 | R07 | ACTIVE→CLOSED atomically freezes end/charge, records financial snapshot, releases ownership independent of due/excess/status. No collect-first or later separate release action. | Q09 | A04; T21–T25/T26/T34/T52/T58 |
-| R08 | Enforce explicit role/self/venue action matrix under current Auth/cutoff, not UI or opening permission. USER self-close PAYMENT only; Staff close/CASH are role defaults within approved scope, not manual-open extras. | Q10; B03 exception scope | A05; T14–T18/T29/T39–T40/T55–T57 |
-| R09 | Disabled/abandoned/overnight/downtime cases keep historical start and bill through authorized close; management assistance without disabled-user bypass. | Q11; B03 narrow operator edge | A01/A05/A07; T24/T29/T35–T36/T57 |
-| R10 | Durable final session facts and closure-time financial result plus current settlement view with safe audit/correlation. Approved minimum fields, separate immutable charge vs later financial updates, no fiscal/reporting expansion. | Q12; B01 exact status enum projection | A03/A06; T09–T12/T38–T40/T53/T58 |
+| R08 | Enforce explicit role/self/venue action matrix under current Auth/cutoff, not UI or opening permission. USER self-close PAYMENT only; Staff close/CASH are role defaults within approved scope, not manual-open extras. | Q10; B03 confirmed existing-session scope | A05; T14–T18/T29/T39–T40/T55–T57 |
+| R09 | Disabled/abandoned/overnight/downtime cases keep historical start and bill through authorized close; management assistance without disabled-user bypass. | Q11; B03 confirmed operator authority | A01/A05/A07; T24/T29/T35–T36/T57 |
+| R10 | Durable final session facts and closure-time financial result plus current settlement view with safe audit/correlation. Approved minimum fields, separate immutable charge vs later financial updates, no fiscal/reporting expansion. | Q12; B01 confirmed status projection | A03/A06; T09–T12/T38–T40/T53/T58 |
 | R11 | Deferred operations remain absent/denied for every role; unresolved funds/debt remain visible and never falsely cleared. | Q13–Q15 | A06/A08; T31–T32/T43/T45/T48/T58 |
 | R12 | Atomic close/CASH/audit/version effects; at-most-once close and receipt effects; live auth and stale-CAS rejection, same-identity recovery. No fictitious atomic transaction with a bank. | Q02/Q08–Q09/Q16 | A04/A07; T19–T30/T34/T37/T54–T56 |
 | R13 | One understandable flow: estimate and billing-continues notice → authorized confirm → committed actual result; cash amount confirmation separate; unknown outcome is not success. | Q02/Q09/Q12 | A06–A07; T04/T18/T20/T33/T38–T41/T49 |
@@ -227,7 +227,7 @@ For a final charge C:
 - Conservation: V=A+X and C=A+DUE.
 - Pre-close monetary reads use the same formula against an explicitly labelled current **estimate** only. They never claim a final charge/settlement freeze.
 - After CLOSED, C/start/end/M/H/closing actor/ownership outcome are immutable. New valid same-session receipts change V/A/DUE/X and current settlement only; preserve the financial snapshot originally recorded at close as historical evidence.
-- Exact primary settlement-status treatment of X or notice flags remains B01; numeric amounts do not depend on that label choice.
+- NEEDS_RESOLUTION indicates a financial anomaly requiring management attention: surplus, late bank/provider money, conflicting provider evidence or unresolved reconciliation. Ordinary known debt remains UNPAID/PARTIAL with remaining_due. An anomaly can coexist with debt; always expose V/A/DUE/X and the reason. See §6.3.
 
 All rows below use H=100,001. Every successful close releases ownership immediately, including due/excess/review cases; AVAILABLE still requires service eligibility.
 
@@ -237,23 +237,23 @@ All rows below use H=100,001. Every successful close releases ownership immediat
 | N02 | PAYMENT; 60:00.001 or 60:01 | 101,668 | 100,001 | 100,001 | 1,667 | 0 | PARTIAL, CLOSED/released |
 | N03 | PAYMENT; 90:00 | 150,002 | 100,001 | 100,001 | 50,001 | 0 | PARTIAL, CLOSED/released |
 | N04 | PAYMENT; 90:00; initial excess funds | 150,002 | 120,000 | 120,000 | 30,002 | 0 | Same-session excess offsets overtime, PARTIAL |
-| N05 | PAYMENT; 90:00 | 150,002 | 160,000 | 150,002 | 0 | 9,998 | CLOSED/released; X visible; primary label B01 |
-| N06 | PAYMENT; 1s; overpaid initial | 100,001 | 120,000 | 100,001 | 0 | 19,999 | No refund or extra time; X visible; label B01 |
+| N05 | PAYMENT; 90:00 | 150,002 | 160,000 | 150,002 | 0 | 9,998 | CLOSED/released; X visible; NEEDS_RESOLUTION |
+| N06 | PAYMENT; 1s; overpaid initial | 100,001 | 120,000 | 100,001 | 0 | 19,999 | No refund or extra time; X visible; NEEDS_RESOLUTION |
 | N07 | MANUAL/walk-in; 1s or 60:00; no actual receipts | 100,001 | 0 | 0 | 100,001 | 0 | UNPAID, CLOSED/released; never prepaid |
 | N08 | MANUAL/walk-in; 90:00; no actual receipts | 150,002 | 0 | 0 | 150,002 | 0 | UNPAID, CLOSED/released |
 | N09 | N08 after committed CASH 50,000 | 150,002 | 50,000 | 50,000 | 100,002 | 0 | PARTIAL; same closed session, no occupancy |
 | N10 | N09 after a separate committed CASH 100,002 | 150,002 | 150,002 | 150,002 | 0 | 0 | PAID; two immutable receipt facts |
 | N11 | N09 duplicate delivery of its original CASH command | 150,002 | 50,000 | 50,000 | 100,002 | 0 | No new receipt/audit/credit; stale mutable retry still rejects |
-| N12 | N03 after same-session late validated bank CREDIT 30,000 | 150,002 | 130,001 | 130,001 | 20,001 | 0 | PARTIAL; frozen end/charge/new table owner untouched |
-| N13 | N12 after new late CREDIT 20,001 | 150,002 | 150,002 | 150,002 | 0 | 0 | PAID; no reopening |
-| N14 | N13 after additional true CREDIT 1 | 150,002 | 150,003 | 150,002 | 0 | 1 | X=1 retained; primary label B01; no refund |
+| N12 | N03 after same-session late validated bank CREDIT 30,000 | 150,002 | 130,001 | 130,001 | 20,001 | 0 | NEEDS_RESOLUTION (late bank money); remaining_due=20,001; frozen end/charge/new table owner untouched |
+| N13 | N12 after new late CREDIT 20,001 | 150,002 | 150,002 | 150,002 | 0 | 0 | NEEDS_RESOLUTION (late bank money); remaining_due=0; no reopening |
+| N14 | N13 after additional true CREDIT 1 | 150,002 | 150,003 | 150,002 | 0 | 1 | X=1 retained; NEEDS_RESOLUTION; no refund |
 | N15 | N03 receives 50,001 bound to another session | 150,002 | 100,001 | 100,001 | 50,001 | 0 | Other session's money never applied here |
-| N16 | N10 receives reversal notice, not a credited movement | 150,002 | 150,002 | 150,002 | 0 | 0 | Evidence/notice visible, no automatic debit; primary label B01 |
+| N16 | N10 receives reversal notice, not a credited movement | 150,002 | 150,002 | 150,002 | 0 | 0 | Evidence/notice visible, no automatic debit; NEEDS_RESOLUTION |
 | N17 | N02 after committed CASH 1,667 | 101,668 | 101,668 | 101,668 | 0 | 0 | PAID; provider opening evidence remains unmodified |
-| N18 | N03 after CASH 50,001 and different valid bank CREDIT 50,001 both commit | 150,002 | 200,003 | 150,002 | 0 | 50,001 | Both real receipts retained, no discarded money; label B01 |
+| N18 | N03 after CASH 50,001 and different valid bank CREDIT 50,001 both commit | 150,002 | 200,003 | 150,002 | 0 | 50,001 | Both real receipts retained, no discarded money; NEEDS_RESOLUTION |
 | N19 | N03, unverified “paid” screenshot/return URL for 50,001 | 150,002 | 100,001 | 100,001 | 50,001 | 0 | Still PARTIAL; client claim not evidence |
 
-N09–N11/N17–N18 are post-close CASH examples, unambiguously within final settlement. B02 asks whether the additional pre-close CASH path is included. N18 does not authorize overriding stale CAS: a loser with a stale financial preview must refresh/reconfirm; both distinct funds are reflected only if both are legitimately committed. Physical receipt of cash and its DB recording are not the same event; a failed record must not silently lose track of the operator's need to retry/reconcile.
+N09–N11/N17–N18 are post-close CASH examples, unambiguously within final settlement. B02 also authorizes pre-close CASH on ACTIVE sessions; it changes receipts/balances only and never stops billing. N18 does not authorize overriding stale CAS: a loser with a stale financial preview must refresh/reconfirm; both distinct funds are reflected only if both are legitimately committed. Physical receipt of cash and its DB recording are not the same event; a failed record must not silently lose track of the operator's need to retry/reconcile.
 
 ## 6. State machines — business contract, no schema design
 
@@ -266,6 +266,7 @@ Business states: inherited PENDING_PAYMENT/ACTIVE/CANCELLED plus owner-decided C
 | PENDING_PAYMENT → ACTIVE/CANCELLED | Frozen Sprint 2 processing | Existing opening/hold rules unchanged | 300s inclusive hold boundary retained; never close a never-played hold |
 | ACTIVE → ACTIVE at 60:00 | Authoritative elapsed time | Initial period ends; M still 60; occupancy retained | No automatic stop/close/charge receipt/renewal action |
 | ACTIVE → ACTIVE at positive time beyond 60:00 | Authoritative elapsed time | Overtime estimate uses M≥61, same start/snapshot | No grace or maximum-duration transition; no browser authority |
+| ACTIVE → ACTIVE on CASH | Authorized scoped operator | Immutable receipt, updated provisional balances and audit only | No ended_at/final charge/close/release; time keeps accruing; failure rolls back receipt effects |
 | ACTIVE → ACTIVE on preview | Authorized own/operator reader | Return current estimate and server time; billing continues | Abandoned preview/offline browser does not stop time |
 | ACTIVE → CLOSED | Authorized close under §8, committed DB operation | Set authoritative end; freeze duration/M/H/C; record financial result and closing evidence; release ownership together regardless of settlement status | Unpaid/partial/excess/provider outage not a reason to retain ownership; CAS/auth/constraint failures roll back all effects |
 | ACTIVE → ACTIVE on failed/rolled-back close | Failed transaction | No final end, bill, close audit or release persists | Continue billing through later successful close; old attempted cutoff never reused |
@@ -288,33 +289,45 @@ Service remains ACTIVE/MAINTENANCE/DISABLED with venue enabled/disabled separate
 | AVAILABLE → PENDING/PLAYING | Existing acquire/MANUAL paths | New ownership only after old close commits; existing unique-owner guarantees |
 | Late old credit/CASH/close retry after new owner | Old session reference | Update only permitted old-session finances; never release/preempt/reset the new owner |
 
+Disabling a venue/table blocks new opening and does not itself revoke an operator's existing-session close/settlement authority. Existing account, ACTIVE membership, role, permission and session-cutoff controls remain authoritative; disabling service never substitutes for personnel revocation. Close never re-enables a disabled venue/table.
+
 An unpaid closed session has no ownership timeout because it holds no capacity at all. Debt is not erased by release or elapsed time. No worker/cache/busy flag becomes ownership authority.
 
 ### 6.3 Financial settlement lifecycle
 
-Opening payment states and immutable bank receipt semantics remain separate from final settlement. For ordinary, unflagged **closed** bills:
+Opening payment states and immutable bank receipt semantics remain separate from settlement. Settlement is derived independently from session lifecycle; a financial label can never hold or release a table.
+
+For ordinary **closed** bills with no unresolved financial anomaly:
 - UNPAID: V=0, DUE=C>0.
 - PARTIAL: 0<V<C, 0<DUE<C.
 - PAID: V=C, DUE=0, X=0.
-- NEEDS_RESOLUTION is required by Q09/Q13; its exact trigger/priority with positive X, notices and the above states awaits B01. It is not an action that can mark a case resolved.
+- NEEDS_RESOLUTION: a financial anomaly/ambiguity needs management attention, including surplus X>0, late bank/provider money, conflicting provider evidence or reconciliation that cannot automatically conclude. It is never caused merely by known ordinary debt. When an anomaly and debt coexist, show NEEDS_RESOLUTION plus the reason and exact remaining_due; never hide debt or claim payment complete.
+
+An ACTIVE summary uses the current estimated charge and explicitly provisional balances/status; there is no frozen final charge before close. A CASH receipt on ACTIVE never freezes that estimate. Excess-only status follows the current X: if subsequent overtime absorbs all excess and no independent unresolved issue remains, the ordinary current-balance classification applies, with receipt history preserved. Merely reaching X=0 does not clear a separate late-money/evidence/reconciliation issue. No manual resolve/refund/correction action is added. A conflicting or unverified provider event creates no validated credit until trustworthy evidence validates it.
+
+Late bank/provider receipt after CLOSED is visible as NEEDS_RESOLUTION even if validated and applied automatically to reduce known due; its issue visibility does not block application under Q07 or mutate the closed facts. Planned authorized post-close CASH collection is ordinary settlement, not an anomaly solely because it follows close. CASH surplus or independently conflicting reconciliation still requires attention.
 
 | Transition | Actor/trigger | Exact money/ownership behavior |
 |---|---|---|
-| No final charge → final financial result | Authorized close | Freeze C and closure snapshot, derive balances, release regardless of result |
-| UNPAID → PARTIAL | Committed valid same-session credit smaller than C | Update V/A/DUE once; closed session stays released |
-| UNPAID/PARTIAL → PAID in ordinary exact-payment case | Valid same-session credits reach exactly C, no issue flags | DUE becomes zero; no new close/ownership effect |
-| Any → excess/review case | New true credit makes V>C, or reconciliation/reversal evidence | Preserve all immutable evidence and derived X; exact primary status B01 |
-| Any → same on duplicate financial identity | Replayed bank/CASH recording | No second monetary effect, receipt or success audit |
-| Closed financial result after new valid late funds | Same session binding | Reduce due/apply up to C, retain surplus; never change start/end/C/ownership |
+| ACTIVE → ACTIVE on CASH | Authorized operator with confirmed current version | Append immutable same-session cash evidence and atomic audit; update provisional balances once; no stop, ended_at, close, final charge or release |
+| No final charge → final financial result | Authorized close | Freeze C and closure snapshot, derive balances/status, release regardless of result |
+| UNPAID → PARTIAL | Ordinary committed same-session CASH smaller than remaining due | Update V/A/DUE once; closed session stays released |
+| UNPAID/PARTIAL → PAID | Ordinary validated credits reach exactly C, no unresolved anomaly | DUE becomes zero; no new close/ownership effect |
+| Any ordinary label → NEEDS_RESOLUTION | Surplus, late provider money, conflicting evidence or unresolved reconciliation | Preserve evidence and reason; apply validated credits only; retain exact DUE/X; no occupancy effect |
+| ACTIVE excess-only NEEDS_RESOLUTION → ordinary provisional balance label | Authoritative overtime estimate absorbs X completely; no other unresolved issue | Current balances change with time; no refund, receipt deletion, finalization or issue-clear button |
+| NEEDS_RESOLUTION → NEEDS_RESOLUTION while independent issue persists | Extra funds, time or retry does not settle the evidence issue | Show accurate balances and unresolved reason; no fake completion |
+| Any → same on duplicate financial identity | Replayed bank/CASH recording | No second monetary effect, receipt or success audit; duplicate alone is not an anomaly |
+| Closed financial result after new valid late funds | Same session binding | Reduce due/apply up to C, retain surplus/late-money issue; never change start/end/C/ownership |
+| CLOSED → CLOSED on ordinary CASH | Authorized operator | Same immutable cash/audit/idempotency guarantees; update only settlement, no second close/release |
 | Claimed refund, manual “resolve”, debt waiver or correction | Any role | Unsupported/DENY; do not mutate historic facts or make a fake completion |
 
-CASH evidence is a new authorized type of financial fact, not a reinterpretation of Sprint 2 provider receipt state. Exact storage/functions/idempotency representation belong to Gate 2. Pre-close CASH timing is B02; do not design that path before the answer.
+CASH evidence is a new authorized type of financial fact, not a reinterpretation of Sprint 2 provider receipt state. ACTIVE and CLOSED PAYMENT/MANUAL sessions are eligible under §8, including disabled venues/tables. Pending/cancelled opening holds are not played-session settlement targets. Exact storage/functions/idempotency representation belong to Gate 2.
 
 Payment/network timeout does not imply paid, erase debt, add a receipt or postpone an otherwise valid close. No new bank-intent TTL, online payment-order module or QR acquisition workflow is approved by “bank credits when adapter exists.” Existing opening QR/hold rules stay frozen; actual provider-specific retries/transport remain separately gated P01/P02.
 
 ## 7. Invariants
 
-Inherited guarantees remain binding; new guarantees below follow the current owner decisions. B01–B03 affect specified edges only, not these conservation/closure/security requirements.
+Inherited guarantees remain binding; all new guarantees below incorporate Q01–Q16 and confirmed B01–B03.
 
 | ID | Always true | Requirements / tests |
 |---|---|---|
@@ -336,6 +349,9 @@ Inherited guarantees remain binding; new guarantees below follow the current own
 | I16 | Disabling an account/venue/table or losing a response never deletes history or creates a fake identity. Management assistance does not grant disabled customer access. | R04/R09/R14; T07/T24/T29/T35–T36/T57 |
 | I17 | Frozen Auth/RLS/cutoff/CAS/audit/opening semantics and history remain intact. Additive compatibility review is not permission for material deviation, old migration edits or future modules. | R14; T01/T47–T48/T55 |
 | I18 | Preview is explicitly an estimate with billing continuing; committed result may be higher due to time. UI accepts the authoritative result, distinguishes uncertainty from success, and does not reuse a stale version or claim cash recorded before commit. | R02/R12/R13; T04/T18–T20/T33/T38–T41/T49/T56 |
+| I19 | Ordinary known debt alone is UNPAID/PARTIAL with remaining_due; NEEDS_RESOLUTION is reserved for unresolved financial anomalies. Anomaly plus debt shows both reason and debt. No fake resolution or erased evidence. | R05/R10/R11; T11/T31/T32/T58/T61/T62; A03/A06 |
+| I20 | CASH on ACTIVE/CLOSED is immutable same-session evidence only. It never stops accrual, sets ended_at, freezes charge, closes or releases; actor/scope/CAS/audit/idempotency remain required. | R06/R12; T10/T51/T56/T59/T60; A03/A07 |
+| I21 | Venue/table disable prevents new opening, not approved handling of existing sessions. Personnel revocation uses frozen account/membership/role/permission/cutoff authority, with no bypass or widened venue scope. | R08/R09/R14; T14/T24/T29/T57; A05/A08 |
 
 ## 8. Permissions, scope and final record
 
@@ -351,20 +367,20 @@ The USER customer self-service contract applies to any role using its own authen
 | Self-close own authenticated PAYMENT | S | S | S | S | S |
 | Self-close MANUAL even with own beneficiary | No self-service grant; use authorized operator path | Same | Same | Same | DENY |
 | Read operational session/financial summary for service | G | G | V, full required operational view | V, required service summary only | DENY internal |
-| Preview/close PAYMENT or MANUAL/walk-in as operator | G | G | V | V, assigned active venue | DENY |
-| Preview/confirm CASH recording | G | G | V | V, assigned active venue | DENY |
+| Preview/close PAYMENT or MANUAL/walk-in as operator | G | G | V | V, ACTIVE membership; disabled service does not revoke existing-session rights | DENY |
+| Preview/confirm CASH recording | G | G | V | V, ACTIVE membership; disabled service does not revoke existing-session rights | DENY |
 | Read final safe business record | G | G | V | V, operational projection | S only |
 | Close existing ACTIVE with disabled beneficiary or unserviceable table at otherwise eligible venue | G | G | V | V under Q10 scope | Disabled USER DENY; active own PAYMENT remains self-service eligible |
-| Close existing ACTIVE at disabled venue | G, explicit Q11 management exception | G, explicit Q11 management exception | Assigned management scope, Q11 | B03 clarification; no inferred grant | Live ACTIVE USER: S, own PAYMENT only under Q10; disabled USER DENY |
-| CASH at disabled venue | B03 clarify operational exception | B03 | B03 | B03 | DENY |
+| Close existing ACTIVE at disabled venue | G | G | V | V, ACTIVE membership | Live ACTIVE USER: S, own PAYMENT only; disabled USER DENY |
+| CASH on existing ACTIVE/CLOSED at disabled venue/table | G | G | V | V, ACTIVE membership | DENY |
 | BUSINESS audit feed | G | G | V | DENY; may receive safe action-specific evidence only | DENY; safe own correlation only |
 | SECURITY audit feed | G | DENY | DENY | DENY | DENY |
 | Refund/reopen/backdate/waive/discount/correct/reassign/split | DENY | DENY | DENY | DENY | DENY |
 | Override snapshot/start/arbitrary end/bank evidence/immutable receipt | DENY | DENY | DENY | DENY | DENY |
 
-CASH permission is decided; only its lifecycle timing B02 and disabled-venue edge B03 remain. No cash is a payment-provider ADMIN confirmation. Staff close/CASH are approved role-default actions, not conditional on TABLE_SESSION_OPEN_MANUAL; that frozen manual-open permission continues to have its original meaning and scope. No new extras are required by the business decisions.
+CASH is allowed on existing ACTIVE and CLOSED sessions, including at disabled venues/tables, under the same live actor/scope checks. No cash is a payment-provider ADMIN confirmation. Staff close/CASH are approved role-default actions, not conditional on TABLE_SESSION_OPEN_MANUAL; that frozen manual-open permission continues to have its original meaning and scope. No new extras are required by the business decisions.
 
-Q11 authorizes management closure of existing sessions even when service becomes unavailable; active membership/account/session checks are never bypassed. B03 asks only for exact Staff/CASH exception eligibility; it does not question management's decided right to close or create a reason to re-enable a venue/account.
+B03: venue/table disable blocks new sessions only; it does not revoke existing-session close/settlement rights. STAFF needs ACTIVE venue membership; MANAGER remains venue-scoped; CEO/ADMIN retain approved global scope. Revoke personnel access through existing account/membership/role/permission/session-cutoff controls, never by treating disabled service as actor revocation. No action re-enables service or bypasses live Auth checks.
 
 ### 8.2 Required final record and projections
 
@@ -375,7 +391,7 @@ Q11 authorizes management closure of existing sessions even when service becomes
 | started_at, ended_at, actual duration, billable minutes | Original start and committed authoritative close; no client-editable cutoff |
 | Hourly snapshot, final charge | Original H and exact §5.3 formula; immutable final C |
 | Validated received V, applied A, remaining DUE, excess X | Derived from immutable same-session money; current financial view can evolve after close |
-| Settlement status | PAID/PARTIAL/UNPAID/NEEDS_RESOLUTION; B01 exact exception precedence |
+| Settlement status | PAID/PARTIAL/UNPAID for ordinary balances; NEEDS_RESOLUTION for financial anomalies under §6.3, with reason and remaining_due |
 | Close/release status and closing actor when applicable | Committed close fact, safe role-aware projection; closing actor cannot be overwritten by later collector |
 | Safe audit/correlation evidence | Trusted attribution/trace sufficient for that action; no permission to browse the audit feed or Auth/provider internals |
 
@@ -408,7 +424,7 @@ Suggested plain user wording consistent with the decisions: “Ước tính — 
 | Early/end-of-hour/subsecond close | Exact 60-minute minimum and started-minute ceiling; at 60:00 no overtime, after it minute 61 | T02/T08/T42/T50 |
 | Preview abandoned or delay before close commits | Continue billing; committed time/charge wins; no backdate or time-only reconfirm loop | T04/T49 |
 | Close insufficiently paid/unpaid/excess/review | Still freeze C/end and release atomically; retain financial truth | T10/T21/T52/T58 |
-| Cash before close | B02: lifecycle eligibility not silently selected | T51 |
+| Cash before close | Authorized immutable receipt on ACTIVE; billing/time/ownership unchanged; CAS/audit/idempotency apply | T51/T59 |
 | CASH after CLOSED or late verified bank credit | Recompute same-session finances, immutable close/charge/ownership; dedupe | T32/T51/T53–T54 |
 | Negative/fractional cash, forged paid status/time/price | Reject; no receipt or partial data/audit/version mutation | T08/T13/T56 |
 | Stale preview due to actual receipt/authority change | Deny stale CAS, reload/reconfirm; elapsed time alone is not this conflict | T18–T19/T30/T49 |
@@ -420,7 +436,7 @@ Suggested plain user wording consistent with the decisions: “Ước tính — 
 | Bank/cash physically received but DB recording fails | No claim external money rolled back. Recover/reconcile using same evidence/command identity; no false receipt success | T26/T34/T56 |
 | DB/audit/constraint failure or crash | Entire attempted DB mutation rolls back; no frozen end/release without closing record or cash evidence without audit | T26–T28/T37/T56 |
 | Worker/server restart, overnight/abandoned/forgotten session | Time continues from same start, no cap/free period/automatic close; recover existing committed result | T03/T35–T36/T44 |
-| Reversal/chargeback/refund/correction requested | Preserve notice/debt/excess; no netting, edited receipt, reopen or completion button; status priority B01 | T31–T32/T45/T58 |
+| Reversal/chargeback/refund/correction requested | Preserve notice/debt/excess; no netting, edited receipt, reopen or completion button; NEEDS_RESOLUTION for unresolved financial anomalies; ordinary known debt stays UNPAID/PARTIAL | T31–T32/T45/T58 |
 
 ## 11. Acceptance criteria and revised test matrix
 
@@ -430,11 +446,11 @@ Suggested plain user wording consistent with the decisions: “Ước tính — 
 |---|---|
 | A01 | Automatic continuation with no grace/cap/stop; committed authoritative cutoff, downtime/abandonment and exceptional close preserve original start and service/security rules. |
 | A02 | Every §5.3 oracle exact for PAYMENT/MANUAL/walk-in; duration rounded first, final VND rounded once, no float/overflow/late-rate repricing. |
-| A03 | All §5.4 balances reconcile, bank/CASH identities dedupe, final money status follows completed B01, late credit updates only current finances; debt/excess visible. |
+| A03 | All §5.4 balances reconcile, bank/CASH identities dedupe, final money status follows §6.3; ordinary debt is never itself NEEDS_RESOLUTION, late credit updates only current finances; debt/excess visible. |
 | A04 | One atomic close/end/charge/record/release even unpaid; independent later settlement; no double close or new-owner interference under races/retry/rollback. |
-| A05 | Every §8 allow/deny cell enforced with real ordinary Auth, default Staff role rights, venue/self scope, revocation, disabled-user denial and B03 exception scope. |
+| A05 | Every §8 allow/deny cell enforced with real ordinary Auth, default Staff role rights, venue/self scope, revocation and disabled-user denial. Disabled venue/table permits scoped existing-session close/CASH, including STAFF with ACTIVE membership; new opening remains denied. |
 | A06 | Required safe record and clear estimate/committed/due/excess/unknown labels, no unsupported action; actual Chromium/WebKit 1440/390/320 evidence. |
-| A07 | CASH and close failure/recovery are atomic and at-most-once; correct stale CAS vs time progression; provider failure cannot fake money or hold a closed table. |
+| A07 | CASH on ACTIVE/CLOSED never stops billing or changes session lifecycle/ownership; receipt/audit failure rolls back together. CASH and close failure/recovery are atomic and at-most-once; correct stale CAS vs time progression; provider failure cannot fake money or hold a closed table. |
 | A08 | Reviewed exact approved scope, additive frozen compatibility, real regressions/static checks, no unexpected FAIL/NOT RUN/SKIPPED/FLAKY; eventual separately authorized merge and exact-main CI before freeze. |
 
 ### 11.2 Test execution rules
@@ -443,9 +459,9 @@ All cases are **NOT RUN — specification cases only**, not automated test count
 
 Permissions use real ordinary-user tokens, not service-role proof. Independent connections exercise race schedules and persisted state/versions/audit. Privileged fixtures may arrange data or faults only. Exact-clock tests cannot ship a production client clock override or weaken assertions. Frozen baseline tests remain, with explicitly reviewed additive coverage for new behavior; don't rewrite old failures to green. Gate 3 assigns exact test paths.
 
-T01–T48 retain their IDs with revised outcomes. T49–T58 add the important owner-decision interactions. Only B01–B03-tagged outcomes remain unresolved; all other questions have been answered. Gate 1 must finish these narrow oracles before SPEC approval.
+T01–T48 retain their IDs with revised outcomes. T49–T58 add the Q01–Q16 interactions; T59–T62 cover the final B01–B03 confirmations. All case outcomes are specified for owner review; these are planned tests, not executed runtime evidence.
 
-| ID | Scenario and required assertions | Layer | Mapping / unresolved edge |
+| ID | Scenario and required assertions | Layer | Requirement / invariant / acceptance mapping |
 |---|---|---|---|
 | T01 | Frozen Auth/opening/payment/hold regression unchanged, including 300s inclusive expiry, cancelled-attempt money, MANUAL no fake prepay. New close denies PENDING/CANCELLED and adds ending only for played ACTIVE. Frozen no-overtime Sprint 2 surface is distinguished from explicitly added Sprint 3 behavior, not silently weakened. | D/A/B | R14; F01/F03–F04/F06/F11; I02/I17; A08 |
 | T02 | Both opening methods at 0s/1s/59:59/60:00/60:00.001/60:01 produce §5.3 exact M/C and no start change. Early PAYMENT minimum preserved. | D/A/U/B | R01–R04; I02–I04; A01/A02 |
@@ -456,11 +472,11 @@ T01–T48 retain their IDs with revised outcomes. T49–T58 add the important ow
 | T07 | MANUAL real beneficiary vs NULL walk-in, actor distinct: correct charge, no dummy identity/public claim. Beneficiary self-read allowed when own; USER self-close MANUAL denied, operator close scoped. | D/A/B | R04/R08; I02/I10/I16; A03/A05 |
 | T08 | Non-divisible rate, subsecond and minute boundaries, long sessions and bigint limits: exact duration-first/VND-second ceilings or atomic overflow error, no clip or hidden cap. | D/A/U | R03; I03/I04; A02 |
 | T09 | Exact initial credit offsets early/minimum and overtime final bill once: N01–N03 numbers and independent close/release correct. | D/A/B | R05/R07/R10; I05/I15; A03/A04 |
-| T10 | Partial final settlement before/during/after close: authorized post-close partial updates DUE exactly, no retention of table. Test financial-version conflict separately; pre-close CASH eligibility B02. | D/A/B | R05–R07; I05/I09/I12; A03/A04; B02 |
-| T11 | Initial excess offsets later same-session overtime (N04); N05/N06 retain exact X with no refund/free time. Label exactness B01 only. | D/A/B | R05/R10; I05/I15; A03; B01 |
+| T10 | Partial final settlement before/during/after close: authorized post-close partial updates DUE exactly, no retention of table. Test financial-version conflict separately; pre-close CASH permitted without stopping billing or changing ownership. | D/A/B | R05–R07; I05/I09/I12; A03/A04 |
+| T11 | Initial excess offsets later same-session overtime (N04); N05/N06 retain exact X with no refund/free time. Surplus means NEEDS_RESOLUTION; known debt alone does not. | D/A/B | R05/R10; I05/I15; A03 |
 | T12 | Cancelled/unmatched/different-session credits cannot be borrowed or rebound; old reference cannot fund/release new owner's session even on same table/venue. | D/A | R05/R14; I02/I05/I06/I12; A03/A04 |
 | T13 | Forged time/rate/amount/paid/actor/role/venue, malformed input, nonpositive/fractional cash, direct table/receipt/audit mutation and private helper execution: deny/no leakage/partial effects. | D/A | R03/R06/R08; I03/I04/I10/I14; A02/A05 |
-| T14 | Every §8 five-role action cell: allowed operations succeed; denied operations fail server-side even via direct URL/body. USER self-close only own PAYMENT; no cash/walk-in/other action. | D/A/B | R08; I10/I11; A05; B03 exception rows |
+| T14 | Every §8 five-role action cell: allowed operations succeed; denied operations fail server-side even via direct URL/body. USER self-close only own PAYMENT; no cash/walk-in/other action. | D/A/B | R08; I10/I11; A05; confirmed disabled-service rows |
 | T15 | MANAGER A/AB and default STAFF A, active/inactive memberships and other venue IDs: only authorized scope; default Staff close/CASH works without manual-open extra; no global read/write. | D/A/B | R08; I10/I11; A05 |
 | T16 | Own financial summary for all customer-path roles vs other customer/walk-in/public/internal: minimal allowed reads only; no anonymous/private operator records or identity leakage. | D/A/B | R08/R10; I10/I16; A05 |
 | T17 | Disabled account, missing/wrong-user Auth session, old JWT/old refreshed session after cutoff denied; fresh valid login gets current rights only. | D/A/B | R08/R09; I10; A05 |
@@ -470,25 +486,25 @@ T01–T48 retain their IDs with revised outcomes. T49–T58 add the important ow
 | T21 | Two operators close same session/version simultaneously: exactly one end/C/financial result/close audit/release; loser conflict, no second bill. | D/A | R07/R12; I07/I09; A04 |
 | T22 | USER own PAYMENT vs operator close, delayed stale confirmation behind lock: one authoritative committed cutoff, no client timestamp/duplicate close. | D/A | R02/R08/R12; I07/I09/I10; A04/A05 |
 | T23 | Close races two new acquire/MANUAL contenders: old ACTIVE blocks before close commit, at most one new owner afterward, no premature ownership gap. | D/A | R07/R14; I01/I12; A04 |
-| T24 | Close vs maintenance/table disable/venue disable/customer disable: preserve service/start/charge, no re-enable or forgiveness. Management can close existing unavailable session; Staff exception B03. | D/A | R07/R09; I12/I16; A04/A05; B03 |
+| T24 | Close vs maintenance/table disable/venue disable/customer disable: preserve service/start/charge, no re-enable or forgiveness. Management can close existing unavailable session; STAFF with ACTIVE venue membership retains close/settlement authority. | D/A | R07/R09; I12/I16; A04/A05 |
 | T25 | Old close retry after new owner: new session/start/money untouched; old result read only by authorized reader. New key cannot reclose. | D/A/B | R07/R12/R14; I01/I07/I12; A04 |
 | T26 | Inject audit/constraint/related-row/overflow failure during closing or cash: full record/state/version/release rollback, no success event; no externally received money falsely declared refunded. | D/A | R06/R12; I04/I08/I09/I14; A07 |
 | T27 | Crash/connection loss before commit vs after commit before response: zero or one durable close and exact end/C; restart/retry cannot reuse failed cutoff or create orphan bill. | D/A | R02/R12; I07–I09; A07 |
 | T28 | Repeated close, changed payload with same identity, guessed command identity, current-version terminal close: no double effect/unauthorized disclosure/reopen/reclose. | D/A | R12; I07/I09/I10; A04/A07 |
-| T29 | Close/CASH concurrent with role/scope/account/membership/security mutation: frozen barrier/cutoff guarantees preserved, current authorized actor only, no helper rewrite for convenience. | D/A | R08/R09/R14; I10/I11/I16/I17; A05/A08; B03 only unavailable venue eligibility |
+| T29 | Close/CASH concurrent with role/scope/account/membership/security mutation: frozen barrier/cutoff guarantees preserved, current authorized actor only, no helper rewrite for convenience. | D/A | R08/R09/R14; I10/I11/I16/I17; A05/A08; disabled service does not revoke authority |
 | T30 | Duplicate transfer under same/new event IDs and distinct receipt races close: exact unique identity/binding, one credit per transfer, persisted money version invalidation, no duplicate audit/settlement. | D/A | R05/R06/R12; I05/I06/I14; A03/A04 |
-| T31 | Conflicting event/transfer payload, nonfinal or reversal notice: no overwrite/rebind/new credit/automatic debit/refund; preserve permitted notice and issue visibility. Primary status B01. | D/A | R05/R06/R11; I05/I06/I14; A03; B01 |
-| T32 | Valid late true credits after CLOSED and table reacquire: N12–N14, due reduced at most to zero, excess retained, old start/end/H/M/C and new ownership unchanged. | D/A/B | R05/R10/R14; I02/I05/I06/I12/I16; A03/A04; B01 surplus label |
+| T31 | Conflicting event/transfer payload, nonfinal or reversal notice: no overwrite/rebind/new credit/automatic debit/refund; preserve permitted notice and issue visibility. Unresolved conflicting/reversal/reconciliation evidence means NEEDS_RESOLUTION; unverified data never becomes credit. | D/A | R05/R06/R11; I05/I06/I14; A03 |
+| T32 | Valid late true credits after CLOSED and table reacquire: N12–N14, due reduced at most to zero, excess retained, old start/end/H/M/C and new ownership unchanged. | D/A/B | R05/R10/R14; I02/I05/I06/I12/I16; A03/A04; surplus means NEEDS_RESOLUTION |
 | T33 | Provider unconfigured/down: no working-bank-QR/paid claims; CASH within permitted scope remains available and an otherwise valid close succeeds regardless of provider. | A/B | R06/R07/R13; I13/I18; A07 |
 | T34 | Transfer processing/ACK timeout or DB failure with 0/partial/full money: no invented receipt/refund, stable evidence recovery; close/release independent of external verification. No new payment-intent expiry policy invented. | D/A | R06/R07/R12; I05/I08/I13; A03/A07 |
 | T35 | Restart/browser sleep/worker stop spanning hour or close: same start, no free outage, exact elapsed charge; already CLOSED stays frozen. | D/A/B | R01/R02/R09/R12; I13/I16; A01/A07 |
 | T36 | Abandoned/forgotten/overnight session bills until actual authorized close; disabled user denied, management assisted close no fake relogin or backdate. | D/A/B | R02/R09; I13/I16; A01/A05 |
 | T37 | Forced deadlock/serialization/connection failure: bounded safe same-identity recovery, rollback or one commit, no new cash/receipt/close effect per retry. | D/A | R12; I08/I09/I13; A07 |
-| T38 | Full PAYMENT/MANUAL/walk-in flow: estimate with ongoing-billing notice, confirm, actual closed/released result while unpaid/partial/paid; then cash settlement without reclose. | B | R04/R07/R10/R13; I15/I18; A06; B01 flagged status only |
+| T38 | Full PAYMENT/MANUAL/walk-in flow: estimate with ongoing-billing notice, confirm, actual closed/released result while unpaid/partial/paid; then cash settlement without reclose. | B | R04/R07/R10/R13; I15/I18; A06; §6.3 anomaly status |
 | T39 | All required final fields under own/Staff/Manager/CEO/Admin projections; no public/private leak/raw bank/Auth/directory. Staff new service finance read does not widen frozen opening endpoints arbitrarily. | D/A/B | R08/R10/R14; I10/I14/I17; A05/A06 |
 | T40 | BUSINESS vs SECURITY feed, trusted closing/collecting actors, safe correlation, redacted new payload, append-only audit, denied/failed actions no success event. | D/A | R10/R12; I10/I14; A05/A07 |
 | T41 | Chromium/WebKit 1440/390/320: readable minute/charge/due/excess, focus/keyboard/no overflow, direct-route denial, offline/unknown/recovery/revocation messages. | B | R13; I18; A06/A07 |
-| T42 | Every §5.3 numeric row and N01–N19 finance oracle: exact integer DB/API/unit results; no pre-rounded per-minute rate or fractional-time truncation. | D/A/U | R03–R06; I03–I06; A02/A03; B01 labels only |
+| T42 | Every §5.3 numeric row and N01–N19 finance oracle: exact integer DB/API/unit results; no pre-rounded per-minute rate or fractional-time truncation. | D/A/U | R03–R06; I03–I06; A02/A03; §6.3 exact labels |
 | T43 | No repricing at time-of-day/venue/date edits, no tax/fees/promotion/discount/pause/transfer/split-bill mechanics; frozen initial amount unchanged. | D/A/U/B | R03/R11; I02/I03/I17; A02/A08 |
 | T44 | UTC duration across midnight/timezone/DST, subsecond and long downtime: exact elapsed M/C, no business-day reset/display-clock authority or hidden maximum duration. | D/A/U/B | R02/R03/R09; I03/I13; A01/A02 |
 | T45 | All roles including ADMIN/CEO attempt reopen/backdate/refund/waive/correct/delete evidence: denied/absent; debt/excess/notice not falsely resolved. | D/A/B | R11; I14/I16/I17; A08 |
@@ -497,32 +513,37 @@ T01–T48 retain their IDs with revised outcomes. T49–T58 add the important ow
 | T48 | Exact approved paths/diff, no secrets/Legacy/future module; dependency audit/type/lint/build, approved PR/merge and exact-main CI before eventual freeze. No CI workaround/old migration edit. | S | R11/R14; I17; A08; later Gates 3–6 |
 | T49 | Preview at 60:00 → confirm commits 60:00.001: 100001 estimate becomes 101668 committed charge without extra confirmation solely for time. Separate actual receipt/version change still gives stale conflict. | D/A/B | R02/R12/R13; I03/I09/I18; A01/A06/A07 |
 | T50 | 60:00.000001 and 61:00.000001 exact ceilings; 24h/30day sessions remain billable without auto-close/cap; initial-ended and overtime-active UI reflect boundary correctly. | D/A/U/B | R01/R03; I03/I04/I13; A01/A02 |
-| T51 | CASH lifecycle eligibility on ACTIVE and CLOSED MANUAL/PAYMENT; after-close N09/N10/N17 succeeds under permission, no fake opening payment. Pending/cancelled hold is not a played-session settlement. Pre-close eligibility awaits B02. | D/A/B | R04/R06; I02/I05/I14/I15; A03/A05; B02 |
+| T51 | CASH lifecycle eligibility on ACTIVE and CLOSED MANUAL/PAYMENT; after-close N09/N10/N17 succeeds under permission, no fake opening payment. Pending/cancelled hold is not a played-session settlement. ACTIVE CASH succeeds under the same scope; leaves ACTIVE, started_at, ended_at and ownership unchanged and accrual continues. | D/A/B | R04/R06; I02/I05/I14/I15; A03/A05 |
 | T52 | Close UNPAID/PARTIAL while provider unavailable: one immediate CLOSED/release, another customer can acquire after commit, collection later does not reacquire or block table. | D/A/B | R07; I01/I08/I12/I15; A04/A07 |
 | T53 | Late bank credit or post-close CASH: end/start/H/M/C/closer/closure-time snapshot unchanged, current V/A/DUE/X progresses exactly; new collector attribution separate. | D/A/B | R05/R06/R10; I02/I05/I12/I15; A03/A06 |
-| T54 | Distinct CASH and bank credit (N18) serialize/reconfirm under CAS; if both genuinely commit, retain both and surplus. Same economic identity cannot enter twice or become another session's credit. | D/A | R05/R06/R12; I05/I06/I09; A03/A07; B01 surplus label |
+| T54 | Distinct CASH and bank credit (N18) serialize/reconfirm under CAS; if both genuinely commit, retain both and surplus. Same economic identity cannot enter twice or become another session's credit. | D/A | R05/R06/R12; I05/I06/I09; A03/A07; surplus means NEEDS_RESOLUTION |
 | T55 | Staff with no extras can close/CASH/read service finances in scope; MANUAL-open/HR extras do not confer new cross-venue/security/price/refund powers. CEO explicit global CASH/close does not imply ACCESS_MANAGE. | D/A/B | R08; I10/I11/I17; A05 |
 | T56 | CASH preview/confirm, reason/actor attribution, lost ACK, same-key replay, changed-key duplicate attempt handling, audit fault and malicious amount: immutable exact evidence once, no edited bank state or fake success. Gate 2 must define at-most-once identity without guessing identical amounts mean same cash event. | D/A/B | R06/R12; I04/I06/I08/I09/I14/I18; A03/A07 |
-| T57 | Disabled venue vs merely disabled table vs disabled customer vs inactive operator membership, each role's read/close/CASH path: decided management close allowed, frozen account/cutoff/scope still enforced. Complete precise Staff/CASH disabled-venue oracle from B03. | D/A/B | R08/R09; I10/I12/I16; A05/A07; B03 |
-| T58 | Excess only, notice only, both, outstanding due plus notice, excess absorbed by later active overtime: V/A/DUE/X conserved and issues visible, close/release independent, exact primary settlement status/automatic label changes from B01; no fake resolve action. | D/A/B | R05/R07/R10/R11; I05/I12/I14/I15; A03/A06; B01 |
+| T57 | Disabled venue vs merely disabled table vs disabled customer vs inactive operator membership, each role's read/close/CASH path: decided management close allowed, frozen account/cutoff/scope still enforced. STAFF ACTIVE membership permits close/CASH on existing sessions even when venue/table disabled; inactive membership/account/cutoff denies. New opening remains denied. | D/A/B | R08/R09; I10/I12/I16; A05/A07 |
+| T58 | Excess only, notice only, both, outstanding due plus notice, excess absorbed by later active overtime: V/A/DUE/X conserved and issues visible, close/release independent, ordinary known debt UNPAID/PARTIAL; unresolved anomaly NEEDS_RESOLUTION even with debt; excess-only display follows current excess, independently unresolved evidence remains flagged; no fake resolve action. | D/A/B | R05/R07/R10/R11; I05/I12/I14/I15; A03/A06 |
+| T59 | ACTIVE PAYMENT and MANUAL receive CASH under each authorized role: exact immutable V increment, actor/venue/audit, provisional balances only; advance past minute boundary then close and verify full elapsed charge. started_at unchanged; no ended_at, release or frozen charge from CASH. Deny USER/cross-venue/inactive actor. | D/A/B | R06/R08/R12; I05/I08/I10/I20; A03/A05/A07 |
+| T60 | ACTIVE CASH races with close, service disable and replay: permitted serialized receipt appears once either before closure snapshot or in later current settlement; final cutoff only from close. Stale CAS fails/refreshes, rollback creates no receipt/audit; disabled service alone does not revoke actor. | D/A | R06–R09/R12; I08/I09/I12/I20/I21; A04/A05/A07 |
+| T61 | Ordinary closed bills V=0 and 0<V<C yield UNPAID/PARTIAL with exact remaining_due, never NEEDS_RESOLUTION solely for debt. Exact ordinary CASH yields PAID. Surplus, valid late provider money, conflicting evidence and unresolved reconciliation yield NEEDS_RESOLUTION with reason; debt stays visible when coexisting. | D/A/B | R05/R06/R10/R11; I05/I15/I19; A03/A06 |
+| T62 | ACTIVE excess-only issue is fully absorbed by overtime: current X=0 and no independent issue gives ordinary provisional label, preserving receipts. Repeat with unresolved provider conflict/late-money issue: NEEDS_RESOLUTION persists even at X=0. Duplicate valid evidence alone adds no anomaly; no deferred resolve/refund button exists. | D/A/B | R01/R05/R10/R11; I05/I06/I14/I19; A01/A03/A06 |
 
-Coverage: R01–R14, F01–F16 and I01–I18 retain test links; every owner Q decision maps to tests. No case is removed to accommodate a new decision. The number of future executable tests will exceed/expand these scenario IDs where numerical rows, role cells and race schedules require it.
 
-## 12. Only genuinely unresolved questions
+Coverage: R01–R14, F01–F16 and I01–I21 retain test links; every owner Q/B decision maps to tests. No case is removed to accommodate a new decision. The number of future executable tests will exceed/expand these scenario IDs where numerical rows, role cells and race schedules require it.
 
-### 12.1 IMPLEMENTATION BLOCKERS — three narrow clarifications
+## 12. Owner decisions and remaining environment/future items
 
-The original Q01–Q16 are incorporated in §5.1. Do not ask the owner to repeat them. Three remaining edges change observable business behavior/permissions, so they cannot be silently chosen as technical details. Core arithmetic and release policy are fully decided.
+### 12.1 IMPLEMENTATION BLOCKERS — none; remaining owner decisions confirmed
 
-| ID | Exact clarification needed | Why necessary / affected cases |
+The owner explicitly confirmed all three remaining decisions on 2026-10-07. These are binding business decisions, not agent-selected defaults.
+
+| ID | Confirmed owner decision | Required coverage |
 |---|---|---|
-| B01 | When does primary settlement status become NEEDS_RESOLUTION, and does it take precedence over PAID/PARTIAL/UNPAID? Specifically: (a) X>0 only; (b) reversal/reconciliation notice with due=0; (c) due>0 plus a notice; (d) active-session excess later fully absorbed by overtime. Should issue status clear automatically when X reaches zero with no other issue, while immutable evidence remains? | Q09 names four statuses and Q13 requires visible unresolved issues but gives no precedence/exit predicate. Amounts are already exact; choosing the label or automatic clearance would invent business behavior. T11/T31/T32/T38/T42/T54/T58. |
-| B02 | May authorized CASH be recorded while an opened session is still ACTIVE as well as after CLOSED, or only after CLOSED? | Q08/Q10 grant recording “for sessions” and Q06 requires independent settlement, but don't specify this lifecycle edge. Both interpretations produce different state/permission acceptance cases. Post-close collection is decided; pending/cancelled opening-hold handling remains frozen. T10/T51. |
-| B03 | At a disabled venue, does the management close exception include STAFF with an ACTIVE assigned membership, or only MANAGER/CEO/ADMIN? Is CASH recording for an existing session also allowed there, and for which of those roles? | Q10 says STAFF at an assigned active venue; Q11 explicitly allows management close of existing sessions after disable, but does not enumerate STAFF or CASH for that exception. Do not silently re-enable venue, widen scope or block the expressly approved management close. T14/T24/T29/T57. |
+| B01 | NEEDS_RESOLUTION is not ordinary debt. Known remaining debt uses UNPAID/PARTIAL and visible remaining_due. Financial anomalies/ambiguity requiring management attention—late money, surplus, conflicting provider evidence or reconciliation that cannot conclude automatically—use NEEDS_RESOLUTION with the issue visible. | §5.4/§6.3; I19; A03; T11/T31/T32/T58/T61/T62 |
+| B02 | CASH may be recorded while ACTIVE and after CLOSED. It is immutable same-session evidence with actor, venue scope, audit and idempotency. It never stops time, closes the session, sets ended_at or releases the table. | §6/§8; I20; A07; T10/T51/T59/T60 |
+| B03 | Venue/table disable blocks opening new sessions only, not authorized handling of existing sessions. STAFF with ACTIVE venue membership retains approved close/settlement rights; MANAGER stays venue-scoped; CEO/ADMIN retain approved scope. Revoke staff via existing membership/account/role/permission/session-cutoff controls. | §6.2/§8; I21; A05; T14/T24/T29/T57 |
 
-No default answer is implemented or asserted for B01–B03. Filling them must update the dependent state/status/permission rows and exact test outcomes before owner SPEC approval. All useful decided work is already recorded above; no Gate 2 design is started while waiting.
+No true business implementation blocker remains. Numeric precision, transaction-time guarantees, locks, safe projections and exact compatibility changes are Gate 2 proof obligations after explicit SPEC approval, not authorization to design now.
 
-The document cannot yet carry **OWNER-DECISION COMPLETE — READY FOR OWNER SPEC APPROVAL** because these three oracles remain open. Once answered, that exact status may be applied to the completed revision, followed by a stop for explicit SPEC approval; it is not implementation authorization.
+**OWNER-DECISION COMPLETE — READY FOR OWNER SPEC APPROVAL**
 
 ### 12.2 PROVIDER / ENVIRONMENT DEPENDENT BUT NON-BLOCKING FOR THE CURRENT SPEC
 
@@ -563,13 +584,13 @@ Gate 2 later must address the precise committed DB cutoff/time semantics, same-s
 
 ## 14. Checkpoint, validation and handoff
 
-- Single allowed artifact: update docs/sprints/SPRINT_3_SPEC.md on sprint3-spec from prior document commit 65562f1c9f3adc0001b1c089ceeed858696e283c; frozen main stays 1b6f713a990aabb4f705d5f0735856442a59b7db.
-- Q01–Q16 decisions are incorporated; 16 inherited facts, 14 requirements, 18 invariants, 8 acceptance groups, revised original 48 tests plus 10 added cases (58 total), 19 duration examples, additional boundary scenarios and 19 financial oracle cases.
-- Only B01–B03 remain business clarification blockers; P01–P03 are capability/environment boundaries and U01–U04 future scope. Exact technical choices belong to later Gate 2.
+- Single allowed artifact: update docs/sprints/SPRINT_3_SPEC.md on sprint3-spec from prior document commit c5fae70a1c42e24cc17ff54702ef20c9b6d1cd4d; frozen main stays 1b6f713a990aabb4f705d5f0735856442a59b7db.
+- Q01–Q16 and B01–B03 decisions are incorporated; 16 inherited facts, 14 requirements, 21 invariants, 8 acceptance groups, revised original 48 tests plus 14 added cases (62 total), 19 duration examples, additional boundary scenarios and 19 financial oracle cases.
+- Q01–Q16 and B01–B03 are resolved; no business implementation blocker remains; P01–P03 are capability/environment boundaries and U01–U04 future scope. Exact technical choices belong to later Gate 2.
 - Documentation validation: check identifiers/mappings, exact arithmetic, decision consistency, no stale tentative formula/settle-before-release rules and one-file remote diff. Numeric computation is document validation, not an executable test artifact or Sprint 3 runtime PASS.
 - All Sprint 3 runtime tests remain NOT RUN. Baseline CI evidence in §2 is historical and unchanged; no workflow/dependency/source/test file touched, no PR/merge/deployment.
 - Publish this document checkpoint to GitHub and verify remote content/diff. Its own commit SHA is in Git history and the owner handoff; do not create another progress file or embed a self-referential SHA.
-- Next agent: read this document and current owner answers, recheck main/branch, resolve only B01–B03, then request explicit approval of the completed SPEC. Never treat business answers or review authorization as Gate 2/implementation approval.
+- Next agent: read this document and current owner answers, recheck main/branch and wait for explicit approval of this completed SPEC. Never treat business answers or review authorization as Gate 2/implementation approval.
 - Eventual implementation still requires approved SPEC → technical design → exact implementation plan/allowlist → owner implementation approval → vertical-slice tests → complete review/green PR → separately authorized merge → exact-main CI and immutable closure ledger → STOP.
 
-**Current endpoint: Gate 1 decision update saved for owner review; B01–B03 unresolved. Do not begin Gate 2.**
+**Current endpoint: OWNER-DECISION COMPLETE — READY FOR OWNER SPEC APPROVAL. STOP at Gate 1 and wait for explicit owner SPEC approval. Do not begin Gate 2.**
