@@ -12,6 +12,17 @@ plan = pathlib.Path('docs/sprints/SPRINT_3_IMPLEMENTATION_PLAN.md').read_text()
 allowed_paths = plan.split('```text\n')[1].split('\n```')[0].splitlines()
 allowed = set(allowed_paths)
 assert len(allowed) == len(allowed_paths) and all('*' not in p for p in allowed)
+# Owner-approved Local Demo maintenance: independent exact scope, not a Sprint 3 contract rewrite.
+DEMO_BASE = '06dbaa8526824952e8269ca35a81cc6e7c39e33c'
+DEMO_PATHS = {
+    'START_VOLUME.bat', 'STOP_VOLUME.bat', 'README_DEMO.md',
+    'scripts/local-demo.ps1', 'scripts/local-demo-admin.mjs',
+    'tests/local-demo/launcher.Tests.ps1', 'tests/local-demo/admin.test.mjs',
+    '.github/workflows/local-demo.yml',
+}
+maintenance = set(git('diff', '--name-only', DEMO_BASE, 'HEAD').splitlines())
+assert maintenance <= DEMO_PATHS | {'scripts/check-sprint3-scope.py'}, 'Unapproved maintenance delta: ' + str(maintenance)
+allowed |= DEMO_PATHS
 changed = set(git('diff', '--name-only', BASE, 'HEAD').splitlines())
 assert changed <= allowed, 'Unapproved paths: ' + str(changed - allowed)
 baseline = git('ls-tree', '-r', '--name-only', BASE).splitlines()
