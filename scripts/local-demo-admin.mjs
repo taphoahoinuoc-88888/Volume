@@ -34,7 +34,7 @@ export function publicConfig(status) {
   if(role!=='anon')fail('Key khong phai public anon; da chan dua vao trinh duyet.');
   return {url:status.API_URL,key:status.ANON_KEY,customer:'http://127.0.0.1:3000'};
 }
-export async function command(file,args,{cwd=ROOT,input,timeout=180000,env=process.env}={}) {
+export async function command(file,args,{cwd=ROOT,input,timeout=180000,env=process.env,onStderr}={}) {
   // No shell, no credential arguments; all diagnostics are deliberately redacted at the boundary.
   return new Promise((resolve,reject)=>{
     const p=spawn(file,args,{cwd,env,windowsHide:true,stdio:['pipe','pipe','pipe']});
@@ -42,9 +42,9 @@ export async function command(file,args,{cwd=ROOT,input,timeout=180000,env=proce
     const finish=(error)=>{if(done)return;done=true;clearTimeout(timer);error?reject(error):resolve(out);};
     const timer=setTimeout(()=>{p.kill();finish(new DemoError('Thao tac qua lau. Kiem tra mang/Docker roi bam lai; khong reset du lieu.'));},timeout);
     p.stdout.on('data',d=>{size+=d.length;if(size<8*1024*1024)out+=d;});
-    p.stderr.on('data',()=>{});
+    p.stderr.on('data',d=>{if(onStderr)onStderr(d.toString());});
     p.on('error',()=>finish(new DemoError('Khong chay duoc '+path.basename(file)+'. Kiem tra phu thuoc da cai.')));
-    p.on('close',code=>finish(code===0?null:new DemoError('Lenh '+path.basename(file)+' chua thanh cong. Kiem tra mang, dung luong va Docker; du lieu khong bi reset.')));
+    p.on('close',code=>finish(code===0?null:new DemoError('Lenh '+path.basename(file)+' '+path.basename(args[0]||'')+' chua thanh cong. Kiem tra mang, dung luong va Docker; du lieu khong bi reset.')));
     p.stdin.on('error',()=>{});p.stdin.end(input??'');
   });
 }
@@ -159,6 +159,7 @@ export async function setupAdmin(ctx,state,s,db,input) {
   if(!pending){if(found)fail('Email da thuoc tai khoan co san. Launcher khong nang quyen tai khoan nay.');pending={email,nonce:randomUUID()};state.pendingAdmin=pending;await save(ctx,state);}
   if(!found){await requestAuth(s,'admin/users',{email,password,email_confirm:true,app_metadata:{volume_local_bootstrap:pending.nonce}},true);found=(await db.query('select id,raw_app_meta_data from auth.users where lower(email)=lower($1)',[email])).rows[0];}
   if(!found||found.raw_app_meta_data?.volume_local_bootstrap!==pending.nonce)fail('Identity khong khop setup da bat dau. Khong thay doi quyen.');
+  await requestAuth(s,'token?grant_type=password',{email,password});
   await bootstrapTransaction(db,found.id,pending.nonce);delete state.pendingAdmin;await save(ctx,state);return {created:true};
 }
 export async function recoverAdmin(s,db,email) {
@@ -189,9 +190,18 @@ async function killVerified(identity) {
 async function ipc(record,action) {
   return new Promise((resolve,reject)=>{const socket=net.connect(PORTS.ipc,'127.0.0.1');let data='';socket.setTimeout(20000);socket.on('connect',()=>socket.end(JSON.stringify({token:record.token,action})+'\n'));socket.on('data',d=>{data+=d;if(data.length>4096)socket.destroy();});socket.on('end',()=>{try{const r=JSON.parse(data);if(r.root!==record.root||r.token!==record.token)throw Error();resolve(r);}catch{reject(new DemoError('Khong xac minh duoc tien trinh VOLUME.'));}});socket.on('timeout',()=>socket.destroy(new Error('timeout')));socket.on('error',()=>reject(new DemoError('Tien trinh VOLUME chua san sang.')));});
 }
+export function validateWorkerRecord(ctx,record) {
+  if(record.root!==ctx.root||!/^[a-f0-9]{64}$/.test(record.token))fail('Worker ownership khong hop le.');
+  const escape=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  for(const [identity,exe,args] of [[record.process,process.execPath,[path.join(ctx.root,'scripts','local-demo-admin.mjs'),'worker']],[record.edge,ctx.cli,['functions','serve','open-table-payment','--workdir',ctx.runtime]]]) {
+    if(!identity)continue;
+    const pattern=new RegExp('^'+[exe,...args].map(x=>'"?'+escape(x)+'"?').join('\\s+')+'\\s*$',process.platform==='win32'?'i':'');
+    if(identity.exe.toLowerCase()!==exe.toLowerCase()||!pattern.test(identity.cmd))fail('Tien trinh khong thuoc launcher nay. Khong dung.');
+  }
+}
 async function stopWorker(ctx) {
   const record=await readJson(ctx.workerFile,true);if(!record)return;
-  if(record.root!==ctx.root||typeof record.token!=='string')fail('Worker ownership khong hop le.');
+  validateWorkerRecord(ctx,record);
   try{await ipc(record,'stop');}catch{await killVerified(record.process);await killVerified(record.edge);}
   await fs.unlink(ctx.workerFile).catch(e=>{if(e.code!=='ENOENT')throw e;});
 }
@@ -202,7 +212,7 @@ async function startWorker(ctx,pub) {
   const record={root:ctx.root,token:randomBytes(32).toString('hex'),process:null,edge:null};
   await atomic(ctx.workerFile,record);
   const child=spawn(process.execPath,[path.join(ctx.root,'scripts','local-demo-admin.mjs'),'worker'],{cwd:ctx.root,detached:true,windowsHide:true,stdio:['pipe','ignore','ignore']});
-  child.on('error',()=>{});record.process=await processIdentity(child.pid);await atomic(ctx.workerFile,record);
+  child.on('error',()=>{});record.process=await processIdentity(child.pid);if(!record.process){child.kill();fail('Khong xac minh duoc tien trinh web.');}await atomic(ctx.workerFile,record);
   child.stdin.on('error',()=>{});child.stdin.end(JSON.stringify({record,pub}));child.unref();
   for(let i=0;i<90;i++){try{await ipc(record,'ping');return;}catch{}await pause(500);}
   await stopWorker(ctx);fail('Web/Edge chua san sang. Kiem tra Docker va thu lai; du lieu duoc giu nguyen.');
@@ -212,7 +222,7 @@ async function worker(ctx,input) {
   if(record.root!==ctx.root||!/^[a-f0-9]{64}$/.test(record.token))fail('Worker input khong hop le.');
   localUrl(pub.url,PORTS.api);publicConfig({API_URL:pub.url,ANON_KEY:pub.key});
   const edge=spawn(ctx.cli,['functions','serve','open-table-payment','--workdir',ctx.runtime],{cwd:ctx.root,windowsHide:true,stdio:'ignore'});
-  edge.on('error',()=>{});record.edge=await processIdentity(edge.pid);await atomic(ctx.workerFile,record);
+  edge.on('error',()=>{});record.edge=await processIdentity(edge.pid);if(!record.edge){edge.kill();fail('Khong xac minh duoc tien trinh Edge.');}await atomic(ctx.workerFile,record);
   const servers=[];let shutting=false;
   const shutdown=async()=>{if(shutting)return;shutting=true;for(const s of servers)await s.close();if(edge.exitCode===null){const closed=new Promise(resolve=>{edge.once('close',resolve);setTimeout(resolve,10000).unref();});edge.kill();await closed;}};
   try{
@@ -258,6 +268,7 @@ export async function start(ctx) {
   state.phase='STARTING';await save(ctx,state);
   try{
     const stopped=items.filter(c=>!c.State?.Running).map(c=>c.Id);if(stopped.length)await ctx.run('docker',['start',...stopped]);
+    console.error('VOLUME: Dang khoi dong backend local...');
     await ctx.run(ctx.cli,['start','--workdir',ctx.runtime],{timeout:900000});
     items=await inventory(ctx,state);state.containers=items.map(c=>c.Id);await save(ctx,state);
     const s=await status(ctx);const db=await poolFor(ctx,s);let needsAdmin;

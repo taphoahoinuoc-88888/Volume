@@ -7,7 +7,7 @@ import net from 'node:net';
 import {spawn} from 'node:child_process';
 import {randomUUID,createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
-import {DemoError,validNode,checkCredentials,localUrl,publicConfig,context,lock,atomic,validateOwned,stop,dockerLocal,sourceFingerprint,processIdentity,sameProcess,command,bootstrapTransaction,setupAdmin,recoverAdmin,PORTS} from '../../scripts/local-demo-admin.mjs';
+import {DemoError,validNode,checkCredentials,localUrl,publicConfig,context,lock,atomic,validateOwned,stop,dockerLocal,sourceFingerprint,processIdentity,sameProcess,validateWorkerRecord,command,bootstrapTransaction,setupAdmin,recoverAdmin,PORTS} from '../../scripts/local-demo-admin.mjs';
 const root=path.resolve(import.meta.dirname,'../..');
 const fakeKey=role=>'header.'+Buffer.from(JSON.stringify({role})).toString('base64url')+'.signature';
 const project='volume-demo-0123456789abcdef-01234567';
@@ -53,6 +53,11 @@ test('D11/D13/D14 kernel lock serializes commands and recovers after release',as
 test('D13/D14 stale/reused process identity never matches',async()=>{
   const self=await processIdentity(process.pid);assert.ok(self);assert.ok(sameProcess(self,await processIdentity(process.pid)));assert.ok(!sameProcess(self,{...self,start:'different'}));assert.ok(!sameProcess(self,{...self,cmd:'unrelated'}));assert.equal(await processIdentity(-1),null);
 });
+
+test('D14 edited journal cannot target an unrelated process even with matching live PID',async()=>{
+  const ctx={root:'/volume',cli:'/volume/tool/supabase',runtime:'/volume/runtime'};
+  assert.throws(()=>validateWorkerRecord(ctx,{root:ctx.root,token:'a'.repeat(64),process:{pid:1,start:'1',exe:'/unrelated',cmd:'/unrelated'},edge:null}),DemoError);
+});
 test('D04/D12/D15 stop exact owned running IDs only, repeated stop keeps state/data',async t=>{
   const dir=await temporary(t);const ctx=await context(dir,dir);await fs.mkdir(ctx.runtime,{recursive:true});
   const state={format:1,root:ctx.root,project,containers:['owned'],phase:'READY'};await atomic(ctx.stateFile,state);let running=true;const mutations=[];
@@ -92,7 +97,7 @@ test('D22 process arguments are literal and shell metacharacters never execute',
 if(process.env.VOLUME_DEMO_REAL==='1')test('D01–D22 REAL Linux Docker/Auth/UI lifecycle (not Windows Docker proof)',{timeout:1200000},async t=>{
   assert.equal(process.platform,'linux');
   const helper=path.join(root,'scripts','local-demo-admin.mjs');const ctx=await context();
-  const cli=(mode,input)=>command(process.execPath,[helper,mode],{cwd:root,input:input?JSON.stringify(input):'',timeout:1000000});
+  const cli=(mode,input)=>command(process.execPath,[helper,mode],{cwd:root,input:input?JSON.stringify(input):'',timeout:1000000,onStderr:text=>{for(const line of text.split('\n'))if(line.startsWith('VOLUME:'))console.error(line);}});
   // Isolated ephemeral CI only. Never remove/stop a container named testnet2.
   let sentinel;try{sentinel=JSON.parse(await command('docker',['inspect','testnet2']))[0];}catch{await command('docker',['run','-d','--name','testnet2','--label','volume-demo-test-sentinel=1','busybox:1.37','sleep','7200']);sentinel=JSON.parse(await command('docker',['inspect','testnet2']))[0];}
   const sentinelProof=x=>JSON.stringify({id:x.Id,state:x.State,config:x.Config});const before=sentinelProof(sentinel);
