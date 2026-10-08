@@ -1,4 +1,4 @@
-import {test as base,expect,type Page} from '@playwright/test';
+import {test as base,expect,type Page,type Request} from '@playwright/test';
 import {fixture,type Fixture} from '../../integration/fixtures/auth';
 export type {Fixture};
 export const customer='http://127.0.0.1:3000',control='http://127.0.0.1:3001';
@@ -25,7 +25,14 @@ async function resetData(f:Fixture){
 export {expect};
 export async function login(page:Page,f:Fixture,name:string,surface='control'){
  const origin=surface==='customer'?customer:control;
- await page.goto(origin+'/login');await page.evaluate(()=>localStorage.clear());await page.goto(origin+'/login');
+ // A load event does not finish React's Auth/RPC requests. Let the previous
+ // document finish those bodies before a hard navigation cancels them in WebKit.
+ const pending=new Set<Request>();
+ const started=(r:Request)=>{const u=new URL(r.url());if(u.pathname.startsWith('/auth/v1/')||u.pathname.startsWith('/rest/v1/'))pending.add(r);};
+ const finished=(r:Request)=>{pending.delete(r);};
+ page.on('request',started);page.on('requestfinished',finished);page.on('requestfailed',finished);
+ try{
+ await page.goto(origin+'/login');await expect(page.getByLabel('Email',{exact:true})).toBeVisible();await expect.poll(()=>pending.size,{message:'Previous login document Auth/RPC bodies must settle before reload'}).toBe(0);await page.evaluate(()=>localStorage.clear());await page.goto(origin+'/login');
  await page.getByLabel('Email',{exact:true}).fill(f.users[name].email);await page.getByLabel('Mật khẩu',{exact:true}).fill(f.users[name].password);await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
  if(name==='disabled'){await expect(page.getByRole('status')).toContainText('Quyền truy cập');return;}
  await page.waitForURL(origin+(surface==='customer'?'/profile':'/overview'));
@@ -33,5 +40,7 @@ export async function login(page:Page,f:Fixture,name:string,surface='control'){
  else if(name.startsWith('user'))await expect(page.getByRole('heading',{name:'Đây là khu vực nhân sự'})).toBeVisible();
  else await expect(page.getByRole('heading',{name:'Xin chào,'+' '+name})).toBeVisible();
  await page.waitForLoadState('load');
+ await expect.poll(()=>pending.size,{message:'Authenticated document Auth/RPC bodies must settle before the next navigation'}).toBe(0);
+ }finally{page.off('request',started);page.off('requestfinished',finished);page.off('requestfailed',finished);}
 }
 
