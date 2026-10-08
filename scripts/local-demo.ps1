@@ -95,13 +95,17 @@ public static class VolumeDemoJob {
             $password=[Runtime.InteropServices.Marshal]::PtrToStringBSTR($a)
             if ($password -cne [Runtime.InteropServices.Marshal]::PtrToStringBSTR($b)) { throw 'Hai mat khau chua giong nhau. Bam START lai de nhap lai; du lieu khong bi xoa.' }
             $payload=@{email=$email;password=$password} | ConvertTo-Json -Compress
-            Invoke-Volume 'admin' $payload | Out-Null
+            $adminResult=Invoke-Volume 'admin' $payload
         } finally {
             [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($a)
             [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($b)
             $password=$null; $payload=$null; $first.Dispose(); $second.Dispose()
         }
-        Write-Host 'Da tao ADMIN. Dang nhap bang email va mat khau vua chon.'
+        if ($adminResult.created) {
+            Write-Host 'Da tao ADMIN. Dang nhap bang email va mat khau vua chon.'
+        } else {
+            Write-Host 'ADMIN da duoc tao o lan mo khac. Thong tin vua nhap khong thay doi tai khoan do. Dung thong tin da tao truoc, hoac bam START lai va chon R de khoi phuc.'
+        }
     } else {
         Write-Host 'ADMIN local da co san. Mat khau va quyen khong bi thay doi.'
         $recover=Read-Host 'Nhan Enter de mo web; go R neu quen mat khau ADMIN'

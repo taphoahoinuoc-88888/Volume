@@ -153,6 +153,7 @@ if(process.env.VOLUME_DEMO_REAL==='1')test('D01–D22 REAL Linux Docker/Auth/UI 
   assert.equal((await db.query("select count(*)::int n from public.audit_events where action='BOOTSTRAP_ADMIN_CREATED'")).rows[0].n,1);
   const login=await fetch(local.API_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:local.ANON_KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password})});assert.equal(login.status,200);const auth=await login.json();
   const access=await fetch(local.API_URL+'/rest/v1/rpc/current_access',{method:'POST',headers:{apikey:local.ANON_KEY,Authorization:'Bearer '+auth.access_token,'Content-Type':'application/json'},body:'{}'});assert.equal(access.status,200);assert.equal((await access.json()).profile.role,'ADMIN');
+  assert.equal(JSON.parse(await cli('admin',{email:'other-'+randomUUID()+'@example.test',password})).created,false,'Concurrent/repeated bootstrap must report existing ADMIN without changing credentials');
   assert.equal(JSON.parse(await cli('start')).needsAdmin,false);
   const {chromium}=await import('@playwright/test');const browser=await chromium.launch();
   try{
