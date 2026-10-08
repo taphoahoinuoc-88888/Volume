@@ -30,7 +30,9 @@ export async function login(page:Page,f:Fixture,name:string,surface='control'){
  const pending=new Set<Request>();
  const started=(r:Request)=>{const u=new URL(r.url());if(u.pathname.startsWith('/auth/v1/')||u.pathname.startsWith('/rest/v1/'))pending.add(r);};
  const finished=(r:Request)=>{pending.delete(r);};
- page.on('request',started);page.on('requestfinished',finished);page.on('requestfailed',finished);
+ // Redirects retire the old document; only its successor's requests can be drained.
+ const committed=(frame:ReturnType<Page['mainFrame']>)=>{if(frame===page.mainFrame())pending.clear();};
+ page.on('request',started);page.on('requestfinished',finished);page.on('requestfailed',finished);page.on('framenavigated',committed);
  try{
  await page.goto(origin+'/login');await expect(page.getByLabel('Email',{exact:true})).toBeVisible();await expect.poll(()=>pending.size,{message:'Previous login document Auth/RPC bodies must settle before reload'}).toBe(0);await page.evaluate(()=>localStorage.clear());await page.goto(origin+'/login');
  await page.getByLabel('Email',{exact:true}).fill(f.users[name].email);await page.getByLabel('Mật khẩu',{exact:true}).fill(f.users[name].password);await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
@@ -41,6 +43,6 @@ export async function login(page:Page,f:Fixture,name:string,surface='control'){
  else await expect(page.getByRole('heading',{name:'Xin chào,'+' '+name})).toBeVisible();
  await page.waitForLoadState('load');
  await expect.poll(()=>pending.size,{message:'Authenticated document Auth/RPC bodies must settle before the next navigation'}).toBe(0);
- }finally{page.off('request',started);page.off('requestfinished',finished);page.off('requestfailed',finished);}
+ }finally{page.off('request',started);page.off('requestfinished',finished);page.off('requestfailed',finished);page.off('framenavigated',committed);}
 }
 
