@@ -16,7 +16,10 @@ button:focus-visible,a:focus-visible{outline:2px solid #c9ff38;outline-offset:5p
 .v2-table:active,.v2-product:active{background:#ffffff12}
 .menu-btn,.mobile-menu button,.mobile-menu a,.lane-actions a{min-height:44px;touch-action:manipulation}
 .lane-actions{flex-wrap:wrap;gap:12px}.lane-actions a{display:inline-flex;align-items:center}
+#services .lane-actions{position:static;margin-top:24px}
+#services .lane-actions a{color:#f3f6f3;background:#17201a;border-color:#ffffff40;font-size:12px}
 .mobile-menu{max-height:100dvh;overflow-y:auto;padding-bottom:max(24px,env(safe-area-inset-bottom))}
 .floating-actions{bottom:calc(20px + env(safe-area-inset-bottom))}
+.hero-copy{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
 #liveTablesStatus{min-height:3.3em}.v2-table strong,.v2-table span{font-variant-numeric:tabular-nums}
 @media(max-width:800px){.venue-lead,.v2-booking p{font-size:16px}.topbar{padding-top:max(12px,env(safe-area-inset-top))}.hero-bottom p{line-height:1.6}.v2-booking{padding:24px}.v2-booking .cta{font-size:12px;letter-spacing:.03em}}

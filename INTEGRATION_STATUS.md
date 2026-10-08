@@ -57,8 +57,13 @@ No Docker/database commands were run during this integration; no Pi Node resourc
 - Native Windows job on 34c8521: PASS, including numeric SID ACL regression, real Vite/Job Object
   start/stop and Windows PowerShell 5.1 entrypoints. Docker ownership cases on Windows are simulated.
 - Full Windows Docker Desktop START/STOP, physical iPhone/macOS and live Telegram response: NOT RUN.
-- Required browser matrix and latest-candidate CI remain pending; earlier desktop Chromium/WebKit
-  showroom cases passed before superseded runs were cancelled. No full visual acceptance claimed.
+- Candidate 0970454: core and both Local Demo jobs PASS. Desktop and 390px mobile showroom
+  Chromium/WebKit cases PASS; reviewed their actual CI screenshots. Fixed a discovered services-link
+  overlay inherited from absolute lane positioning, and reserved hero space above the floating contact.
+- Required CI remains incomplete: Checkpoint 1B stopped after 111 browser passes on the existing
+  frozen Auth fixture (`tests/integration/fixtures/auth.ts:58`, SocketError: other side closed).
+  No frozen fixture changed. Sprint 2 hit a WebKit internal navigation error; one failed-job retry issued.
+  Latest CSS correction requires its own candidate CI; no full visual acceptance claimed.
 
 ## Existing CI scope
 
