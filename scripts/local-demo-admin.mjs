@@ -215,14 +215,18 @@ export async function startWorker(ctx,pub) {
   const launch=workerCommand(ctx);let supervisorError='';
   const child=spawn(launch.file,launch.args,{cwd:ctx.root,detached:true,windowsHide:true,stdio:['pipe','pipe','pipe']});
   for(const stream of [child.stdout,child.stderr]){stream.on('data',chunk=>{supervisorError=(supervisorError+chunk.toString()).slice(-4000);for(const line of chunk.toString().split('\n'))if(line.startsWith('VOLUME:'))console.error(line);});stream.unref?.();}
-  child.on('error',e=>{supervisorError='spawn '+String(e.code);});record.process=await processIdentity(child.pid);if(!record.process){child.kill();const detail=supervisorError.replaceAll(record.token,'[REDACTED]').replaceAll(pub.key,'[REDACTED]').replace(/eyJ[A-Za-z0-9_.-]+/g,'[REDACTED]');console.error('VOLUME: Supervisor '+detail.replace(/[\r\n]+/g,' ').slice(0,700));fail('Khong xac minh duoc tien trinh web.');}await atomic(ctx.workerFile,record);
+  child.on('error',e=>{supervisorError='spawn '+String(e.code);});
   child.stdin.on('error',()=>{});child.stdin.end(JSON.stringify({record,pub}));child.unref();
   for(let i=0;i<90;i++){try{await ipc(record,'ping');return;}catch{}await pause(500);}
+  if(child.exitCode===null)child.kill();
+  console.error('VOLUME: Supervisor '+supervisorError.replaceAll(record.token,'[REDACTED]').replaceAll(pub.key,'[REDACTED]').replace(/[\r\n]+/g,' ').slice(0,700));
   await stopWorker(ctx);fail('Web/Edge chua san sang. Kiem tra Docker va thu lai; du lieu duoc giu nguyen.');
 }
 async function worker(ctx,input) {
   const {record,pub}=input;
   if(record.root!==ctx.root||!/^[a-f0-9]{64}$/.test(record.token))fail('Worker input khong hop le.');
+  record.process=await processIdentity(process.platform==='win32'?process.ppid:process.pid);
+  if(!record.process)fail('Khong xac minh duoc worker dang chay.');await atomic(ctx.workerFile,record);
   localUrl(pub.url,PORTS.api);publicConfig({API_URL:pub.url,ANON_KEY:pub.key});
   let edge=null;
   const edgeReady=async()=>{try{const r=await fetch(pub.url+'/functions/v1/open-table-payment',{headers:{apikey:pub.key,Authorization:'Bearer '+pub.key},signal:AbortSignal.timeout(1500)});return r.status===405&&(await r.json()).code==='METHOD_NOT_ALLOWED';}catch{return false;}};
@@ -238,7 +242,7 @@ async function worker(ctx,input) {
     if(!ready)throw Error('edge');
     const {createServer}=await import(pathToFileURL(path.join(ctx.root,'node_modules','vite','dist','node','index.js')).href);
     for(const [app,port] of [['customer',PORTS.customer],['control-center',PORTS.control]]){
-      const server=await createServer({root:path.join(ctx.root,'apps',app),configFile:false,envFile:false,envPrefix:'VOLUME_UNUSED_',logLevel:'silent',define:{'import.meta.env.VITE_SUPABASE_URL':JSON.stringify(pub.url),'import.meta.env.VITE_SUPABASE_ANON_KEY':JSON.stringify(pub.key),'import.meta.env.VITE_CUSTOMER_URL':JSON.stringify(pub.customer)},server:{host:'127.0.0.1',port,strictPort:true}});await server.listen();servers.push(server);
+      const server=await createServer({root:path.join(ctx.root,'apps',app),configFile:false,envFile:false,envPrefix:[],logLevel:'silent',define:{'import.meta.env.VITE_SUPABASE_URL':JSON.stringify(pub.url),'import.meta.env.VITE_SUPABASE_ANON_KEY':JSON.stringify(pub.key),'import.meta.env.VITE_CUSTOMER_URL':JSON.stringify(pub.customer)},server:{host:'127.0.0.1',port,strictPort:true}});await server.listen();servers.push(server);
       if(!(await fetch('http://127.0.0.1:'+port,{signal:AbortSignal.timeout(5000)})).ok)throw Error('web');
     }
     const control=net.createServer({allowHalfOpen:true},socket=>{let data='';socket.setTimeout(3000);socket.on('timeout',()=>socket.destroy());socket.on('data',chunk=>{data+=chunk;if(data.length>4096)socket.destroy();});socket.on('end',async()=>{

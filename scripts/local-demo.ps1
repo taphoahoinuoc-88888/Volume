@@ -28,8 +28,6 @@ try {
     $command=Get-Command node.exe -ErrorAction SilentlyContinue
     if (-not $command) { throw 'Chua co Node.js. Cai Node.js 22 LTS (22.12 tro len), sau do bam lai START_VOLUME.bat.' }
     $script:Node=$command.Source
-    $version=(& $script:Node --version).TrimStart('v').Split('.')
-    if (-not (([int]$version[0] -eq 22 -and [int]$version[1] -ge 12) -or [int]$version[0] -eq 24)) { throw 'Can Node.js 22.12+ (dong 22) hoac 24. Hay cai Node.js LTS.' }
     if ($Action -eq 'Worker') {
         # Suspended creation + Windows Job Object: every descendant belongs to this supervisor.
         # Closing this supervisor kills only its job, including CLI sidecars; no global taskkill.
@@ -72,6 +70,8 @@ public static class VolumeDemoJob {
 '@
         exit [VolumeDemoJob]::Run($script:Node,$script:Helper,$script:Root)
     }
+    $version=(& $script:Node --version).TrimStart('v').Split('.')
+    if (-not (([int]$version[0] -eq 22 -and [int]$version[1] -ge 12) -or [int]$version[0] -eq 24)) { throw 'Can Node.js 22.12+ (dong 22) hoac 24. Hay cai Node.js LTS.' }
     if ($Action -eq 'Stop') {
         Invoke-Volume 'stop' | Out-Null
         Write-Host 'Da tat cac tai nguyen VOLUME do demo quan ly. Du lieu van duoc giu nguyen.'
