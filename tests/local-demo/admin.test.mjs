@@ -8,7 +8,7 @@ import http from 'node:http';
 import {spawn} from 'node:child_process';
 import {randomUUID,createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
-import {DemoError,validNode,checkCredentials,localUrl,publicConfig,context,lock,atomic,validateOwned,stop,dockerLocal,sourceFingerprint,processIdentity,sameProcess,validateWorkerRecord,startWorker,stopWorker,command,bootstrapTransaction,setupAdmin,recoverAdmin,PORTS} from '../../scripts/local-demo-admin.mjs';
+import {DemoError,validNode,checkCredentials,localUrl,publicConfig,context,lock,atomic,validateOwned,stop,dockerLocal,sourceFingerprint,processIdentity,sameProcess,validateWorkerRecord,startWorker,stopWorker,command,bootstrapTransaction,setupAdmin,recoverAdmin,migrationCheck,PORTS} from '../../scripts/local-demo-admin.mjs';
 const root=path.resolve(import.meta.dirname,'../..');
 const fakeKey=role=>'header.'+Buffer.from(JSON.stringify({role})).toString('base64url')+'.signature';
 const project='volume-demo-0123456789abcdef-01234567';
@@ -86,6 +86,15 @@ test('D16/D18/D20 source does not call reset/prune, no frozen runtime files modi
 test('D17 runtime source fingerprint stable and sensitive to migration changes',async t=>{
   const dir=await temporary(t);await fs.cp(path.join(root,'supabase'),path.join(dir,'supabase'),{recursive:true});const a=await sourceFingerprint(dir);assert.equal(a,await sourceFingerprint(dir));await fs.writeFile(path.join(dir,'supabase','migrations','99999999999999_test.sql'),'select 1;');assert.notEqual(a,await sourceFingerprint(dir));
 });
+test('D17 existing database migration mismatch is rejected read-only',async()=>{
+  const calls=[];await assert.rejects(migrationCheck({root},{query:async sql=>{calls.push(sql);return {rows:[]};}}),DemoError);
+  assert.deepEqual(calls,['select version from supabase_migrations.schema_migrations order by version']);
+});
+test('D05/D12 occupied application port is preserved on worker startup failure',async t=>{
+  const dir=await temporary(t);const ctx=await context(dir,dir);await fs.mkdir(ctx.runtime,{recursive:true});
+  const server=net.createServer();await new Promise(r=>server.listen(PORTS.customer,'127.0.0.1',r));
+  try{await assert.rejects(startWorker(ctx,{url:'http://127.0.0.1:55321',key:fakeKey('anon'),customer:'http://127.0.0.1:3000'}),DemoError);assert.ok(server.listening);await assert.rejects(fs.access(ctx.workerFile));}finally{await new Promise(r=>server.close(r));}
+});
 test('D21 process timeout is bounded and raw command errors remain redacted',async()=>{
   await assert.rejects(command(process.execPath,['-e','setTimeout(()=>{},10000)'],{timeout:100}),e=>e instanceof DemoError);
   await assert.rejects(command(process.execPath,['-e','console.error("sensitive-value");process.exit(1)']),e=>!e.message.includes('sensitive-value'));
@@ -106,13 +115,19 @@ if(process.env.VOLUME_DEMO_WINDOWS_WORKER==='1')test('D11/D13/D14/D15 REAL Windo
   const unrelated=spawn(process.execPath,['-e','setTimeout(()=>{},180000)'],{stdio:'ignore'});const unrelatedIdentity=await processIdentity(unrelated.pid);
   t.after(async()=>{await stopWorker(ctx);unrelated.kill();await new Promise(r=>fake.close(r));await fs.rm(ctx.runtime,{recursive:true,force:true});});
   await startWorker(ctx,{url:'http://127.0.0.1:55321',key:fakeKey('anon'),customer:'http://127.0.0.1:3000'});
-  const first=JSON.parse(await fs.readFile(ctx.workerFile,'utf8'));assert.ok(first.process);assert.ok(first.edge);
+  let first=JSON.parse(await fs.readFile(ctx.workerFile,'utf8'));assert.ok(first.process);assert.ok(first.edge);
   await startWorker(ctx,{url:'http://127.0.0.1:55321',key:fakeKey('anon'),customer:'http://127.0.0.1:3000'});
   assert.equal(JSON.parse(await fs.readFile(ctx.workerFile,'utf8')).process.pid,first.process.pid);
   const {chromium}=await import('@playwright/test');const browser=await chromium.launch();const page=await browser.newPage();
   try{for(const port of [3000,3001]){await page.goto('http://127.0.0.1:'+port);await page.getByLabel('Email',{exact:true}).waitFor();}}finally{await browser.close();}
-  await stopWorker(ctx);await stopWorker(ctx);for(let i=0;i<30&&await processIdentity(first.edge.pid);i++)await new Promise(r=>setTimeout(r,200));
-  assert.equal(await processIdentity(first.edge.pid),null);assert.ok(sameProcess(unrelatedIdentity,await processIdentity(unrelated.pid)));
+  // Real supervisor crash: its Windows Job must kill only its own descendants.
+  const crashed=first;await command('powershell.exe',['-NoProfile','-Command',`Stop-Process -Id ${crashed.process.pid} -Force`]);
+  for(let i=0;i<30&&await processIdentity(crashed.edge.pid);i++)await new Promise(r=>setTimeout(r,200));
+  assert.equal(await processIdentity(crashed.edge.pid),null);assert.ok(sameProcess(unrelatedIdentity,await processIdentity(unrelated.pid)));
+  await startWorker(ctx,{url:'http://127.0.0.1:55321',key:fakeKey('anon'),customer:'http://127.0.0.1:3000'});
+  first=JSON.parse(await fs.readFile(ctx.workerFile,'utf8'));assert.ok(!sameProcess(crashed.process,first.process));
+  await stopWorker(ctx);await stopWorker(ctx);for(let i=0;i<30&&first.edge&&await processIdentity(first.edge.pid);i++)await new Promise(r=>setTimeout(r,200));
+  if(first.edge)assert.equal(await processIdentity(first.edge.pid),null);assert.ok(sameProcess(unrelatedIdentity,await processIdentity(unrelated.pid)));
   for(const port of [3000,3001])await assert.rejects(fetch('http://127.0.0.1:'+port,{signal:AbortSignal.timeout(1000)}));
 });
 
@@ -126,7 +141,7 @@ if(process.env.VOLUME_DEMO_REAL==='1')test('D01–D22 REAL Linux Docker/Auth/UI 
   assert.equal(JSON.parse(await cli('start')).needsAdmin,true);
   const local=JSON.parse(await command(ctx.cli,['status','--workdir',ctx.runtime,'-o','json']));const {default:pg}=await import('pg');const db=new pg.Pool({connectionString:local.DB_URL});
   let dbClosed=false;t.after(async()=>{if(!dbClosed)await db.end();await cli('stop');assert.equal(sentinelProof(JSON.parse(await command('docker',['inspect','testnet2']))[0]),before);});
-  const email='owner-'+randomUUID()+'@example.test';const password='Owner-local-'+randomUUID()+'!';
+  const email='owner-'+randomUUID()+'@example.test';const password='Owner-local-'+randomUUID()+'!;$`&<>"';
   await db.query("create function public.demo_test_audit_failure() returns trigger language plpgsql as $$ begin raise exception 'TEST_ONLY_AUDIT_ROLLBACK'; end $$; create trigger demo_test_audit_failure before insert on public.audit_events for each row execute function public.demo_test_audit_failure();");
   await assert.rejects(cli('admin',{email,password}));
   const candidate=(await db.query('select p.* from public.profiles p join auth.users u on u.id=p.id where u.email=$1',[email])).rows[0];assert.equal(candidate.role,'USER');assert.equal(candidate.version,'1');
@@ -150,9 +165,9 @@ if(process.env.VOLUME_DEMO_REAL==='1')test('D01–D22 REAL Linux Docker/Auth/UI 
     await recovery.getByLabel('Mật khẩu mới',{exact:true}).fill(password+'new');await recovery.getByRole('button',{name:'Lưu mật khẩu mới',exact:true}).click();await recovery.waitForURL('http://127.0.0.1:3000/login');
     const recovered=await fetch(local.API_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:local.ANON_KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password:password+'new'})});assert.equal(recovered.status,200,'Owner-selected replacement password works');
   }finally{await browser.close();}
-  const dataBefore=JSON.stringify((await db.query('select id,role,version,account_status from public.profiles order by id')).rows);
+  const dataBefore=JSON.stringify((await db.query('select id,role,version,account_status,sessions_revoked_before from public.profiles order by id')).rows);
   await db.end();dbClosed=true;await cli('stop');await cli('stop');assert.equal(JSON.parse(await cli('start')).needsAdmin,false);
-  const db2=new pg.Pool({connectionString:local.DB_URL});try{assert.equal(JSON.stringify((await db2.query('select id,role,version,account_status from public.profiles order by id')).rows),dataBefore);
+  const db2=new pg.Pool({connectionString:local.DB_URL});try{assert.equal(JSON.stringify((await db2.query('select id,role,version,account_status,sessions_revoked_before from public.profiles order by id')).rows),dataBefore);
     await db2.query("update public.profiles set account_status='DISABLED' where id=$1",[p.id]);await assert.rejects(cli('recover',{email}));assert.equal((await db2.query('select account_status from public.profiles where id=$1',[p.id])).rows[0].account_status,'DISABLED');
     await db2.query("update public.profiles set account_status='ACTIVE' where id=$1",[p.id]);
   }finally{await db2.end();}
