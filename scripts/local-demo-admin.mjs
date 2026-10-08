@@ -212,10 +212,10 @@ export async function startWorker(ctx,pub) {
   for(const port of [PORTS.customer,PORTS.control,PORTS.ipc])await freePort(port);
   const record={root:ctx.root,token:randomBytes(32).toString('hex'),process:null,edge:null};
   await atomic(ctx.workerFile,record);
-  const launch=workerCommand(ctx);
+  const launch=workerCommand(ctx);let supervisorError='';
   const child=spawn(launch.file,launch.args,{cwd:ctx.root,detached:true,windowsHide:true,stdio:['pipe','pipe','pipe']});
-  for(const stream of [child.stdout,child.stderr]){stream.on('data',chunk=>{for(const line of chunk.toString().split('\n'))if(line.startsWith('VOLUME:'))console.error(line);});stream.unref?.();}
-  child.on('error',()=>{});record.process=await processIdentity(child.pid);if(!record.process){child.kill();fail('Khong xac minh duoc tien trinh web.');}await atomic(ctx.workerFile,record);
+  for(const stream of [child.stdout,child.stderr]){stream.on('data',chunk=>{supervisorError=(supervisorError+chunk.toString()).slice(-4000);for(const line of chunk.toString().split('\n'))if(line.startsWith('VOLUME:'))console.error(line);});stream.unref?.();}
+  child.on('error',e=>{supervisorError='spawn '+String(e.code);});record.process=await processIdentity(child.pid);if(!record.process){child.kill();const detail=supervisorError.replaceAll(record.token,'[REDACTED]').replaceAll(pub.key,'[REDACTED]').replace(/eyJ[A-Za-z0-9_.-]+/g,'[REDACTED]');console.error('VOLUME: Supervisor '+detail.replace(/[\r\n]+/g,' ').slice(0,700));fail('Khong xac minh duoc tien trinh web.');}await atomic(ctx.workerFile,record);
   child.stdin.on('error',()=>{});child.stdin.end(JSON.stringify({record,pub}));child.unref();
   for(let i=0;i<90;i++){try{await ipc(record,'ping');return;}catch{}await pause(500);}
   await stopWorker(ctx);fail('Web/Edge chua san sang. Kiem tra Docker va thu lai; du lieu duoc giu nguyen.');
@@ -277,9 +277,11 @@ export async function start(ctx) {
   try{
     const stopped=items.filter(c=>!c.State?.Running).map(c=>c.Id);if(stopped.length)await ctx.run('docker',['start',...stopped]);
     console.error('VOLUME: Dang khoi dong backend local...');
-    await ctx.run(ctx.cli,['start','--workdir',ctx.runtime],{timeout:900000});
+    if(!items.length)await ctx.run(ctx.cli,['start','--workdir',ctx.runtime],{timeout:900000});
     items=await inventory(ctx,state);state.containers=items.map(c=>c.Id);await save(ctx,state);
-    const s=await status(ctx);const db=await poolFor(ctx,s);let needsAdmin;
+    let s;for(let attempt=0;attempt<60;attempt++){try{const candidate=await status(ctx);const responses=await Promise.all(['/auth/v1/health','/rest/v1/'].map(route=>fetch(candidate.API_URL+route,{headers:{apikey:candidate.ANON_KEY},signal:AbortSignal.timeout(2000)})));if(responses.every(r=>r.ok)){s=candidate;break;}}catch{}await pause(1000);}
+    if(!s)fail('Backend local chua khoi dong xong. Cho Docker on dinh roi bam START lai.');
+    const db=await poolFor(ctx,s);let needsAdmin;
     try{await migrationCheck(ctx,db);
       const dbItem=items.find(c=>c.Name==='/supabase_db_'+state.project);if(!dbItem)fail('Khong tim thay database demo da xac minh.');
       await ctx.run('docker',['exec',dbItem.Id,'psql','-U','supabase_admin','-d','postgres','-v','ON_ERROR_STOP=1','-c','alter role volume_session_reader bypassrls; grant usage on schema auth to volume_session_reader; grant select(id,user_id,created_at) on auth.sessions to volume_session_reader;']);

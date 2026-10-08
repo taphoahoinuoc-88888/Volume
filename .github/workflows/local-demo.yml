@@ -1,7 +1,7 @@
 name: Local Demo
 on:
   push:
-    branches: [local-demo-spec, main]
+    branches: [main]
   pull_request:
     branches: [main]
 permissions:
