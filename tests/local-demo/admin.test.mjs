@@ -102,7 +102,7 @@ if(process.env.VOLUME_DEMO_WINDOWS_WORKER==='1')test('D11/D13/D14/D15 REAL Windo
   await fs.mkdir(path.dirname(ctx.cli),{recursive:true});
   const script="$cfg=[Console]::In.ReadToEnd()|ConvertFrom-Json; Add-Type -TypeDefinition 'using System; using System.Threading; public class DemoEdgeFixture { public static void Main(string[] args) { Thread.Sleep(120000); } }' -OutputAssembly $cfg.path -OutputType ConsoleApplication";
   await command('powershell.exe',['-NoProfile','-EncodedCommand',Buffer.from(script,'utf16le').toString('base64')],{input:JSON.stringify({path:ctx.cli})});
-  const fake=http.createServer((req,res)=>{res.writeHead(405);res.end();});await new Promise(r=>fake.listen(PORTS.api,'127.0.0.1',r));
+  let probe=0;const fake=http.createServer((req,res)=>{res.writeHead(probe++===0?503:405,{'Content-Type':'application/json'});res.end(JSON.stringify({code:'METHOD_NOT_ALLOWED'}));});await new Promise(r=>fake.listen(PORTS.api,'127.0.0.1',r));
   const unrelated=spawn(process.execPath,['-e','setTimeout(()=>{},180000)'],{stdio:'ignore'});const unrelatedIdentity=await processIdentity(unrelated.pid);
   t.after(async()=>{await stopWorker(ctx);unrelated.kill();await new Promise(r=>fake.close(r));await fs.rm(ctx.runtime,{recursive:true,force:true});});
   await startWorker(ctx,{url:'http://127.0.0.1:55321',key:fakeKey('anon'),customer:'http://127.0.0.1:3000'});

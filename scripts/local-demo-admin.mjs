@@ -213,7 +213,8 @@ export async function startWorker(ctx,pub) {
   const record={root:ctx.root,token:randomBytes(32).toString('hex'),process:null,edge:null};
   await atomic(ctx.workerFile,record);
   const launch=workerCommand(ctx);
-  const child=spawn(launch.file,launch.args,{cwd:ctx.root,detached:true,windowsHide:true,stdio:['pipe','ignore','ignore']});
+  const child=spawn(launch.file,launch.args,{cwd:ctx.root,detached:true,windowsHide:true,stdio:['pipe','pipe','pipe']});
+  for(const stream of [child.stdout,child.stderr]){stream.on('data',chunk=>{for(const line of chunk.toString().split('\n'))if(line.startsWith('VOLUME:'))console.error(line);});stream.unref?.();}
   child.on('error',()=>{});record.process=await processIdentity(child.pid);if(!record.process){child.kill();fail('Khong xac minh duoc tien trinh web.');}await atomic(ctx.workerFile,record);
   child.stdin.on('error',()=>{});child.stdin.end(JSON.stringify({record,pub}));child.unref();
   for(let i=0;i<90;i++){try{await ipc(record,'ping');return;}catch{}await pause(500);}
@@ -223,12 +224,17 @@ async function worker(ctx,input) {
   const {record,pub}=input;
   if(record.root!==ctx.root||!/^[a-f0-9]{64}$/.test(record.token))fail('Worker input khong hop le.');
   localUrl(pub.url,PORTS.api);publicConfig({API_URL:pub.url,ANON_KEY:pub.key});
-  const edge=spawn(ctx.cli,['functions','serve','open-table-payment','--workdir',ctx.runtime],{cwd:ctx.root,windowsHide:true,stdio:'ignore'});
-  edge.on('error',()=>{});record.edge=await processIdentity(edge.pid);if(!record.edge){edge.kill();fail('Khong xac minh duoc tien trinh Edge.');}await atomic(ctx.workerFile,record);
+  let edge=null;
+  const edgeReady=async()=>{try{const r=await fetch(pub.url+'/functions/v1/open-table-payment',{headers:{apikey:pub.key,Authorization:'Bearer '+pub.key},signal:AbortSignal.timeout(1500)});return r.status===405&&(await r.json()).code==='METHOD_NOT_ALLOWED';}catch{return false;}};
   const servers=[];let shutting=false;
-  const shutdown=async()=>{if(shutting)return;shutting=true;for(const s of servers)await s.close();if(edge.exitCode===null){const closed=new Promise(resolve=>{edge.once('close',resolve);setTimeout(resolve,10000).unref();});edge.kill();await closed;}};
+  const shutdown=async()=>{if(shutting)return;shutting=true;for(const s of servers)await s.close();if(edge&&edge.exitCode===null){const closed=new Promise(resolve=>{edge.once('close',resolve);setTimeout(resolve,10000).unref();});edge.kill();await closed;}};
   try{
-    let ready=false;for(let i=0;i<90;i++){try{const r=await fetch(pub.url+'/functions/v1/open-table-payment',{headers:{apikey:pub.key,Authorization:'Bearer '+pub.key},signal:AbortSignal.timeout(1500)});if(r.status===405){ready=true;break;}}catch{}await pause(500);}
+    // Newer pinned CLI starts functions with the stack. Do not replace a healthy owned Edge container.
+    if(!await edgeReady()){
+      edge=spawn(ctx.cli,['functions','serve','open-table-payment','--workdir',ctx.runtime],{cwd:ctx.root,windowsHide:true,stdio:'ignore'});
+      edge.on('error',()=>{});record.edge=await processIdentity(edge.pid);if(!record.edge){edge.kill();fail('Khong xac minh duoc tien trinh Edge.');}await atomic(ctx.workerFile,record);
+    }
+    let ready=false;for(let i=0;i<90;i++){if(await edgeReady()){ready=true;break;}await pause(500);}
     if(!ready)throw Error('edge');
     const {createServer}=await import(pathToFileURL(path.join(ctx.root,'node_modules','vite','dist','node','index.js')).href);
     for(const [app,port] of [['customer',PORTS.customer],['control-center',PORTS.control]]){

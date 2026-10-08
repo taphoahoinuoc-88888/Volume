@@ -5,6 +5,10 @@ function Assert-True($Value,[string]$Message) { if (-not $Value) { throw $Messag
 $tokens=$null; $errors=$null
 [void][System.Management.Automation.Language.Parser]::ParseFile((Join-Path $root 'scripts/local-demo.ps1'),[ref]$tokens,[ref]$errors)
 Assert-True ($errors.Count -eq 0) 'PowerShell launcher has parse errors'
+$source=Get-Content -LiteralPath (Join-Path $root 'scripts/local-demo.ps1') -Raw
+$csharp=[regex]::Match($source, "Add-Type -TypeDefinition @'\r?\n([\s\S]*?)\r?\n'@").Groups[1].Value
+Assert-True ($csharp.Length -gt 100) 'Missing Windows Job Object implementation'
+Add-Type -TypeDefinition $csharp
 $env:VOLUME_DEMO_WINDOWS_WORKER='1'
 & node --test (Join-Path $root 'tests/local-demo/admin.test.mjs')
 if ($LASTEXITCODE -ne 0) { throw 'Native Windows Node safety cases failed' }
