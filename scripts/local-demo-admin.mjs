@@ -65,12 +65,12 @@ export async function lock(port=PORTS.lock) {
   return ()=>new Promise(resolve=>server.close(resolve));
 }
 async function freePort(port) {const release=await lock(port);await release();}
-async function secureRuntime(ctx) {
+export async function secureRuntime(ctx) {
   await fs.mkdir(ctx.runtime,{recursive:true,mode:0o700});
   if(process.platform==='win32') {
     const result=await ctx.run('whoami.exe',['/user','/fo','csv','/nh']);const sid=result.match(/S-1-5-[\d-]+/);
     if(!sid)fail('Khong xac minh duoc tai khoan Windows.');
-    await ctx.run('icacls.exe',[ctx.runtime,'/inheritance:r','/grant:r',sid[0]+':(OI)(CI)F']);
+    await ctx.run('icacls.exe',[ctx.runtime,'/inheritance:r','/grant:r','*'+sid[0]+':(OI)(CI)F']);
   } else await fs.chmod(ctx.runtime,0o700);
 }
 async function filesUnder(dir) {
@@ -133,7 +133,13 @@ export async function migrationCheck(ctx,db) {
 export async function requestAuth(s,route,body,privileged=false) {
   const key=privileged?s.SERVICE_ROLE_KEY:s.ANON_KEY;
   const response=await fetch(s.API_URL+'/auth/v1/'+route,{method:'POST',headers:{apikey:key,Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(20000)});
-  if(!response.ok)fail('Auth local chua hoan tat. Kiem tra email/mat khau roi thu lai; khong co quyen nao duoc bo qua.');return response.json();
+  if(!response.ok){let code='';try{const data=await response.json();code=data.error_code||data.code||'';}catch{}fail(authFailure(response.status,code,route));}return response.json();
+}
+export function authFailure(status,code,route){
+ const action=route==='admin/users'?'Tao tai khoan':route.startsWith('token?')?'Dang nhap kiem tra':'Auth';
+ const reasons={weak_password:'Mat khau chua dat yeu cau. Dung mat khau dai hon, it nhat 12 ky tu.',email_address_invalid:'Email khong hop le. Kiem tra lai dia chi.',email_exists:'Email da duoc su dung. Launcher khong tu nang quyen tai khoan cu.',user_already_exists:'Tai khoan da ton tai. Dung lai dung email cua lan setup truoc.',invalid_credentials:'Email/mat khau chua khop. Neu setup dang do, nhap lai dung thong tin da chon.',email_not_confirmed:'Email chua duoc xac nhan. Can kiem tra Auth local.'};
+ const reason=(Object.hasOwn(reasons,code)?reasons[code]:null)||(status===429?'Auth dang gioi han tan suat. Cho mot luc roi bam START lai.':status>=500?'Auth local dang loi. Kiem tra Docker va dich vu Auth; khong reset du lieu.':'Kiem tra cau hinh Auth local va thu lai; quyen khong bi bo qua.');
+ return action+' that bai (HTTP '+Number(status)+'). '+reason;
 }
 export async function adminState(db) {
   const rows=(await db.query("select id,account_status from public.profiles where role='ADMIN' order by id")).rows;

@@ -1,0 +1,47 @@
+@font-face{font-family:VolumeDisplay;src:url("assets/fonts/volume-display-bold.woff") format("woff");font-weight:700;font-style:normal;font-display:swap}
+h2{font-family:VolumeDisplay,Arial,sans-serif}
+/* Targeted v5.1 Vietnamese typography, native mobile layout and single concierge CTA. */
+.world-copy h2,.section-heading h2,.rank-copy h2,.tg-copy h2,.visit-content h2,.about-copy h2,.seo-intro h2,.shot-copy h2,.break-title h2{line-height:1.05;letter-spacing:-.025em;overflow-wrap:normal;word-break:normal}
+.about-copy h2,.seo-intro h2{font-size:clamp(48px,7.8vw,124px)}
+h2 em{line-height:inherit}
+.about-lead,.seo-intro>p:last-child,.seo-columns p,.vision-card p,.tg-copy>span,.section-heading>span,.shot-copy>p,.break-copy>p{line-height:1.6;letter-spacing:normal}
+.hero h1{line-height:.82} /* Short Latin brand keeps its display treatment. */
+[hidden]{display:none!important}
+.floating-actions{right:16px;bottom:calc(18px + env(safe-area-inset-bottom));gap:0}
+.telegram-fab{width:auto;min-width:112px;height:48px;border-radius:24px;display:flex;gap:8px;padding:0 16px;flex-direction:row;box-shadow:0 8px 26px #0005}
+.telegram-fab span{font-size:21px}.telegram-fab b{font-size:11px;line-height:1.2}.telegram-fab b br{display:none}
+.floating-actions.occluded{visibility:hidden;pointer-events:none}
+.hero-ctas{padding-right:0!important}
+.handoff-modal h2,.modal h2{line-height:1.08;letter-spacing:-.025em;padding-right:30px}
+.handoff-modal .cta,.handoff-modal .app-primary{margin-top:14px;min-height:48px}
+.product-media img,.product-modal-media img{object-fit:contain}
+footer{gap:24px;flex-wrap:wrap}footer button{min-height:44px}
+[aria-busy="true"]{cursor:wait;opacity:.65}
+@media(max-width:800px){
+ .world-copy h2,.section-heading h2,.rank-copy h2,.tg-copy h2,.visit-content h2,.about-copy h2,.seo-intro h2{font-size:clamp(38px,10.6vw,72px);line-height:1.07;letter-spacing:-.025em}
+ .shot-copy h2,.break-title h2{font-size:clamp(42px,11vw,72px);line-height:1.07;letter-spacing:-.025em}
+ .about-copy h2,.seo-intro h2{margin-bottom:28px}
+ .section-heading{gap:24px}.hero-ctas{gap:12px}.hero-ctas .cta{min-height:48px}
+ .modal{width:calc(100% - 32px);max-height:calc(100svh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));padding:24px;overflow-y:auto;overscroll-behavior:contain}
+ .phone-shell{min-width:0;max-width:100%}.phone-shell h3{line-height:1.1;letter-spacing:-.025em}
+ .rank-board{min-width:0}.player-row{gap:12px}.player-row>div{min-width:0}.player-row strong{overflow-wrap:anywhere}.player-row button{min-height:44px;flex-shrink:0}
+ .event-card h2{font-size:clamp(36px,10vw,58px);line-height:1.07;letter-spacing:-.025em}
+ .experience-loop{overflow-x:auto;max-width:100%}
+ .seo-intro>p:last-child{letter-spacing:normal;line-height:1.6}
+}
+@media(prefers-reduced-motion:reduce){.floating-actions,.modal{transition:none!important}}
+
+.topbar.scrolled{background:#070b08f5}
+.phone-shell.connected{min-height:420px}
+.telegram-fab b{word-spacing:3px}
+
+.world-copy h2,.section-heading h2,.rank-copy h2,.tg-copy h2,.visit-content h2,.about-copy h2,.seo-intro h2,.shot-copy h2{line-height:1.12}
+@media(max-width:800px){.world-copy h2,.section-heading h2,.rank-copy h2,.tg-copy h2,.visit-content h2,.about-copy h2,.seo-intro h2,.shot-copy h2{line-height:1.12}.break-title h2{line-height:1.07!important}}
+/* Extra clearance for stacked Vietnamese accents in the About statement. */
+.about-copy h2,.seo-intro h2{line-height:1.16}
+.shot-copy h2{line-height:1.16}
+@media(max-width:800px){
+ .shop-tabs button,.rank-filter button,.feedback-tags button,.rating button,.app-back{min-height:44px;min-width:44px}
+ .rank-head{flex-wrap:wrap;gap:12px}.rank-filter{flex-wrap:wrap}
+ #menuBtn{min-height:44px;min-width:44px}
+}

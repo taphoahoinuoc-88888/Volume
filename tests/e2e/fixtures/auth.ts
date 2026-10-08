@@ -2,7 +2,19 @@ import {test as base,expect,type Page} from '@playwright/test';
 import {fixture,type Fixture} from '../../integration/fixtures/auth';
 export type {Fixture};
 export const customer='http://127.0.0.1:3000',control='http://127.0.0.1:3001';
-export const test=base.extend<{reset:void;diagnostics:void}, {volume:Fixture}>({volume:[async({},use)=>{const volume=await fixture();await use(volume);await volume.close();},{scope:'worker'}],reset:[async({volume},use)=>{await resetData(volume);await use();},{auto:true}],diagnostics:[async({page},use,info)=>{const events:object[]=[];page.on('response',r=>{const path=new URL(r.url()).pathname;if(path.startsWith('/auth/v1/')||path.startsWith('/rest/v1/'))events.push({path,status:r.status()});});page.on('requestfailed',r=>events.push({path:new URL(r.url()).pathname,status:'request_failed'}));page.on('pageerror',e=>events.push({error:e.name}));await use();if(info.status!==info.expectedStatus)await info.attach('http-statuses',{body:Buffer.from(JSON.stringify(events)),contentType:'application/json'});},{auto:true}]});
+export const test=base.extend<{reset:void;diagnostics:void}, {volume:Fixture}>({volume:[async({},use)=>{const volume=await fixture();await use(volume);await volume.close();},{scope:'worker'}],reset:[async({volume},use)=>{await resetData(volume);await use();},{auto:true}],diagnostics:[async({page},use,info)=>{
+ const events:object[]=[];const started=Date.now();const record=(event:object)=>events.push({ms:Date.now()-started,...event});
+ const path=(url:string)=>{try{return new URL(url).pathname;}catch{return 'unavailable';}};
+ page.on('request',r=>{if(r.isNavigationRequest())record({event:'navigation-request',path:path(r.url()),method:r.method()});});
+ page.on('response',r=>{const p=path(r.url());if(r.request().isNavigationRequest()||p.startsWith('/auth/v1/')||p.startsWith('/rest/v1/'))record({event:'response',path:p,status:r.status()});});
+ page.on('requestfailed',r=>{const error=r.failure()?.errorText||'';record({event:'request-failed',path:path(r.url()),navigation:r.isNavigationRequest(),kind:/internal error/i.test(error)?'internal':/abort|cancel/i.test(error)?'aborted':/timeout/i.test(error)?'timeout':'other'});});
+ page.on('pageerror',e=>record({event:'pageerror',error:e.name}));
+ page.on('crash',()=>record({event:'crash'}));
+ page.on('framenavigated',frame=>{if(frame===page.mainFrame())record({event:'navigation-commit',path:path(frame.url())});});
+ page.on('domcontentloaded',()=>record({event:'domcontentloaded',path:path(page.url())}));
+ page.on('load',()=>record({event:'load',path:path(page.url())}));
+ try{await use();}finally{if(info.status!==info.expectedStatus)await info.attach('http-statuses',{body:Buffer.from(JSON.stringify(events)),contentType:'application/json'});}
+},{auto:true}]});
 const roles:Record<string,string>={admin1:'ADMIN',admin2:'ADMIN',ceo:'CEO',managerA:'MANAGER',managerB:'MANAGER',managerAB:'MANAGER',staffA:'STAFF',staffB:'STAFF',hrA:'STAFF',user1:'USER',user2:'USER',disabled:'USER',inactive:'STAFF'};
 async function resetData(f:Fixture){
  await f.db.query('truncate public.audit_events,public.staff_memberships');
@@ -13,7 +25,8 @@ async function resetData(f:Fixture){
 export {expect};
 export async function login(page:Page,f:Fixture,name:string,surface='control'){
  const origin=surface==='customer'?customer:control;
- await page.goto(origin+'/login');await page.evaluate(()=>localStorage.clear());await page.goto(origin+'/login');
+ const webkit=page.context().browser()?.browserType().name()==='webkit';
+ await page.goto(origin+'/login');await expect(page.getByLabel('Email',{exact:true})).toBeVisible();if(webkit)await page.waitForLoadState('networkidle');await page.evaluate(()=>localStorage.clear());await page.goto(origin+'/login');
  await page.getByLabel('Email',{exact:true}).fill(f.users[name].email);await page.getByLabel('Mật khẩu',{exact:true}).fill(f.users[name].password);await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
  if(name==='disabled'){await expect(page.getByRole('status')).toContainText('Quyền truy cập');return;}
  await page.waitForURL(origin+(surface==='customer'?'/profile':'/overview'));
@@ -21,5 +34,9 @@ export async function login(page:Page,f:Fixture,name:string,surface='control'){
  else if(name.startsWith('user'))await expect(page.getByRole('heading',{name:'Đây là khu vực nhân sự'})).toBeVisible();
  else await expect(page.getByRole('heading',{name:'Xin chào,'+' '+name})).toBeVisible();
  await page.waitForLoadState('load');
+ // WebKit logs showed new RPC bursts after the heading/load event. Wait for
+ // its network to settle before the next hard navigation; UI assertions above
+ // still prove login, and existing test/navigation timeouts remain unchanged.
+ if(webkit)await page.waitForLoadState('networkidle');
 }
 
