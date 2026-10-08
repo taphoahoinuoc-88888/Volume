@@ -20,6 +20,7 @@ document.querySelectorAll<HTMLElement>('[data-telegram]').forEach(element=>{
 });
 const tableStatus=document.querySelector<HTMLElement>('#liveTablesStatus');
 const tableList=document.querySelector<HTMLElement>('#liveTables');
+const availabilityLabels:Record<TableRow['availability'],string>={available:'Còn trống',pending:'Đang giữ',playing:'Đang chơi'};
 let pending=false;
 async function loadTables(){
  if(pending||!tableStatus||!tableList||document.hidden)return;
@@ -32,7 +33,7 @@ async function loadTables(){
    const card=document.createElement('a');card.className='v2-table';card.href='/tables';
    const title=document.createElement('strong');title.textContent=table.label;
    const venue=document.createElement('span');venue.textContent=table.venue_name||'Volume';
-   const detail=document.createElement('span');detail.textContent=({available:'Còn trống',pending:'Đang giữ',occupied:'Đang chơi'} as Record<string,string>)[table.availability]||'Chưa phục vụ';
+   const detail=document.createElement('span');detail.textContent=availabilityLabels[table.availability]||'Chưa phục vụ';
    const price=document.createElement('span');price.textContent=table.hourly_price_vnd==null?'Xem giá khi chọn bàn':money(table.hourly_price_vnd)+' / 60 phút';
    card.append(title,venue,detail,price);tableList.append(card);
   }

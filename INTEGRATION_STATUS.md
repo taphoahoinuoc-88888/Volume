@@ -52,7 +52,13 @@ No Docker/database commands were run during this integration; no Pi Node resourc
 - Browser visual/performance tests: BLOCKED. Browser binary download failed; remote browser could not reach
   local preview. A Vite preview startup also failed with unavailable network-interface enumeration;
   loopback attempt printed a URL but was not reachable. These attempts are not browser PASS evidence.
-- Real backend/ADMIN login, Windows Docker Desktop START/STOP, iPhone/macOS: NOT RUN.
+- GitHub Actions on candidate d873bfe: real isolated backend launch, ADMIN provisioning/login/recovery,
+  UI, stop/restart and frozen core Auth/RLS/security regression: PASS.
+- Native Windows job on 34c8521: PASS, including numeric SID ACL regression, real Vite/Job Object
+  start/stop and Windows PowerShell 5.1 entrypoints. Docker ownership cases on Windows are simulated.
+- Full Windows Docker Desktop START/STOP, physical iPhone/macOS and live Telegram response: NOT RUN.
+- Required browser matrix and latest-candidate CI remain pending; earlier desktop Chromium/WebKit
+  showroom cases passed before superseded runs were cancelled. No full visual acceptance claimed.
 
 ## Existing CI scope
 
