@@ -1,7 +1,9 @@
 ﻿param([ValidateSet('Start','Stop','Worker')][string]$Action='Start')
 $ErrorActionPreference='Stop'
-[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
-$OutputEncoding = [Console]::OutputEncoding
+if ($Action -ne 'Worker') {
+    [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+    $OutputEncoding = [Console]::OutputEncoding
+}
 function Invoke-Volume([string]$Command, [string]$InputJson='') {
     $info=New-Object System.Diagnostics.ProcessStartInfo
     $info.FileName=$script:Node
@@ -48,6 +50,7 @@ public static class VolumeDemoJob {
  [DllImport("kernel32.dll")] static extern uint ResumeThread(IntPtr thread);
  [DllImport("kernel32.dll")] static extern uint WaitForSingleObject(IntPtr handle,uint timeout);
  [DllImport("kernel32.dll")] static extern bool GetExitCodeProcess(IntPtr process,out uint code);
+ [DllImport("kernel32.dll")] static extern bool FreeConsole();
  [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
  [DllImport("kernel32.dll")] static extern bool TerminateProcess(IntPtr process,uint code);
  [DllImport("kernel32.dll")] static extern IntPtr GetStdHandle(int handle);
@@ -59,6 +62,7 @@ public static class VolumeDemoJob {
      Extended limit=new Extended();limit.basic.flags=0x2000;
      if(!SetInformationJobObject(job,9,ref limit,(uint)Marshal.SizeOf(limit)))throw new Exception("Khong dat duoc gioi han Job Object.");
      Startup si=new Startup();si.cb=(uint)Marshal.SizeOf(si);si.flags=0x100;si.input=GetStdHandle(-10);si.output=GetStdHandle(-11);si.error=GetStdHandle(-12);
+     FreeConsole(); // Detach only this supervisor; closing the owner batch window must not stop the demo.
      SetHandleInformation(si.input,1,1);SetHandleInformation(si.output,1,1);SetHandleInformation(si.error,1,1);
      StringBuilder cmd=new StringBuilder("\""+node+"\" \""+helper+"\" worker");
      if(!CreateProcess(node,cmd,IntPtr.Zero,IntPtr.Zero,true,0x08000004,IntPtr.Zero,cwd,ref si,out pi))throw new Exception("Khong tao duoc worker VOLUME.");

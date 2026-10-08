@@ -213,13 +213,13 @@ export async function startWorker(ctx,pub) {
   const record={root:ctx.root,token:randomBytes(32).toString('hex'),process:null,edge:null,public:pub};
   await atomic(ctx.workerFile,record);
   const launch=workerCommand(ctx);let supervisorError='';
-  const child=spawn(launch.file,launch.args,{cwd:ctx.root,detached:true,windowsHide:true,stdio:['ignore','pipe','pipe']});
+  const child=spawn(launch.file,launch.args,{cwd:ctx.root,detached:process.platform!=='win32',windowsHide:true,stdio:['ignore','pipe','pipe']});
   for(const stream of [child.stdout,child.stderr]){stream.on('data',chunk=>{supervisorError=(supervisorError+chunk.toString()).slice(-4000);for(const line of chunk.toString().split('\n'))if(line.startsWith('VOLUME:'))console.error(line);});stream.unref?.();}
   child.on('error',e=>{supervisorError='spawn '+String(e.code);});
   child.unref();
   for(let i=0;i<90;i++){try{await ipc(record,'ping');return;}catch{}await pause(500);}
   if(child.exitCode===null)child.kill();
-  console.error('VOLUME: Supervisor '+supervisorError.replaceAll(record.token,'[REDACTED]').replaceAll(pub.key,'[REDACTED]').replace(/[\r\n]+/g,' ').slice(0,700));
+  console.error('VOLUME: Supervisor exit='+String(child.exitCode)+' pid='+String(child.pid)+' '+supervisorError.replaceAll(record.token,'[REDACTED]').replaceAll(pub.key,'[REDACTED]').replace(/[\r\n]+/g,' ').slice(0,700));
   await stopWorker(ctx);fail('Web/Edge chua san sang. Kiem tra Docker va thu lai; du lieu duoc giu nguyen.');
 }
 async function worker(ctx,input) {
