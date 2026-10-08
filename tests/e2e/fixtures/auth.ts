@@ -16,6 +16,7 @@ export async function login(page:Page,f:Fixture,name:string,surface='control'){
  await page.goto(origin+'/login');await page.evaluate(()=>localStorage.clear());await page.goto(origin+'/login');
  await page.getByLabel('Email',{exact:true}).fill(f.users[name].email);await page.getByLabel('Mật khẩu',{exact:true}).fill(f.users[name].password);await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
  if(name==='disabled'){await expect(page.getByRole('status')).toContainText('Quyền truy cập');return;}
+ await page.waitForURL(origin+(surface==='customer'?'/profile':'/overview'));
  if(surface==='customer')await expect(page.getByRole('heading',{name:'Xin chào,'+ ' '+name})).toBeVisible();
  else if(name.startsWith('user'))await expect(page.getByRole('heading',{name:'Đây là khu vực nhân sự'})).toBeVisible();
  else await expect(page.getByRole('heading',{name:'Xin chào,'+' '+name})).toBeVisible();

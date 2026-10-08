@@ -307,3 +307,25 @@ Runs 37733153961 / 37733525237 failed resolving the pinned CLI executable after 
 by starting the supervisor normally and detaching only its own console. Run 37735955862 then passed both jobs.
 The transient authoring runtime cannot read /proc process identity: its isolated local unit invocation had one
 process-identity failure, not a PASS. The unchanged assertion passed on real GitHub Windows and Linux runners.
+
+
+## PR #9 — separate frozen fixture maintenance approval
+
+Owner explicitly approved this additional scope after the navigation-race blocker:
+`tests/e2e/fixtures/auth.ts` gains exactly one final-login-URL wait immediately after the existing disabled-account early return.
+The URL is `/profile` for customer login and `/overview` for control login.
+All existing assertions, Auth behavior, authorization checks, timeouts and load checks remain intact.
+`scripts/check-sprint3-scope.py` permits only that insertion by byte-for-byte comparison with the frozen baseline;
+its original security, scope, secret, regression and historical checks remain enforced for every other path.
+This supersedes the earlier nine-path inventory only by adding this one specifically authorized fixture path (ten total).
+No other frozen file modification is authorized. No application/business/security implementation changes.
+
+Evidence motivating the change: Sprint 2 run 37738855961 attempt 2 on `0f9d2bbb16e95d2f72f9f2eccdba658af960bc3b`
+FAILED: 95 browser tests passed, 1 failed, 72 not run. WebKit's navigation to `/table-session` was interrupted by
+an unfinished login redirect to `/profile`. The helper previously waited for a greeting/current-document load,
+which could precede the final redirect. The approved wait synchronizes that existing redirect; it does not retry or suppress failures.
+Earlier WebKit internal navigation errors remain historical failures, not retrospectively PASS.
+
+At that same candidate, Local Demo run 37738855973 was SUCCESS: native Windows 21/21 and real Linux stack 21/21,
+zero failed/skipped. Full Windows Docker Desktop end-to-end remains NOT RUN. The new candidate and post-merge
+five-workflow evidence will be recorded in PR #9; merge requires all five workflows green on the actual candidate.

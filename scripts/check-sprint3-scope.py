@@ -20,9 +20,10 @@ DEMO_PATHS = {
     'tests/local-demo/launcher.Tests.ps1', 'tests/local-demo/admin.test.mjs',
     '.github/workflows/local-demo.yml',
 }
+LOGIN_FIXTURE = 'tests/e2e/fixtures/auth.ts'  # Separately owner-approved exact synchronization only.
 maintenance = set(git('diff', '--name-only', DEMO_BASE, 'HEAD').splitlines())
-assert maintenance <= DEMO_PATHS | {'scripts/check-sprint3-scope.py'}, 'Unapproved maintenance delta: ' + str(maintenance)
-allowed |= DEMO_PATHS
+assert maintenance <= DEMO_PATHS | {'scripts/check-sprint3-scope.py', LOGIN_FIXTURE}, 'Unapproved maintenance delta: ' + str(maintenance)
+allowed |= DEMO_PATHS | {LOGIN_FIXTURE}
 changed = set(git('diff', '--name-only', BASE, 'HEAD').splitlines())
 assert changed <= allowed, 'Unapproved paths: ' + str(changed - allowed)
 baseline = git('ls-tree', '-r', '--name-only', BASE).splitlines()
@@ -31,7 +32,14 @@ for p in baseline:
     if p.startswith(('supabase/migrations/','docs/decisions/')) or (p.startswith(('supabase/tests/','tests/integration/','tests/e2e/')) and p not in ['supabase/tests/sprint2_constraints.test.sql','tests/integration/fixtures/payment.ts','tests/integration/fixtures/auth.ts']):
         frozen.append(p)
 for p in frozen:
-    assert not git('diff','--name-only',BASE,'HEAD','--',p).strip(), 'Frozen file changed: '+p
+    if p == LOGIN_FIXTURE:
+        original = subprocess.check_output(['git', 'show', BASE + ':' + LOGIN_FIXTURE])
+        marker = " if(name==='disabled'){await expect(page.getByRole('status')).toContainText('Quyền truy cập');return;}\n".encode('utf-8')
+        insertion = b" await page.waitForURL(origin+(surface==='customer'?'/profile':'/overview'));\n"
+        assert original.count(marker) == 1 and insertion not in original
+        assert pathlib.Path(p).read_bytes() == original.replace(marker, marker + insertion), 'Only exact final-login-URL synchronization allowed; frozen assertions/Auth/timeouts unchanged'
+    else:
+        assert not git('diff','--name-only',BASE,'HEAD','--',p).strip(), 'Frozen file changed: '+p
 auth_fixture='tests/integration/fixtures/auth.ts'
 old=git('show',BASE+':'+auth_fixture)
 source="const r=await fetch(`${base}/auth/v1/${path}`,{method:'POST',headers:{apikey:anon,'Content-Type':'application/json'},body:JSON.stringify(body)});"
