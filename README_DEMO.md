@@ -1,6 +1,6 @@
 # VOLUME — demo Windows một lần bấm
 
-**Trạng thái: SPEC đóng gói local, chờ phê duyệt maintenance guard; CHƯA CÓ launcher chạy được.**
+**Trạng thái: SPEC APPROVED; Gate 1 CLOSED. Design/Plan approved by owner end-to-end authorization; implementation pending verification.**
 Không dùng tài liệu này như bằng chứng demo đã PASS. Sprint 3 vẫn CLOSED / FROZEN.
 Baseline đã xác minh: `06dbaa8526824952e8269ca35a81cc6e7c39e33c` (closure PR #8).
 
@@ -12,7 +12,7 @@ Chưa đủ điều kiện owner hands-on acceptance nếu phải tự cấu hì
 Đây là maintenance đóng gói local riêng, không phải Sprint 4, không mở lại nghiệp vụ Sprint 1/2/3.
 Thứ tự nguồn: owner → AGENTS.md procedural/security → SPEC active → blueprint →
 permissions/architecture/ADR → các contract frozen trước → Legacy reference.
-Giữ quy trình Spec-Driven; Gate 1 là tài liệu này. Chưa bắt đầu Gate 2 hoặc implementation.
+Giữ quy trình Spec-Driven; owner đã duyệt SPEC và 22 cases tại 98fb962895ef130dd6f8c9b66bc3d47b407ac757, cho phép tự hoàn tất các Gate trong exact scope bên dưới.
 
 ## Mục tiêu và phạm vi
 
@@ -139,7 +139,7 @@ Kiểm thử native Windows và real Supabase Linux có thể bổ sung cho nhau
 
 ## Blocker thực tế và maintenance xin duyệt
 
-**IMPLEMENTATION BLOCKER — cần owner cho phép chỉnh một file guard đã freeze.**
+**RESOLVED — owner explicitly approved the narrow guard maintenance and eight demo paths.**
 Cả bốn workflow đang gọi `scripts/check-sprint3-scope.py`.
 Guard so diff từ Gate 1 SHA `69b680da06ae3194f8dcc2bbfffce4eddf30be32`
 với exact 31-path Sprint 3 allowlist; các path demo mới đều không nằm trong danh sách.
@@ -166,3 +166,56 @@ real provider vẫn ngoài scope. FUTURE SPRINT: duy trì launcher cùng từng 
 2026-10-08: xác minh GitHub main đúng baseline nêu trên; đọc AGENTS, scope guard, bốn workflow,
 frozen local bootstrap/recovery và contract liên quan. Chỉ README này được tạo trên branch maintenance.
 START/STOP/Windows/Supabase demo tests: **NOT RUN — implementation chưa bắt đầu**.
+
+
+## Gate 2 — Technical design (reviewed before implementation)
+
+No schema/migration/RPC/role/business UI changes. Local orchestration is implemented in the two approved scripts.
+Batch entrypoints locate their own directory, invoke the PowerShell wrapper and keep failures visible.
+PowerShell checks Windows/Node and offers masked owner credential input over stdin; no password in arguments.
+Node helper owns orchestration, fixed commands without shell interpolation, Auth bootstrap/recovery, and a local UI supervisor.
+Runtime state/config/tool installation lives outside the repository in the owner local application-data directory.
+Its path is derived from the canonical checkout path; a unique project id prevents adopting the old volume-v2 stack.
+Only a generated copy of frozen Supabase config changes project id and local ports; copied migration/seed/function bytes remain identical.
+Demo API/DB/mail use 55321/55322/55324; customer/control use frozen 3000/3001 recovery origins.
+A kernel-held local lock serializes START/STOP/bootstrap. Worker ownership uses an authenticated local IPC endpoint;
+never kill by name, port or a stale PID. Containers must match saved exact ids and project labels; unknown resources fail closed.
+Only specifically owned container ids can be stopped; volumes are retained. No Docker-wide lifecycle commands.
+Failed startup retains owned data and records recoverable state; cleanup never resets or deletes a database.
+Generated config compatibility is fingerprinted; an old database with different migration inventory is blocked without reset.
+Privileged local status values stay in process memory. Vite receives only public URL/anon key through runtime defines, never secret env files.
+A local supervisor runs the actual two Vite apps and JWT-verified Edge serve command; health gates precede opening the browser.
+Pre-existing unrelated processes/ports are never killed. Corrupt or missing ownership evidence blocks destructive actions.
+
+First ADMIN: real Auth signup (default USER), then local operator transaction using the frozen security advisory lock,
+exact untouched candidate profile/version, no existing ADMIN, and atomic BOOTSTRAP_ADMIN_CREATED audit.
+An existing USER cannot be promoted through recovery. A persisted local setup identity/correlation allows only recovery of this first bootstrap;
+no duplicate effect on retry. Auth HTTP happens outside the SQL transaction. Existing ADMIN remains unchanged.
+Recovery sends the existing Auth recovery email and opens the local inbox; owner chooses the new password in the frozen recovery UI.
+Disabled accounts and lost role are not silently repaired. Auth/session-reader bootstrap reproduces exactly the already frozen local grants.
+No bank confirmation or payment fixture is introduced. MANUAL/CASH/session closing use existing app flows.
+
+## Gate 3 — Exact implementation plan (internally approved)
+
+Branch: local-demo-spec. Base: 06dbaa8526824952e8269ca35a81cc6e7c39e33c.
+Approved SPEC commit: 98fb962895ef130dd6f8c9b66bc3d47b407ac757.
+Exact nine-path delta, no wildcard:
+
+| Path | Change | Purpose / traceability |
+|---|---|---|
+| START_VOLUME.bat | create | D01/D02/D11/D21 start entrypoint |
+| STOP_VOLUME.bat | create | D04/D13/D15 stop entrypoint |
+| README_DEMO.md | create/maintain | Approved SPEC, design, plan, usage and D01–D22 evidence |
+| scripts/local-demo.ps1 | create | Windows dependency checks, masked credentials, simple Vietnamese UX |
+| scripts/local-demo-admin.mjs | create | Resource lifecycle, safe local Auth bootstrap/recovery, public UI supervisor; D01–D22 mechanisms |
+| tests/local-demo/launcher.Tests.ps1 | create | Native Windows entrypoint/lifecycle/ownership tests; explicit simulation boundary |
+| tests/local-demo/admin.test.mjs | create | Node safety and real isolated Supabase/Auth cases, 22-case mapping |
+| .github/workflows/local-demo.yml | create | Native Windows and real Linux stack evidence, no frozen workflow edits |
+| scripts/check-sprint3-scope.py | modify | Separate exact demo allowlist, freeze all other main bytes; preserve every prior check |
+
+No application dependency/lockfile changes. Supabase tooling stays pinned at 2.119.0 outside the app tree.
+No migration/RPC additions. No modified historical SPEC/plan/results. No production deployment.
+Implement tests before or alongside each lifecycle/Auth slice. Run native Windows checks, isolated Linux real stack,
+and all four existing actual-candidate regressions. Compare exact PR diff; merge only with required checks green;
+verify final main and record immutable evidence in PR plus this README without a self-referential hash loop.
+Internal Gate 2/3 review: additive packaging only; approved narrow guard change; frozen semantics unchanged.
