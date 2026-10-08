@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-label="TAOM · CHALK">
+<defs>
+<radialGradient id="bg"><stop offset="0" stop-color="#183b25"/><stop offset=".55" stop-color="#0b130e"/><stop offset="1" stop-color="#040605"/></radialGradient>
+<linearGradient id="acid" x1="0" x2="1"><stop stop-color="#efffae"/><stop offset=".45" stop-color="#c9ff38"/><stop offset="1" stop-color="#5d8a14"/></linearGradient>
+<linearGradient id="metal"><stop stop-color="#eef4ef"/><stop offset=".18" stop-color="#69756d"/><stop offset=".52" stop-color="#dce4de"/><stop offset="1" stop-color="#29302b"/></linearGradient>
+<filter id="glow"><feGaussianBlur stdDeviation="18"/></filter>
+</defs>
+<rect width="100%" height="100%" rx="54" fill="url(#bg)"/>
+<ellipse cx="600" cy="720" rx="360" ry="62" fill="#000" opacity=".42"/>
+<circle cx="620" cy="360" r="230" fill="#c9ff38" opacity=".07" filter="url(#glow)"/>
+<g transform="translate(600 455)"><path d="M-190 -160L20 -210 180 -90 150 145 -55 210 -210 70Z" fill="#1c2b21" stroke="#6f7a72" stroke-width="8"/><path d="M-150 -118L12 -158 132 -70 110 105 -48 155 -160 50Z" fill="#29583b"/><circle cx="-15" cy="0" r="92" fill="#c9ff38" opacity=".9"/><circle cx="-15" cy="0" r="72" fill="#0d5a3a"/><text x="-15" y="18" fill="#eaffb5" text-anchor="middle" font-family="Arial" font-size="58" font-weight="900">V</text></g>
+<text x="60" y="80" fill="#c9ff38" font-family="Arial" font-size="24" font-weight="700" letter-spacing="6">TAOM · CHALK</text>
+<text x="60" y="125" fill="#7c8b81" font-family="Arial" font-size="15" letter-spacing="4">CONCEPT RENDER · DEMO ONLY</text>
+</svg>

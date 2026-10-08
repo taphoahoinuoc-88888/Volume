@@ -40,6 +40,7 @@
   // Navigation.
   const menu = $('#mobileMenu');
   const menuBtn = $('#menuBtn');
+  if(menu)menu.inert=true;
   const toggleMenu = force => {
     if (!menu || !menuBtn) return;
     const open = typeof force === 'boolean' ? force : !menu.classList.contains('open');
@@ -47,9 +48,18 @@
     menuBtn.classList.toggle('open', open);
     menuBtn.setAttribute('aria-expanded', String(open));
     menu.setAttribute('aria-hidden', String(!open));
+    menu.inert=!open;
     document.body.classList.toggle('body-lock', open);
     if(window.volumeScroll) open ? window.volumeScroll.stop() : window.volumeScroll.start();
+    if(open)menu.querySelector('button,a[href]')?.focus({preventScroll:true});
+    else if(menu.contains(document.activeElement))menuBtn.focus({preventScroll:true});
   };
+  addEventListener('keydown',e=>{
+    if(e.key!=='Tab'||!menu?.classList.contains('open'))return;
+    const items=[menuBtn,...$$('button,a[href]',menu)].filter(x=>x&&!x.disabled&&x.getClientRects().length);
+    if(e.shiftKey&&document.activeElement===items[0]){e.preventDefault();items.at(-1)?.focus();}
+    else if(!e.shiftKey&&document.activeElement===items.at(-1)){e.preventDefault();items[0]?.focus();}
+  });
   menuBtn?.addEventListener('click', () => toggleMenu());
   $$('[data-scroll]').forEach(el => el.addEventListener('click', () => {
     toggleMenu(false);

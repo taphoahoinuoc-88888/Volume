@@ -10,3 +10,13 @@
 button:focus-visible,a:focus-visible{outline:2px solid #c9ff38;outline-offset:5px}
 @media(max-width:800px){.v2-booking{width:100%}.hero h1{letter-spacing:-.035em}.v2-product{flex-basis:76vw}}
 @media(prefers-reduced-motion:reduce){.reveal-up{opacity:1;transform:none}.cinematic-loader{display:none}}
+/* Advisory design review: retain VolumeDisplay/neon billiards identity, improve operability. */
+.v2-booking p,.venue-lead,.about-lead{max-width:65ch}
+.v2-booking h3,.venue-heading h2{text-wrap:balance}
+.v2-table:active,.v2-product:active{background:#ffffff12}
+.menu-btn,.mobile-menu button,.mobile-menu a,.lane-actions a{min-height:44px;touch-action:manipulation}
+.lane-actions{flex-wrap:wrap;gap:12px}.lane-actions a{display:inline-flex;align-items:center}
+.mobile-menu{max-height:100dvh;overflow-y:auto;padding-bottom:max(24px,env(safe-area-inset-bottom))}
+.floating-actions{bottom:calc(20px + env(safe-area-inset-bottom))}
+#liveTablesStatus{min-height:3.3em}.v2-table strong,.v2-table span{font-variant-numeric:tabular-nums}
+@media(max-width:800px){.venue-lead,.v2-booking p{font-size:16px}.topbar{padding-top:max(12px,env(safe-area-inset-top))}.hero-bottom p{line-height:1.6}.v2-booking{padding:24px}.v2-booking .cta{font-size:12px;letter-spacing:.03em}}

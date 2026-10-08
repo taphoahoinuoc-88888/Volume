@@ -24,6 +24,8 @@ DEMO_PATHS = {
 # Business contracts, frozen migrations and existing assertions below are unchanged.
 INTEGRATION_BASE = '310965e0bb6e61c0ed6b8b11dd161ac0a12ba353'
 INTEGRATION_PATHS = {
+    'apps/customer/src/App.tsx',
+    'tests/e2e/showroom.spec.ts',
     'INTEGRATION_STATUS.md',
     'apps/customer/public/showroom/app.js',
     'apps/customer/public/showroom/assets/cue-closeup-1448.webp',

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-label="ARAMITH · BALL SET">
+<defs>
+<radialGradient id="bg"><stop offset="0" stop-color="#183b25"/><stop offset=".55" stop-color="#0b130e"/><stop offset="1" stop-color="#040605"/></radialGradient>
+<linearGradient id="acid" x1="0" x2="1"><stop stop-color="#efffae"/><stop offset=".45" stop-color="#c9ff38"/><stop offset="1" stop-color="#5d8a14"/></linearGradient>
+<linearGradient id="metal"><stop stop-color="#eef4ef"/><stop offset=".18" stop-color="#69756d"/><stop offset=".52" stop-color="#dce4de"/><stop offset="1" stop-color="#29302b"/></linearGradient>
+<filter id="glow"><feGaussianBlur stdDeviation="18"/></filter>
+</defs>
+<rect width="100%" height="100%" rx="54" fill="url(#bg)"/>
+<ellipse cx="600" cy="720" rx="360" ry="62" fill="#000" opacity=".42"/>
+<circle cx="620" cy="360" r="230" fill="#c9ff38" opacity=".07" filter="url(#glow)"/>
+<g transform="translate(600 455)"><path d="M-300 220Q0 340 300 220L240 -80Q0 -180 -240 -80Z" fill="#191d19" stroke="#5c655f" stroke-width="10"/><g><circle cx="-145" cy="20" r="72" fill="#111"/><text x="-145" y="42" fill="white" text-anchor="middle" font-family="Arial" font-size="58" font-weight="900">8</text><circle cx="0" cy="-38" r="72" fill="#f2d64d"/><text x="0" y="-16" fill="#111" text-anchor="middle" font-family="Arial" font-size="58" font-weight="900">9</text><circle cx="145" cy="28" r="72" fill="#d9584e"/><circle cx="-25" cy="120" r="72" fill="#f6f2e5"/></g></g>
+<text x="60" y="80" fill="#c9ff38" font-family="Arial" font-size="24" font-weight="700" letter-spacing="6">ARAMITH · BALL SET</text>
+<text x="60" y="125" fill="#7c8b81" font-family="Arial" font-size="15" letter-spacing="4">CONCEPT RENDER · DEMO ONLY</text>
+</svg>

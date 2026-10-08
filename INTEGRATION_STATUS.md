@@ -21,6 +21,10 @@ Base: main `310965e0bb6e61c0ed6b8b11dd161ac0a12ba353` (merged PR #9).
   Auth bootstrap, role grants, audit transaction and first-ADMIN safeguards are unchanged.
 - Added a native runtime-permission regression to the existing launcher test suite.
 
+## Design refinement
+
+Read Anthropic frontend-design SKILL.md and UI/UX Pro Max SKILL.md + quick-reference directly from their requested repositories. Applied advisory guidance directly; no external scripts/packages installed. Existing VolumeDisplay typography, colors, 3D and photo galleries remain authoritative. Added keyboard-contained mobile navigation, inert closed menu, 44px touch targets, safe-area spacing, readable mobile body copy and reserved status space. Added showroom coverage to the existing six-project Playwright suite (no new framework).
+
 ## Source provenance
 
 Library search identified F6.1 as the newest supplied legacy website bundle (newer V2 ZIPs were core/preflight artifacts).
@@ -42,7 +46,7 @@ No Docker/database commands were run during this integration; no Pi Node resourc
 - Build, Customer + Control Center: PASS (existing large-chunk/dependency directive warnings remain).
 - Lint: PASS.
 - Core unit tests: 38/38 PASS.
-- Launcher suite: 20/21 PASS, 1 FAIL. Existing process-identity test cannot read `/proc/<pid>`
+- Launcher suite after recovery and diagnostic regression: 21/22 PASS, 1 FAIL. Existing process-identity test cannot read `/proc/<pid>`
   in this execution environment (stat/cmdline/exe each return ENOENT). Test remains unchanged.
 - HTML asset references: no missing local assets; 31 images. No unbound buttons in integrated HTML.
 - Browser visual/performance tests: BLOCKED. Browser binary download failed; remote browser could not reach

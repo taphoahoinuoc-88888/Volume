@@ -9,11 +9,28 @@ import {spawn} from 'node:child_process';
 import {randomUUID,createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {DemoError,validNode,checkCredentials,localUrl,publicConfig,context,lock,atomic,validateOwned,stop,dockerLocal,sourceFingerprint,processIdentity,sameProcess,validateWorkerRecord,startWorker,stopWorker,command,bootstrapTransaction,setupAdmin,recoverAdmin,migrationCheck,PORTS} from '../../scripts/local-demo-admin.mjs';
+import {secureRuntime,authFailure} from '../../scripts/local-demo-admin.mjs';
 const root=path.resolve(import.meta.dirname,'../..');
 const fakeKey=role=>'header.'+Buffer.from(JSON.stringify({role})).toString('base64url')+'.signature';
 const project='volume-demo-0123456789abcdef-01234567';
 const item=(id='owned')=>({Id:id,Name:'/supabase_db_'+project,Config:{Labels:{'com.supabase.cli.project':project}},State:{Running:true}});
 async function temporary(t){const dir=await fs.mkdtemp(path.join(os.tmpdir(),'volume demo đ '));t.after(()=>fs.rm(dir,{recursive:true,force:true}));return dir;}
+
+test('Auth diagnostics identify the failed stage without echoing response content or credentials',()=>{
+ assert.match(authFailure(422,'weak_password','admin/users'),/Tao tai khoan.*12 ky tu/);
+ assert.match(authFailure(400,'invalid_credentials','token?grant_type=password'),/Dang nhap kiem tra.*chua khop/);
+ const message=authFailure(500,'SECRET_FROM_RESPONSE','admin/users');assert.ok(!message.includes('SECRET_FROM_RESPONSE'));assert.match(message,/khong reset/);
+});
+
+test('Runtime directory remains private and writable after native permission setup',async t=>{
+ const dir=await temporary(t),ctx=await context(dir,dir);
+ await secureRuntime(ctx);
+ const probe=path.join(ctx.runtime,'write-check');await fs.writeFile(probe,'ok');assert.equal(await fs.readFile(probe,'utf8'),'ok');
+ if(process.platform==='win32'){
+  const script='$acl=Get-Acl -LiteralPath '+"'"+ctx.runtime.replaceAll("'","''")+"'"+'; $sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; if(-not $acl.AreAccessRulesProtected){exit 2}; $rules=@($acl.Access | Where-Object {$_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value -eq $sid -and $_.AccessControlType -eq "Allow" -and ($_.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::FullControl) -eq [System.Security.AccessControl.FileSystemRights]::FullControl}); if($rules.Count -lt 1){exit 3}';
+  await command('powershell.exe',['-NoProfile','-EncodedCommand',Buffer.from(script,'utf16le').toString('base64')]);
+ }else assert.equal((await fs.stat(ctx.runtime)).mode&0o777,0o700);
+});
 
 test('D01/D02 dependency versions and path with spaces/Unicode',async t=>{
   assert.ok(validNode('22.12.0'));assert.ok(validNode('24.0.0'));assert.ok(!validNode('22.11.0'));assert.ok(!validNode('20.20.0'));
@@ -119,7 +136,7 @@ if(process.env.VOLUME_DEMO_WINDOWS_WORKER==='1')test('D11/D13/D14/D15 REAL Windo
   await startWorker(ctx,{url:'http://127.0.0.1:55321',key:fakeKey('anon'),customer:'http://127.0.0.1:3000'});
   assert.equal(JSON.parse(await fs.readFile(ctx.workerFile,'utf8')).process.pid,first.process.pid);
   const {chromium}=await import('@playwright/test');const browser=await chromium.launch();const page=await browser.newPage();
-  try{for(const port of [3000,3001]){await page.goto('http://127.0.0.1:'+port);await page.getByLabel('Email',{exact:true}).waitFor();}}finally{await browser.close();}
+  try{for(const port of [3000,3001]){await page.goto('http://127.0.0.1:'+port);if(port===3000){await page.locator('#hero-title').waitFor();await page.getByRole('link',{name:'Tài khoản ↗',exact:true}).click();}await page.getByLabel('Email',{exact:true}).waitFor();}}finally{await browser.close();}
   // Real supervisor crash: its Windows Job must kill only its own descendants.
   const crashed=first;await command('powershell.exe',['-NoProfile','-Command',`Stop-Process -Id ${crashed.process.pid} -Force`]);
   for(let i=0;i<30&&await processIdentity(crashed.edge.pid);i++)await new Promise(r=>setTimeout(r,200));
@@ -157,7 +174,7 @@ if(process.env.VOLUME_DEMO_REAL==='1')test('D01–D22 REAL Linux Docker/Auth/UI 
   assert.equal(JSON.parse(await cli('start')).needsAdmin,false);
   const {chromium}=await import('@playwright/test');const browser=await chromium.launch();
   try{
-    for(const port of [3000,3001]){const page=await browser.newPage();await page.goto('http://127.0.0.1:'+port);await page.getByLabel('Email',{exact:true}).fill(email);await page.getByLabel('Mật khẩu',{exact:true}).fill(password);await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();await page.waitForURL('http://127.0.0.1:'+port+(port===3000?'/profile':'/overview'));await page.getByRole('button',{name:'Đăng xuất',exact:true}).waitFor();assert.ok(!(await page.content()).includes(local.SERVICE_ROLE_KEY));}
+    for(const port of [3000,3001]){const page=await browser.newPage();await page.goto('http://127.0.0.1:'+port);if(port===3000){await page.locator('#hero-title').waitFor();await page.getByRole('link',{name:'Tài khoản ↗',exact:true}).click();}await page.getByLabel('Email',{exact:true}).fill(email);await page.getByLabel('Mật khẩu',{exact:true}).fill(password);await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();await page.waitForURL('http://127.0.0.1:'+port+(port===3000?'/profile':'/overview'));await page.getByRole('button',{name:'Đăng xuất',exact:true}).waitFor();assert.ok(!(await page.content()).includes(local.SERVICE_ROLE_KEY));}
     await cli('recover',{email});let mail;
     for(let attempt=0;attempt<30;attempt++){const response=await fetch('http://127.0.0.1:55324/api/v1/messages');assert.equal(response.status,200);mail=(await response.json()).messages?.find(m=>m.To?.some(to=>to.Address===email));if(mail)break;await new Promise(r=>setTimeout(r,100));}
     assert.ok(mail,'Recovery email delivered locally');const message=await(await fetch('http://127.0.0.1:55324/api/v1/message/'+mail.ID)).json();
