@@ -20,10 +20,145 @@ DEMO_PATHS = {
     'tests/local-demo/launcher.Tests.ps1', 'tests/local-demo/admin.test.mjs',
     '.github/workflows/local-demo.yml',
 }
+# Owner command: FINAL INTEGRATION authorizes this exact presentation/launcher scope.
+# Business contracts, frozen migrations and existing assertions below are unchanged.
+INTEGRATION_BASE = '310965e0bb6e61c0ed6b8b11dd161ac0a12ba353'
+INTEGRATION_PATHS = {
+    'INTEGRATION_STATUS.md',
+    'apps/customer/public/showroom/app.js',
+    'apps/customer/public/showroom/assets/cue-closeup-1448.webp',
+    'apps/customer/public/showroom/assets/cue-closeup-768.webp',
+    'apps/customer/public/showroom/assets/fonts/volume-display-bold.woff',
+    'apps/customer/public/showroom/assets/icon-192.png',
+    'apps/customer/public/showroom/assets/icon-512.png',
+    'apps/customer/public/showroom/assets/og-volume.jpg',
+    'apps/customer/public/showroom/assets/player-neon-1448.webp',
+    'apps/customer/public/showroom/assets/player-neon-768.webp',
+    'apps/customer/public/showroom/assets/product-fallback.svg',
+    'apps/customer/public/showroom/assets/products/balls-aramith.svg',
+    'apps/customer/public/showroom/assets/products/case-cue.svg',
+    'apps/customer/public/showroom/assets/products/chalk-kamui.svg',
+    'apps/customer/public/showroom/assets/products/chalk-taom.svg',
+    'apps/customer/public/showroom/assets/products/cloth-andy.svg',
+    'apps/customer/public/showroom/assets/products/cloth-simonis.svg',
+    'apps/customer/public/showroom/assets/products/cue-extension.svg',
+    'apps/customer/public/showroom/assets/products/cue-mezz.svg',
+    'apps/customer/public/showroom/assets/products/cue-peri.svg',
+    'apps/customer/public/showroom/assets/products/cue-predator.svg',
+    'apps/customer/public/showroom/assets/products/glove.svg',
+    'apps/customer/public/showroom/assets/products/table-aileex.svg',
+    'apps/customer/public/showroom/assets/products/table-diamond.svg',
+    'apps/customer/public/showroom/assets/products/table-rasson.svg',
+    'apps/customer/public/showroom/assets/table-neon-1448.webp',
+    'apps/customer/public/showroom/assets/table-neon-768.webp',
+    'apps/customer/public/showroom/assets/venue/cafe-01-1280.webp',
+    'apps/customer/public/showroom/assets/venue/cafe-01-640.webp',
+    'apps/customer/public/showroom/assets/venue/cafe-02-1280.webp',
+    'apps/customer/public/showroom/assets/venue/cafe-02-640.webp',
+    'apps/customer/public/showroom/assets/venue/cafe-03-1280.webp',
+    'apps/customer/public/showroom/assets/venue/cafe-03-640.webp',
+    'apps/customer/public/showroom/assets/venue/cafe-04-1280.webp',
+    'apps/customer/public/showroom/assets/venue/cafe-04-640.webp',
+    'apps/customer/public/showroom/assets/venue/champion-1280.webp',
+    'apps/customer/public/showroom/assets/venue/champion-640.webp',
+    'apps/customer/public/showroom/assets/venue/club-01-1280.webp',
+    'apps/customer/public/showroom/assets/venue/club-01-640.webp',
+    'apps/customer/public/showroom/assets/venue/club-02-1280.webp',
+    'apps/customer/public/showroom/assets/venue/club-02-640.webp',
+    'apps/customer/public/showroom/assets/venue/club-03-1280.webp',
+    'apps/customer/public/showroom/assets/venue/club-03-640.webp',
+    'apps/customer/public/showroom/assets/venue/club-04-1280.webp',
+    'apps/customer/public/showroom/assets/venue/club-04-640.webp',
+    'apps/customer/public/showroom/assets/venue/club-05-1280.webp',
+    'apps/customer/public/showroom/assets/venue/club-05-640.webp',
+    'apps/customer/public/showroom/assets/venue/club-06-1280.webp',
+    'apps/customer/public/showroom/assets/venue/club-06-640.webp',
+    'apps/customer/public/showroom/assets/venue/exterior-1280.webp',
+    'apps/customer/public/showroom/assets/venue/exterior-640.webp',
+    'apps/customer/public/showroom/assets/venue/logo-480.webp',
+    'apps/customer/public/showroom/assets/venue/logo-960.webp',
+    'apps/customer/public/showroom/assets/venue/runner-up-1280.webp',
+    'apps/customer/public/showroom/assets/venue/runner-up-640.webp',
+    'apps/customer/public/showroom/assets/venue/source-map.json',
+    'apps/customer/public/showroom/assets/venue/third-01-1280.webp',
+    'apps/customer/public/showroom/assets/venue/third-01-640.webp',
+    'apps/customer/public/showroom/assets/venue/third-02-1280.webp',
+    'apps/customer/public/showroom/assets/venue/third-02-640.webp',
+    'apps/customer/public/showroom/billiards-physics.js',
+    'apps/customer/public/showroom/ecosystem.css',
+    'apps/customer/public/showroom/integration.css',
+    'apps/customer/public/showroom/manifest.webmanifest',
+    'apps/customer/public/showroom/motion-3d.js',
+    'apps/customer/public/showroom/motion-upgrade.css',
+    'apps/customer/public/showroom/rescue.css',
+    'apps/customer/public/showroom/smooth-scroll.js',
+    'apps/customer/public/showroom/styles.css',
+    'apps/customer/public/showroom/vendor/LENIS-LICENSE.txt',
+    'apps/customer/public/showroom/vendor/THREE-LICENSE.txt',
+    'apps/customer/public/showroom/vendor/VOLUME-DISPLAY-LICENSE.txt',
+    'apps/customer/public/showroom/vendor/lenis.min.js',
+    'apps/customer/public/showroom/vendor/three.min.js',
+    'apps/customer/public/showroom/venue-gallery.js',
+    'apps/customer/public/showroom/venue.css',
+    'apps/customer/showroom.html',
+    'apps/customer/src/main.tsx',
+    'apps/customer/src/showroom.ts',
+    'apps/customer/vite.config.ts',
+    'scripts/local-demo-admin.mjs',
+    'scripts/local-demo.ps1',
+    'tests/local-demo/admin.test.mjs',
+    'scripts/check-sprint3-scope.py',
+}
+INTEGRATION_BINARY = {
+    'apps/customer/public/showroom/assets/player-neon-768.webp': '2267322cd42aed872ec6fe351bfa978005c1b8d4',
+    'apps/customer/public/showroom/assets/cue-closeup-1448.webp': 'ef1d32a22cc9be35dc9347f19d670387dd0fb111',
+    'apps/customer/public/showroom/assets/icon-192.png': '16c421ae699da6d81e0c9d2d3a2991f8302ede33',
+    'apps/customer/public/showroom/assets/player-neon-1448.webp': 'c0964a2243b6d17c536260c7362b460fec0cd35a',
+    'apps/customer/public/showroom/assets/og-volume.jpg': 'daca97a2aea92cc502180cb7315479c2780f7f55',
+    'apps/customer/public/showroom/assets/cue-closeup-768.webp': 'cc9ca9524b915e191057c54eecfa6054d3376cc2',
+    'apps/customer/public/showroom/assets/table-neon-1448.webp': '9994bbbfe8a44edd6f1cf65ec1850c3f4fec0a31',
+    'apps/customer/public/showroom/assets/table-neon-768.webp': 'e89f396bc7352989c1ba28aa5909e0eb3621dbea',
+    'apps/customer/public/showroom/assets/icon-512.png': '399dd0ec1792c2c38bbf043b247ccf364a9545d3',
+    'apps/customer/public/showroom/assets/venue/club-02-640.webp': 'db2441ca4ab2e557a2111f15a070cb8baa491285',
+    'apps/customer/public/showroom/assets/venue/cafe-01-640.webp': 'd1a6f4e657f986d3a945b90b7583e970bc9a22f2',
+    'apps/customer/public/showroom/assets/venue/logo-480.webp': 'a4220a5a9115493a24a70572eaed7b23abe4868f',
+    'apps/customer/public/showroom/assets/venue/champion-1280.webp': 'a4474c7a01265f59ca96ebd29788575141d254d2',
+    'apps/customer/public/showroom/assets/venue/club-05-1280.webp': '01f8d520c27241e8ba67a449b2e7a5e611cd20a6',
+    'apps/customer/public/showroom/assets/venue/cafe-03-640.webp': '2a66bd4165e865d93c2b4c401d6bac66367c8fa8',
+    'apps/customer/public/showroom/assets/venue/cafe-04-640.webp': 'e8141d828b17a78218c87fb84f640457c12895fd',
+    'apps/customer/public/showroom/assets/venue/club-06-1280.webp': 'f960fbce2e1185a1f2c475ea5d6c464ae88ab615',
+    'apps/customer/public/showroom/assets/venue/club-05-640.webp': 'bf2eee9710144c67e783e89d0025a55c81992a98',
+    'apps/customer/public/showroom/assets/venue/champion-640.webp': 'd36904e56be2fa31880c98e229b0bb55dba99bc5',
+    'apps/customer/public/showroom/assets/venue/club-04-1280.webp': '5363ba4be3bf0317775625c51ccd6f7f8b3e6f9b',
+    'apps/customer/public/showroom/assets/venue/third-02-1280.webp': '4d2171ea86835f8ef907db1fa5dd900938e3221b',
+    'apps/customer/public/showroom/assets/venue/cafe-01-1280.webp': '119d33cb71020b80c1edace5b68c56eaeea0862f',
+    'apps/customer/public/showroom/assets/venue/club-04-640.webp': 'babf44fee0f2e96dc1997068c73bd3104c07a441',
+    'apps/customer/public/showroom/assets/venue/third-01-1280.webp': '7d65ecf066fd9b8c35d632032cb68bda80a91106',
+    'apps/customer/public/showroom/assets/venue/cafe-03-1280.webp': '11ac062bb7959dd70ce7719cea6a22645737891d',
+    'apps/customer/public/showroom/assets/venue/cafe-02-1280.webp': '933880ad6d5747e5de7d9fafdebfd2175eded367',
+    'apps/customer/public/showroom/assets/venue/club-03-640.webp': '6b8a26aaad33a5bf0492559295a5046e45e58fb1',
+    'apps/customer/public/showroom/assets/venue/cafe-04-1280.webp': 'f9b7e638ea81e9a3c9bce682310bca591172e6b1',
+    'apps/customer/public/showroom/assets/venue/cafe-02-640.webp': '50449ab688a697ae274b22166ec6111ea6453534',
+    'apps/customer/public/showroom/assets/venue/exterior-640.webp': '28130a9aeff08f3b918aa6793be1c2c8d1150a23',
+    'apps/customer/public/showroom/assets/venue/club-06-640.webp': 'b79fced0f82856af689c4742b6aa40db73d2a6ca',
+    'apps/customer/public/showroom/assets/venue/club-01-640.webp': '484f257fa6678b6653a5aac6a3f068682a18f228',
+    'apps/customer/public/showroom/assets/venue/third-01-640.webp': 'b8daa3c9c9b0852fedccd4b4fc33e729bbfd1893',
+    'apps/customer/public/showroom/assets/venue/exterior-1280.webp': 'eac78ecd6929d0c25b3b2010132e9ea00cfbb729',
+    'apps/customer/public/showroom/assets/venue/club-03-1280.webp': 'f3c810b922a547e02707ce7faa9b68015f26f1ba',
+    'apps/customer/public/showroom/assets/venue/club-01-1280.webp': '0e7a7f401abb2e52ecae8030075f4f909add3d4d',
+    'apps/customer/public/showroom/assets/venue/club-02-1280.webp': '4aa504b0bf8c8e681fdf1918d3b48342077adb9c',
+    'apps/customer/public/showroom/assets/venue/runner-up-640.webp': '0b08758fe8d81eab6ccc6a2e7afe38158aa6e2a1',
+    'apps/customer/public/showroom/assets/venue/third-02-640.webp': '3e792472a915645577141f02516dd9db3271769b',
+    'apps/customer/public/showroom/assets/venue/runner-up-1280.webp': '3c2fbb1ae2ce6fadad8e3293e50d5d1fb316072d',
+    'apps/customer/public/showroom/assets/venue/logo-960.webp': '799f213169d55aa6577e90c3dacd37cbfc3ff57e',
+    'apps/customer/public/showroom/assets/fonts/volume-display-bold.woff': '2c50fd65b2d3e530af2fdb83f44cffaaf9d955ff',
+}
+integration = set(git('diff', '--name-only', INTEGRATION_BASE, 'HEAD').splitlines())
+assert integration <= INTEGRATION_PATHS, 'Unapproved integration delta: ' + str(integration - INTEGRATION_PATHS)
 LOGIN_FIXTURE = 'tests/e2e/fixtures/auth.ts'  # Separately owner-approved exact synchronization only.
 maintenance = set(git('diff', '--name-only', DEMO_BASE, 'HEAD').splitlines())
-assert maintenance <= DEMO_PATHS | {'scripts/check-sprint3-scope.py', LOGIN_FIXTURE}, 'Unapproved maintenance delta: ' + str(maintenance)
-allowed |= DEMO_PATHS | {LOGIN_FIXTURE}
+assert maintenance <= DEMO_PATHS | INTEGRATION_PATHS | {'scripts/check-sprint3-scope.py', LOGIN_FIXTURE}, 'Unapproved maintenance delta: ' + str(maintenance)
+allowed |= DEMO_PATHS | INTEGRATION_PATHS | {LOGIN_FIXTURE}
 changed = set(git('diff', '--name-only', BASE, 'HEAD').splitlines())
 assert changed <= allowed, 'Unapproved paths: ' + str(changed - allowed)
 baseline = git('ls-tree', '-r', '--name-only', BASE).splitlines()
@@ -55,7 +190,12 @@ old=git('show',BASE+':'+test)
 expected=old.replace("where table_schema='public' and table_type='BASE TABLE'),8,'T65 exactly eight approved business tables'", "where table_schema='public' and table_type='BASE TABLE' and table_name in ('profiles','venues','staff_memberships','audit_events','billiard_tables','table_sessions','payments','payment_receipts')),8,'T65 exactly eight retained Sprint2 business tables'")
 assert pathlib.Path(test).read_text()==expected, 'Only named frozen eight-table assertion adaptation allowed'
 for p in git('ls-files').splitlines():
-    data=pathlib.Path(p).read_text()
+    raw=pathlib.Path(p).read_bytes()
+    if p in INTEGRATION_BINARY:
+        assert git('hash-object', p).strip() == INTEGRATION_BINARY[p], 'Unapproved binary asset change: '+p
+        data=raw.decode('latin-1')  # Preserve ASCII secret scanning over every binary byte.
+    else:
+        data=raw.decode('utf-8')
     assert not re.search(r'sb_secret_[A-Za-z0-9_-]{15,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{20,}',data), 'Secret-like value: '+p
     assert not p.startswith('reference/') and not re.search(r'/(?:player|matches|video|tournament|shop|telegram|crm|ai|refund)/',p,re.I), 'Forbidden scope: '+p
     if p.startswith(('apps/','packages/')):

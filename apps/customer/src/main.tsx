@@ -1,4 +1,5 @@
 import {createRoot} from 'react-dom/client';
 import App from './App';
 import './styles.css';
-createRoot(document.getElementById('root')!).render(<App/>);
+if(window.location.pathname==='/')window.location.replace('/showroom.html'+window.location.search+window.location.hash);
+else createRoot(document.getElementById('root')!).render(<App/>);

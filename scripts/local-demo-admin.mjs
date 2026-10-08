@@ -65,12 +65,12 @@ export async function lock(port=PORTS.lock) {
   return ()=>new Promise(resolve=>server.close(resolve));
 }
 async function freePort(port) {const release=await lock(port);await release();}
-async function secureRuntime(ctx) {
+export async function secureRuntime(ctx) {
   await fs.mkdir(ctx.runtime,{recursive:true,mode:0o700});
   if(process.platform==='win32') {
     const result=await ctx.run('whoami.exe',['/user','/fo','csv','/nh']);const sid=result.match(/S-1-5-[\d-]+/);
     if(!sid)fail('Khong xac minh duoc tai khoan Windows.');
-    await ctx.run('icacls.exe',[ctx.runtime,'/inheritance:r','/grant:r',sid[0]+':(OI)(CI)F']);
+    await ctx.run('icacls.exe',[ctx.runtime,'/inheritance:r','/grant:r','*'+sid[0]+':(OI)(CI)F']);
   } else await fs.chmod(ctx.runtime,0o700);
 }
 async function filesUnder(dir) {

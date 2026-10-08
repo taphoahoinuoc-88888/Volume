@@ -11,6 +11,7 @@ function Invoke-Volume([string]$Command, [string]$InputJson='') {
     $info.WorkingDirectory=$script:Root
     $info.UseShellExecute=$false
     $info.RedirectStandardInput=$true
+    $info.StandardInputEncoding=New-Object System.Text.UTF8Encoding($false)
     $info.RedirectStandardOutput=$true
     $info.StandardOutputEncoding=New-Object System.Text.UTF8Encoding($false)
     $info.CreateNoWindow=$true
