@@ -11,14 +11,19 @@ function Invoke-Volume([string]$Command, [string]$InputJson='') {
     $info.WorkingDirectory=$script:Root
     $info.UseShellExecute=$false
     $info.RedirectStandardInput=$true
-    $info.StandardInputEncoding=New-Object System.Text.UTF8Encoding($false)
     $info.RedirectStandardOutput=$true
     $info.StandardOutputEncoding=New-Object System.Text.UTF8Encoding($false)
     $info.CreateNoWindow=$true
     $proc=New-Object System.Diagnostics.Process
     $proc.StartInfo=$info
     [void]$proc.Start()
-    if ($InputJson) { $proc.StandardInput.WriteLine($InputJson) }
+    if ($InputJson) {
+        # Windows PowerShell 5.1 lacks ProcessStartInfo.StandardInputEncoding.
+        # Write UTF-8 bytes directly so credentials survive every Windows code page.
+        $inputBytes=[System.Text.Encoding]::UTF8.GetBytes($InputJson+"`n")
+        $proc.StandardInput.BaseStream.Write($inputBytes,0,$inputBytes.Length)
+        $proc.StandardInput.BaseStream.Flush()
+    }
     $proc.StandardInput.Close()
     $output=$proc.StandardOutput.ReadToEnd()
     $proc.WaitForExit()
