@@ -4,10 +4,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import net from 'node:net';
+import http from 'node:http';
 import {spawn} from 'node:child_process';
 import {randomUUID,createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
-import {DemoError,validNode,checkCredentials,localUrl,publicConfig,context,lock,atomic,validateOwned,stop,dockerLocal,sourceFingerprint,processIdentity,sameProcess,validateWorkerRecord,command,bootstrapTransaction,setupAdmin,recoverAdmin,PORTS} from '../../scripts/local-demo-admin.mjs';
+import {DemoError,validNode,checkCredentials,localUrl,publicConfig,context,lock,atomic,validateOwned,stop,dockerLocal,sourceFingerprint,processIdentity,sameProcess,validateWorkerRecord,startWorker,stopWorker,command,bootstrapTransaction,setupAdmin,recoverAdmin,PORTS} from '../../scripts/local-demo-admin.mjs';
 const root=path.resolve(import.meta.dirname,'../..');
 const fakeKey=role=>'header.'+Buffer.from(JSON.stringify({role})).toString('base64url')+'.signature';
 const project='volume-demo-0123456789abcdef-01234567';
@@ -92,6 +93,27 @@ test('D21 process timeout is bounded and raw command errors remain redacted',asy
 test('D22 process arguments are literal and shell metacharacters never execute',async t=>{
   const dir=await temporary(t);const file=path.join(dir,'literal & argument.txt');const arg='$(touch BAD); `whoami` & < > "';
   await command(process.execPath,['-e','require("fs").writeFileSync(process.argv[1],process.argv[2])',file,arg]);assert.equal(await fs.readFile(file,'utf8'),arg);
+});
+
+
+if(process.env.VOLUME_DEMO_WINDOWS_WORKER==='1')test('D11/D13/D14/D15 REAL Windows Vite/Job Object start/stop; Edge health is simulated',{timeout:180000},async t=>{
+  assert.equal(process.platform,'win32');const ctx=await context();
+  await assert.rejects(fs.access(ctx.runtime)); // A fresh isolated CI runner, never reuse an owner runtime.
+  await fs.mkdir(path.dirname(ctx.cli),{recursive:true});
+  const script="$cfg=[Console]::In.ReadToEnd()|ConvertFrom-Json; Add-Type -TypeDefinition 'using System; using System.Threading; public class DemoEdgeFixture { public static void Main(string[] args) { Thread.Sleep(120000); } }' -OutputAssembly $cfg.path -OutputType ConsoleApplication";
+  await command('powershell.exe',['-NoProfile','-EncodedCommand',Buffer.from(script,'utf16le').toString('base64')],{input:JSON.stringify({path:ctx.cli})});
+  const fake=http.createServer((req,res)=>{res.writeHead(405);res.end();});await new Promise(r=>fake.listen(PORTS.api,'127.0.0.1',r));
+  const unrelated=spawn(process.execPath,['-e','setTimeout(()=>{},180000)'],{stdio:'ignore'});const unrelatedIdentity=await processIdentity(unrelated.pid);
+  t.after(async()=>{await stopWorker(ctx);unrelated.kill();await new Promise(r=>fake.close(r));await fs.rm(ctx.runtime,{recursive:true,force:true});});
+  await startWorker(ctx,{url:'http://127.0.0.1:55321',key:fakeKey('anon'),customer:'http://127.0.0.1:3000'});
+  const first=JSON.parse(await fs.readFile(ctx.workerFile,'utf8'));assert.ok(first.process);assert.ok(first.edge);
+  await startWorker(ctx,{url:'http://127.0.0.1:55321',key:fakeKey('anon'),customer:'http://127.0.0.1:3000'});
+  assert.equal(JSON.parse(await fs.readFile(ctx.workerFile,'utf8')).process.pid,first.process.pid);
+  const {chromium}=await import('@playwright/test');const browser=await chromium.launch();const page=await browser.newPage();
+  try{for(const port of [3000,3001]){await page.goto('http://127.0.0.1:'+port);await page.getByLabel('Email',{exact:true}).waitFor();}}finally{await browser.close();}
+  await stopWorker(ctx);await stopWorker(ctx);for(let i=0;i<30&&await processIdentity(first.edge.pid);i++)await new Promise(r=>setTimeout(r,200));
+  assert.equal(await processIdentity(first.edge.pid),null);assert.ok(sameProcess(unrelatedIdentity,await processIdentity(unrelated.pid)));
+  for(const port of [3000,3001])await assert.rejects(fetch('http://127.0.0.1:'+port,{signal:AbortSignal.timeout(1000)}));
 });
 
 if(process.env.VOLUME_DEMO_REAL==='1')test('D01–D22 REAL Linux Docker/Auth/UI lifecycle (not Windows Docker proof)',{timeout:1200000},async t=>{

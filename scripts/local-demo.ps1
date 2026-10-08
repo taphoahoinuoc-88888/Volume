@@ -1,4 +1,4 @@
-﻿param([ValidateSet('Start','Stop')][string]$Action='Start')
+﻿param([ValidateSet('Start','Stop','Worker')][string]$Action='Start')
 $ErrorActionPreference='Stop'
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 $OutputEncoding = [Console]::OutputEncoding
@@ -30,6 +30,48 @@ try {
     $script:Node=$command.Source
     $version=(& $script:Node --version).TrimStart('v').Split('.')
     if (-not (([int]$version[0] -eq 22 -and [int]$version[1] -ge 12) -or [int]$version[0] -eq 24)) { throw 'Can Node.js 22.12+ (dong 22) hoac 24. Hay cai Node.js LTS.' }
+    if ($Action -eq 'Worker') {
+        # Suspended creation + Windows Job Object: every descendant belongs to this supervisor.
+        # Closing this supervisor kills only its job, including CLI sidecars; no global taskkill.
+        Add-Type -TypeDefinition @'
+using System;
+using System.Text;
+using System.Runtime.InteropServices;
+public static class VolumeDemoJob {
+ [StructLayout(LayoutKind.Sequential)] struct Basic { public long a,b; public uint flags; public UIntPtr min,max; public uint active; public UIntPtr affinity; public uint priority,scheduling; }
+ [StructLayout(LayoutKind.Sequential)] struct IO { public ulong a,b,c,d,e,f; }
+ [StructLayout(LayoutKind.Sequential)] struct Extended { public Basic basic; public IO io; public UIntPtr processMemory,jobMemory,peakProcess,peakJob; }
+ [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)] struct Startup { public uint cb; public string reserved,desktop,title; public uint x,y,xSize,ySize,xCount,yCount,fill,flags; public short show,reserved2; public IntPtr reservedPointer,input,output,error; }
+ [StructLayout(LayoutKind.Sequential)] struct ProcessInfo { public IntPtr process,thread; public uint pid,tid; }
+ [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern IntPtr CreateJobObject(IntPtr attributes,string name);
+ [DllImport("kernel32.dll",SetLastError=true)] static extern bool SetInformationJobObject(IntPtr job,int kind,ref Extended info,uint size);
+ [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern bool CreateProcess(string app,StringBuilder command,IntPtr pa,IntPtr ta,bool inherit,uint flags,IntPtr env,string cwd,ref Startup startup,out ProcessInfo pi);
+ [DllImport("kernel32.dll",SetLastError=true)] static extern bool AssignProcessToJobObject(IntPtr job,IntPtr process);
+ [DllImport("kernel32.dll")] static extern uint ResumeThread(IntPtr thread);
+ [DllImport("kernel32.dll")] static extern uint WaitForSingleObject(IntPtr handle,uint timeout);
+ [DllImport("kernel32.dll")] static extern bool GetExitCodeProcess(IntPtr process,out uint code);
+ [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
+ [DllImport("kernel32.dll")] static extern bool TerminateProcess(IntPtr process,uint code);
+ [DllImport("kernel32.dll")] static extern IntPtr GetStdHandle(int handle);
+ [DllImport("kernel32.dll")] static extern bool SetHandleInformation(IntPtr handle,uint mask,uint flags);
+ public static int Run(string node,string helper,string cwd) {
+   IntPtr job=CreateJobObject(IntPtr.Zero,null); ProcessInfo pi=new ProcessInfo();
+   if(job==IntPtr.Zero)throw new Exception("Khong tao duoc Job Object VOLUME.");
+   try {
+     Extended limit=new Extended();limit.basic.flags=0x2000;
+     if(!SetInformationJobObject(job,9,ref limit,(uint)Marshal.SizeOf(limit)))throw new Exception("Khong dat duoc gioi han Job Object.");
+     Startup si=new Startup();si.cb=(uint)Marshal.SizeOf(si);si.flags=0x100;si.input=GetStdHandle(-10);si.output=GetStdHandle(-11);si.error=GetStdHandle(-12);
+     SetHandleInformation(si.input,1,1);SetHandleInformation(si.output,1,1);SetHandleInformation(si.error,1,1);
+     StringBuilder cmd=new StringBuilder("\""+node+"\" \""+helper+"\" worker");
+     if(!CreateProcess(node,cmd,IntPtr.Zero,IntPtr.Zero,true,0x08000004,IntPtr.Zero,cwd,ref si,out pi))throw new Exception("Khong tao duoc worker VOLUME.");
+     if(!AssignProcessToJobObject(job,pi.process)){TerminateProcess(pi.process,1);throw new Exception("Khong gan duoc worker vao Job Object.");}
+     ResumeThread(pi.thread);WaitForSingleObject(pi.process,0xffffffff);uint code;GetExitCodeProcess(pi.process,out code);return (int)code;
+   } finally { if(pi.thread!=IntPtr.Zero)CloseHandle(pi.thread);if(pi.process!=IntPtr.Zero)CloseHandle(pi.process);CloseHandle(job); }
+ }
+}
+'@
+        exit [VolumeDemoJob]::Run($script:Node,$script:Helper,$script:Root)
+    }
     if ($Action -eq 'Stop') {
         Invoke-Volume 'stop' | Out-Null
         Write-Host 'Da tat cac tai nguyen VOLUME do demo quan ly. Du lieu van duoc giu nguyen.'

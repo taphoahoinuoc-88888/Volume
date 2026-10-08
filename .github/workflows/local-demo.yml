@@ -19,7 +19,9 @@ jobs:
         with:
           node-version: '22'
       - name: Locked dependencies
-        run: npm ci
+        run: |
+          npm ci
+          npx playwright install chromium
       - name: Native Windows entrypoints and safety cases
         shell: powershell
         run: ./tests/local-demo/launcher.Tests.ps1

@@ -57,7 +57,7 @@ export async function context(root=ROOT,base) {
   root=await fs.realpath(root);
   const hash=createHash('sha256').update(process.platform==='win32'?root.toLowerCase():root).digest('hex').slice(0,16);
   const runtime=path.join(base??(process.platform==='win32'?process.env.LOCALAPPDATA:path.join(os.homedir(),'.local','state')),'VolumeDemo',hash);
-  return {root,runtime,run:command,stateFile:path.join(runtime,'state.json'),workerFile:path.join(runtime,'worker.json'),cli:path.join(runtime,'tools','node_modules','supabase','bin','supabase'+(process.platform==='win32'?'.exe':''))};
+  return {root,runtime,run:command,stateFile:path.join(runtime,'state.json'),workerFile:path.join(runtime,'worker.json'),cli:path.join(runtime,'tools','node_modules','@supabase','cli-'+(process.platform==='win32'?'windows':process.platform)+'-'+process.arch,'bin','supabase'+(process.platform==='win32'?'.exe':''))};
 }
 export async function lock(port=PORTS.lock) {
   const server=net.createServer(socket=>socket.destroy());
@@ -190,28 +190,30 @@ async function killVerified(identity) {
 async function ipc(record,action) {
   return new Promise((resolve,reject)=>{const socket=net.connect(PORTS.ipc,'127.0.0.1');let data='';socket.setTimeout(20000);socket.on('connect',()=>socket.end(JSON.stringify({token:record.token,action})+'\n'));socket.on('data',d=>{data+=d;if(data.length>4096)socket.destroy();});socket.on('end',()=>{try{const r=JSON.parse(data);if(r.root!==record.root||r.token!==record.token)throw Error();resolve(r);}catch{reject(new DemoError('Khong xac minh duoc tien trinh VOLUME.'));}});socket.on('timeout',()=>socket.destroy(new Error('timeout')));socket.on('error',()=>reject(new DemoError('Tien trinh VOLUME chua san sang.')));});
 }
+export function workerCommand(ctx) { return process.platform==='win32'?{file:path.join(process.env.SystemRoot,'System32','WindowsPowerShell','v1.0','powershell.exe'),args:['-NoLogo','-NoProfile','-ExecutionPolicy','Bypass','-File',path.join(ctx.root,'scripts','local-demo.ps1'),'-Action','Worker']}:{file:process.execPath,args:[path.join(ctx.root,'scripts','local-demo-admin.mjs'),'worker']}; }
 export function validateWorkerRecord(ctx,record) {
   if(record.root!==ctx.root||!/^[a-f0-9]{64}$/.test(record.token))fail('Worker ownership khong hop le.');
   const escape=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  for(const [identity,exe,args] of [[record.process,process.execPath,[path.join(ctx.root,'scripts','local-demo-admin.mjs'),'worker']],[record.edge,ctx.cli,['functions','serve','open-table-payment','--workdir',ctx.runtime]]]) {
+  for(const [identity,exe,args] of [[record.process,workerCommand(ctx).file,workerCommand(ctx).args],[record.edge,ctx.cli,['functions','serve','open-table-payment','--workdir',ctx.runtime]]]) {
     if(!identity)continue;
     const pattern=new RegExp('^'+[exe,...args].map(x=>'"?'+escape(x)+'"?').join('\\s+')+'\\s*$',process.platform==='win32'?'i':'');
     if(identity.exe.toLowerCase()!==exe.toLowerCase()||!pattern.test(identity.cmd))fail('Tien trinh khong thuoc launcher nay. Khong dung.');
   }
 }
-async function stopWorker(ctx) {
+export async function stopWorker(ctx) {
   const record=await readJson(ctx.workerFile,true);if(!record)return;
   validateWorkerRecord(ctx,record);
   try{await ipc(record,'stop');}catch{await killVerified(record.process);await killVerified(record.edge);}
   await fs.unlink(ctx.workerFile).catch(e=>{if(e.code!=='ENOENT')throw e;});
 }
-async function startWorker(ctx,pub) {
+export async function startWorker(ctx,pub) {
   const old=await readJson(ctx.workerFile,true);
   if(old){try{await ipc(old,'ping');return;}catch{await stopWorker(ctx);}}
   for(const port of [PORTS.customer,PORTS.control,PORTS.ipc])await freePort(port);
   const record={root:ctx.root,token:randomBytes(32).toString('hex'),process:null,edge:null};
   await atomic(ctx.workerFile,record);
-  const child=spawn(process.execPath,[path.join(ctx.root,'scripts','local-demo-admin.mjs'),'worker'],{cwd:ctx.root,detached:true,windowsHide:true,stdio:['pipe','ignore','ignore']});
+  const launch=workerCommand(ctx);
+  const child=spawn(launch.file,launch.args,{cwd:ctx.root,detached:true,windowsHide:true,stdio:['pipe','ignore','ignore']});
   child.on('error',()=>{});record.process=await processIdentity(child.pid);if(!record.process){child.kill();fail('Khong xac minh duoc tien trinh web.');}await atomic(ctx.workerFile,record);
   child.stdin.on('error',()=>{});child.stdin.end(JSON.stringify({record,pub}));child.unref();
   for(let i=0;i<90;i++){try{await ipc(record,'ping');return;}catch{}await pause(500);}
