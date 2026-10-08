@@ -1,6 +1,6 @@
 # Sprint 3 — CLOSED / FROZEN
 
-Gate 6 closed on 2026-10-07 after all required exact post-merge main workflows completed SUCCESS. This immutable Git commit is the closure record; use its commit-addressed permalink, not a moving branch name. No Sprint 4 work follows.
+Prepared final closure status: **CLOSED / FROZEN**. Implementation-main evidence below was independently reverified on 2026-10-08. Formal closure is declared only after this documentation PR is merged and all four required workflows succeed on its exact resulting main SHA. The closure PR conversation records that final SHA and its run IDs, avoiding a self-referential commit hash. No Sprint 4 work follows.
 
 ## Frozen identifiers
 
@@ -15,10 +15,10 @@ Gate 6 closed on 2026-10-07 after all required exact post-merge main workflows c
 | Documented narrow plan/fixture addition | `27c99f4b65a5a778eb226b724953b1d478f39b41` |
 | Final implementation HEAD | `27c99f4b65a5a778eb226b724953b1d478f39b41` |
 | Implementation PR | [#7](https://github.com/HAD10202/Volume/pull/7), merged 2026-10-07T18:29:08Z |
-| Final frozen main | `b6fbcbcd449dd79889dfd1365cb96f0dc521de4c` |
+| Final implementation merge SHA / documentation closure base | `b6fbcbcd449dd79889dfd1365cb96f0dc521de4c` |
 | Verified implementation/main tree | `e96680e5f470e3f4f6629f3ebe62752738cfb392` |
 
-The final main merge has exactly Gate 1 main and final implementation HEAD as its parents. Its tree equals the green implementation tree. This documentation-only closure record is published on `sprint3-closure`, based on that exact verified main, and changes only this already-allowlisted results path. It does not change the frozen runtime main or introduce an unverified implementation commit. The PR conversation links this immutable record.
+The implementation merge has exactly Gate 1 main and final implementation HEAD as its parents; its tree equals the green implementation tree. The documentation-only closure PR uses `sprint3-closure`, based on that verified main, and changes only `docs/sprints/SPRINT_3_RESULTS.md`. All non-document runtime files remain identical. Its final PR/merge/main SHA and fresh CI evidence are recorded in the closure PR's final attestation and linked from implementation PR #7.
 
 ## Verified results
 
@@ -33,7 +33,7 @@ Each browser project passed 28 tests: Chromium and WebKit at desktop 1440px, mob
 
 Allowlist/forbidden-scope/secret scan, dependency audit, typecheck, lint, production build, clean database reset, migration compatibility, constraints/grants/RLS, real Auth/cutoff/role/venue checks, bigint CAS, concurrency, audit/constraint rollback, financial conservation, exact numeric oracles, overflow, close/release/CASH races, old-owner safety and actual PostgreSQL restart/recovery all PASS. No frozen snapshot checkout was used to bypass candidate testing.
 
-### Exact post-merge main runs
+### Verified implementation-main runs (before documentation closure)
 
 | Workflow | Run | Attempt | Result |
 |---|---|---:|---|
@@ -42,7 +42,7 @@ Allowlist/forbidden-scope/secret scan, dependency audit, typecheck, lint, produc
 | Sprint 3 | [37667190381](https://github.com/HAD10202/Volume/actions/runs/37667190381) | 1 | SUCCESS |
 | Checkpoint 1B | [37667190589](https://github.com/HAD10202/Volume/actions/runs/37667190589) | 1 | SUCCESS |
 
-Verified jobs: Sprint 3 `112949319023`; Sprint 2 `112949319536`; Checkpoint 1B `112949318941`; Checkpoint 1A `112949360825`. Logs were independently read for actual counts; all four runs target the exact frozen main above.
+Verified jobs: Sprint 3 `112949319023`; Sprint 2 `112949319536`; Checkpoint 1B `112949318941`; Checkpoint 1A `112949360825`. Logs were independently read for actual counts; all four runs target implementation main `b6fbcbcd449dd79889dfd1365cb96f0dc521de4c`. Closure-PR and closure-main checks are verified separately before the final attestation.
 
 ### Final implementation/PR evidence
 
@@ -158,7 +158,7 @@ Closure records verified main without rewriting frozen historical documents or b
 
 The following entries are preserved historical checkpoints. Their IN PROGRESS/NOT CLOSED statements describe their earlier candidates and are superseded by the verified closure above.
 
-# Sprint 3 verification ledger — IN PROGRESS
+### Archived progress snapshot — IN PROGRESS at that checkpoint
 
 Not CLOSED/FROZEN. No production deployment or real payment provider integration is claimed.
 
