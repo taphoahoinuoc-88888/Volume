@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { request as httpRequest } from 'node:http';
 
 async function sessionLifecyclePreflight() {
   const raw = execFileSync('supabase', ['status', '-o', 'json'], { encoding: 'utf8' });
@@ -55,8 +56,21 @@ export async function fixture() {
   const base = config.API_URL;
   const users: Record<string,{id:string,email:string,password:string,token:string,refresh:string,session:string}> = {};
   async function auth(path:string,body:object) {
-    const r=await fetch(`${base}/auth/v1/${path}`,{method:'POST',headers:{Connection:'close',apikey:anon,'Content-Type':'application/json'},body:JSON.stringify(body)});
-    const data=await r.json(); return {status:r.status,data};
+    // One socket per local Auth request: never reuse a connection closed by GoTrue/Kong.
+    // No retry: transport, incomplete response and JSON errors still fail the fixture.
+    const payload=JSON.stringify(body);
+    const r=await new Promise<{status:number;text:string}>((resolve,reject)=>{
+      const req=httpRequest(`${base}/auth/v1/${path}`,{
+        method:'POST',agent:false,
+        headers:{Connection:'close',apikey:anon,'Content-Type':'application/json','Content-Length':Buffer.byteLength(payload)},
+      },res=>{
+        let text='';res.setEncoding('utf8');
+        res.on('data',chunk=>{text+=chunk;});res.once('error',reject);
+        res.once('end',()=>{if(!res.complete)reject(new Error('Incomplete local Auth response'));else resolve({status:res.statusCode??0,text});});
+      });
+      req.once('error',reject);req.end(payload);
+    });
+    const data=JSON.parse(r.text); return {status:r.status,data};
   }
   async function login(name:string) {
     const u=users[name]; const r=await auth('token?grant_type=password',{email:u.email,password:u.password});

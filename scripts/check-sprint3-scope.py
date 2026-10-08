@@ -155,12 +155,14 @@ INTEGRATION_BINARY = {
     'apps/customer/public/showroom/assets/venue/logo-960.webp': '799f213169d55aa6577e90c3dacd37cbfc3ff57e',
     'apps/customer/public/showroom/assets/fonts/volume-display-bold.woff': '2c50fd65b2d3e530af2fdb83f44cffaaf9d955ff',
 }
+# Owner-approved PR #10 fixture maintenance, exact transformations verified below.
+FIXTURE_PATHS = {'tests/integration/fixtures/auth.ts', 'tests/e2e/fixtures/auth.ts'}
 integration = set(git('diff', '--name-only', INTEGRATION_BASE, 'HEAD').splitlines())
-assert integration <= INTEGRATION_PATHS, 'Unapproved integration delta: ' + str(integration - INTEGRATION_PATHS)
+assert integration <= INTEGRATION_PATHS | FIXTURE_PATHS, 'Unapproved integration delta: ' + str(integration - INTEGRATION_PATHS - FIXTURE_PATHS)
 LOGIN_FIXTURE = 'tests/e2e/fixtures/auth.ts'  # Separately owner-approved exact synchronization only.
 maintenance = set(git('diff', '--name-only', DEMO_BASE, 'HEAD').splitlines())
-assert maintenance <= DEMO_PATHS | INTEGRATION_PATHS | {'scripts/check-sprint3-scope.py', LOGIN_FIXTURE}, 'Unapproved maintenance delta: ' + str(maintenance)
-allowed |= DEMO_PATHS | INTEGRATION_PATHS | {LOGIN_FIXTURE}
+assert maintenance <= DEMO_PATHS | INTEGRATION_PATHS | FIXTURE_PATHS | {'scripts/check-sprint3-scope.py', LOGIN_FIXTURE}, 'Unapproved maintenance delta: ' + str(maintenance)
+allowed |= DEMO_PATHS | INTEGRATION_PATHS | FIXTURE_PATHS | {LOGIN_FIXTURE}
 changed = set(git('diff', '--name-only', BASE, 'HEAD').splitlines())
 assert changed <= allowed, 'Unapproved paths: ' + str(changed - allowed)
 baseline = git('ls-tree', '-r', '--name-only', BASE).splitlines()
@@ -174,7 +176,12 @@ for p in frozen:
         marker = " if(name==='disabled'){await expect(page.getByRole('status')).toContainText('Quyền truy cập');return;}\n".encode('utf-8')
         insertion = b" await page.waitForURL(origin+(surface==='customer'?'/profile':'/overview'));\n"
         assert original.count(marker) == 1 and insertion not in original
-        assert pathlib.Path(p).read_bytes() == original.replace(marker, marker + insertion), 'Only exact final-login-URL synchronization allowed; frozen assertions/Auth/timeouts unchanged'
+        expected = original.replace(marker, marker + insertion)
+        diagnostics_before = b"diagnostics:[async({page},use,info)=>{const events:object[]=[];page.on('response',r=>{const path=new URL(r.url()).pathname;if(path.startsWith('/auth/v1/')||path.startsWith('/rest/v1/'))events.push({path,status:r.status()});});page.on('requestfailed',r=>events.push({path:new URL(r.url()).pathname,status:'request_failed'}));page.on('pageerror',e=>events.push({error:e.name}));await use();if(info.status!==info.expectedStatus)await info.attach('http-statuses',{body:Buffer.from(JSON.stringify(events)),contentType:'application/json'});},{auto:true}]});"
+        diagnostics_after = b"diagnostics:[async({page},use,info)=>{\n const events:object[]=[];const started=Date.now();const record=(event:object)=>events.push({ms:Date.now()-started,...event});\n const path=(url:string)=>{try{return new URL(url).pathname;}catch{return 'unavailable';}};\n page.on('request',r=>{if(r.isNavigationRequest())record({event:'navigation-request',path:path(r.url()),method:r.method()});});\n page.on('response',r=>{const p=path(r.url());if(r.request().isNavigationRequest()||p.startsWith('/auth/v1/')||p.startsWith('/rest/v1/'))record({event:'response',path:p,status:r.status()});});\n page.on('requestfailed',r=>{const error=r.failure()?.errorText||'';record({event:'request-failed',path:path(r.url()),navigation:r.isNavigationRequest(),kind:/internal error/i.test(error)?'internal':/abort|cancel/i.test(error)?'aborted':/timeout/i.test(error)?'timeout':'other'});});\n page.on('pageerror',e=>record({event:'pageerror',error:e.name}));\n page.on('crash',()=>record({event:'crash'}));\n page.on('framenavigated',frame=>{if(frame===page.mainFrame())record({event:'navigation-commit',path:path(frame.url())});});\n page.on('domcontentloaded',()=>record({event:'domcontentloaded',path:path(page.url())}));\n page.on('load',()=>record({event:'load',path:path(page.url())}));\n try{await use();}finally{if(info.status!==info.expectedStatus)await info.attach('http-statuses',{body:Buffer.from(JSON.stringify(events)),contentType:'application/json'});}\n},{auto:true}]});"
+        assert expected.count(diagnostics_before) == 1
+        expected = expected.replace(diagnostics_before, diagnostics_after)
+        assert pathlib.Path(p).read_bytes() == expected, 'Only exact approved login synchronization and redacted navigation diagnostics allowed'
     else:
         assert not git('diff','--name-only',BASE,'HEAD','--',p).strip(), 'Frozen file changed: '+p
 auth_fixture='tests/integration/fixtures/auth.ts'
@@ -182,7 +189,11 @@ old=git('show',BASE+':'+auth_fixture)
 source="const r=await fetch(`${base}/auth/v1/${path}`,{method:'POST',headers:{apikey:anon,'Content-Type':'application/json'},body:JSON.stringify(body)});"
 assert old.count(source)==1
 expected=old.replace(source,source.replace("headers:{apikey:anon,","headers:{Connection:'close',apikey:anon,"))
-assert pathlib.Path(auth_fixture).read_text()==expected, 'Only exact Auth fixture connection-lifecycle header allowed; assertions/auth unchanged'
+auth_before = "  async function auth(path:string,body:object) {\n    const r=await fetch(`${base}/auth/v1/${path}`,{method:'POST',headers:{Connection:'close',apikey:anon,'Content-Type':'application/json'},body:JSON.stringify(body)});\n    const data=await r.json(); return {status:r.status,data};\n  }\n"
+auth_after = "  async function auth(path:string,body:object) {\n    // One socket per local Auth request: never reuse a connection closed by GoTrue/Kong.\n    // No retry: transport, incomplete response and JSON errors still fail the fixture.\n    const payload=JSON.stringify(body);\n    const r=await new Promise<{status:number;text:string}>((resolve,reject)=>{\n      const req=httpRequest(`${base}/auth/v1/${path}`,{\n        method:'POST',agent:false,\n        headers:{Connection:'close',apikey:anon,'Content-Type':'application/json','Content-Length':Buffer.byteLength(payload)},\n      },res=>{\n        let text='';res.setEncoding('utf8');\n        res.on('data',chunk=>{text+=chunk;});res.once('error',reject);\n        res.once('end',()=>{if(!res.complete)reject(new Error('Incomplete local Auth response'));else resolve({status:res.statusCode??0,text});});\n      });\n      req.once('error',reject);req.end(payload);\n    });\n    const data=JSON.parse(r.text); return {status:r.status,data};\n  }\n"
+assert expected.count(auth_before) == 1
+expected = expected.replace(auth_before, auth_after).replace("import { randomUUID } from 'node:crypto';\n", "import { randomUUID } from 'node:crypto';\nimport { request as httpRequest } from 'node:http';\n")
+assert pathlib.Path(auth_fixture).read_bytes()==expected.encode('utf-8'), 'Only exact approved one-socket Auth transport allowed; all assertions/Auth semantics unchanged'
 fixture='tests/integration/fixtures/payment.ts'
 old=git('show',BASE+':'+fixture)
 expected=old.replace('truncate public.payment_receipts,public.payments,public.table_sessions,public.billiard_tables,public.audit_events','truncate public.session_financial_issues,public.session_cash_receipts,public.payment_receipts,public.payments,public.table_sessions,public.billiard_tables,public.audit_events')
