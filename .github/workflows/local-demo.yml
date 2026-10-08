@@ -1,0 +1,58 @@
+name: Local Demo
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: local-demo-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  windows-launcher:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Locked dependencies
+        run: |
+          npm ci
+          npx playwright install chromium
+      - name: Native Windows entrypoints and safety cases
+        shell: powershell
+        run: ./tests/local-demo/launcher.Tests.ps1
+      - name: Windows evidence boundary
+        shell: pwsh
+        run: |
+          'Native Windows entrypoints, process identity and local locking tested. Docker command adapter safety tests are simulated; full Windows Docker Desktop/WSL stack NOT RUN here.' >> $env:GITHUB_STEP_SUMMARY
+  real-local-stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Exact maintenance scope and unchanged frozen checks
+        run: python scripts/check-sprint3-scope.py
+      - name: Locked dependencies and real browser
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Real isolated local launch, ADMIN, Auth, recovery, UI, stop and restart
+        env:
+          VOLUME_DEMO_REAL: '1'
+        run: node --test tests/local-demo/admin.test.mjs
+      - name: Stop only owned demo resources, retain data
+        if: always()
+        run: node scripts/local-demo-admin.mjs stop
+      - name: Evidence boundary
+        run: |
+          echo 'Real Linux Docker/Supabase/Auth/Vite/browser integration. testnet2 sentinel identity/config/state preserved. This is not full Windows Docker Desktop proof. Frozen four workflows remain separately required.' >> "$GITHUB_STEP_SUMMARY"
