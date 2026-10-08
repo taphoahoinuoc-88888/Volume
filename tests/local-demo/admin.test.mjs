@@ -139,9 +139,17 @@ if(process.env.VOLUME_DEMO_REAL==='1')test('D01–D22 REAL Linux Docker/Auth/UI 
   const login=await fetch(local.API_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:local.ANON_KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password})});assert.equal(login.status,200);const auth=await login.json();
   const access=await fetch(local.API_URL+'/rest/v1/rpc/current_access',{method:'POST',headers:{apikey:local.ANON_KEY,Authorization:'Bearer '+auth.access_token,'Content-Type':'application/json'},body:'{}'});assert.equal(access.status,200);assert.equal((await access.json()).profile.role,'ADMIN');
   assert.equal(JSON.parse(await cli('start')).needsAdmin,false);
-  const {chromium}=await import('@playwright/test');const browser=await chromium.launch();const page=await browser.newPage();
-  try{for(const port of [3000,3001]){await page.goto('http://127.0.0.1:'+port);await page.getByLabel('Email',{exact:true}).fill(email);await page.getByLabel('Mật khẩu',{exact:true}).fill(password);await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('input[type=password]'));}assert.ok(! (await page.content()).includes(local.SERVICE_ROLE_KEY));}finally{await browser.close();}
-  await cli('recover',{email});const mails=await fetch('http://127.0.0.1:55324/api/v1/messages');assert.equal(mails.status,200);assert.ok(JSON.stringify(await mails.json()).includes(email));
+  const {chromium}=await import('@playwright/test');const browser=await chromium.launch();
+  try{
+    for(const port of [3000,3001]){const page=await browser.newPage();await page.goto('http://127.0.0.1:'+port);await page.getByLabel('Email',{exact:true}).fill(email);await page.getByLabel('Mật khẩu',{exact:true}).fill(password);await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();await page.waitForURL('http://127.0.0.1:'+port+(port===3000?'/profile':'/overview'));await page.getByRole('button',{name:'Đăng xuất',exact:true}).waitFor();assert.ok(!(await page.content()).includes(local.SERVICE_ROLE_KEY));}
+    await cli('recover',{email});let mail;
+    for(let attempt=0;attempt<30;attempt++){const response=await fetch('http://127.0.0.1:55324/api/v1/messages');assert.equal(response.status,200);mail=(await response.json()).messages?.find(m=>m.To?.some(to=>to.Address===email));if(mail)break;await new Promise(r=>setTimeout(r,100));}
+    assert.ok(mail,'Recovery email delivered locally');const message=await(await fetch('http://127.0.0.1:55324/api/v1/message/'+mail.ID)).json();
+    const url=(message.Text+' '+message.HTML).match(/http:\/\/127\.0\.0\.1:55321\/auth\/v1\/verify[^\s<>"']+/)?.[0]?.replaceAll('&amp;','&');assert.ok(url,'Local Auth recovery link exists');
+    const recovery=await browser.newPage();try{await recovery.goto(url);}catch{throw Error('Real recovery link navigation failed (sensitive URL withheld)');}
+    await recovery.getByLabel('Mật khẩu mới',{exact:true}).fill(password+'new');await recovery.getByRole('button',{name:'Lưu mật khẩu mới',exact:true}).click();await recovery.waitForURL('http://127.0.0.1:3000/login');
+    const recovered=await fetch(local.API_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:local.ANON_KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password:password+'new'})});assert.equal(recovered.status,200,'Owner-selected replacement password works');
+  }finally{await browser.close();}
   const dataBefore=JSON.stringify((await db.query('select id,role,version,account_status from public.profiles order by id')).rows);
   await db.end();dbClosed=true;await cli('stop');await cli('stop');assert.equal(JSON.parse(await cli('start')).needsAdmin,false);
   const db2=new pg.Pool({connectionString:local.DB_URL});try{assert.equal(JSON.stringify((await db2.query('select id,role,version,account_status from public.profiles order by id')).rows),dataBefore);

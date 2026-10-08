@@ -68,7 +68,8 @@ public static class VolumeDemoJob {
  }
 }
 '@
-        exit [VolumeDemoJob]::Run($script:Node,$script:Helper,$script:Root)
+        $workerExit=[VolumeDemoJob]::Run($script:Node,$script:Helper,$script:Root)
+        exit $workerExit
     }
     $version=(& $script:Node --version).TrimStart('v').Split('.')
     if (-not (([int]$version[0] -eq 22 -and [int]$version[1] -ge 12) -or [int]$version[0] -eq 24)) { throw 'Can Node.js 22.12+ (dong 22) hoac 24. Hay cai Node.js LTS.' }

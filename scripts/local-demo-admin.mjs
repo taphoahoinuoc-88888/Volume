@@ -210,13 +210,13 @@ export async function startWorker(ctx,pub) {
   const old=await readJson(ctx.workerFile,true);
   if(old){try{await ipc(old,'ping');return;}catch{await stopWorker(ctx);}}
   for(const port of [PORTS.customer,PORTS.control,PORTS.ipc])await freePort(port);
-  const record={root:ctx.root,token:randomBytes(32).toString('hex'),process:null,edge:null};
+  const record={root:ctx.root,token:randomBytes(32).toString('hex'),process:null,edge:null,public:pub};
   await atomic(ctx.workerFile,record);
   const launch=workerCommand(ctx);let supervisorError='';
-  const child=spawn(launch.file,launch.args,{cwd:ctx.root,detached:true,windowsHide:true,stdio:['pipe','pipe','pipe']});
+  const child=spawn(launch.file,launch.args,{cwd:ctx.root,detached:true,windowsHide:true,stdio:['ignore','pipe','pipe']});
   for(const stream of [child.stdout,child.stderr]){stream.on('data',chunk=>{supervisorError=(supervisorError+chunk.toString()).slice(-4000);for(const line of chunk.toString().split('\n'))if(line.startsWith('VOLUME:'))console.error(line);});stream.unref?.();}
   child.on('error',e=>{supervisorError='spawn '+String(e.code);});
-  child.stdin.on('error',()=>{});child.stdin.end(JSON.stringify({record,pub}));child.unref();
+  child.unref();
   for(let i=0;i<90;i++){try{await ipc(record,'ping');return;}catch{}await pause(500);}
   if(child.exitCode===null)child.kill();
   console.error('VOLUME: Supervisor '+supervisorError.replaceAll(record.token,'[REDACTED]').replaceAll(pub.key,'[REDACTED]').replace(/[\r\n]+/g,' ').slice(0,700));
@@ -298,7 +298,7 @@ export async function start(ctx) {
 }
 async function main() {
   const mode=process.argv[2];const ctx=await context();
-  if(mode==='worker'){let data='';for await(const chunk of process.stdin){data+=chunk;if(data.length>20000)fail('Worker input qua lon.');}await worker(ctx,JSON.parse(data));return;}
+  if(mode==='worker'){const record=await readJson(ctx.workerFile);await worker(ctx,{record,pub:record.public});return;}
   if(!['start','stop','admin','recover'].includes(mode))fail('Lenh demo khong hop le.');
   const release=await lock();try{
     let result;
