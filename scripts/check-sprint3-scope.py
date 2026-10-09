@@ -23,6 +23,13 @@ DEMO_PATHS = {
 # Owner command: FINAL INTEGRATION authorizes this exact presentation/launcher scope.
 # Business contracts, frozen migrations and existing assertions below are unchanged.
 INTEGRATION_BASE = '310965e0bb6e61c0ed6b8b11dd161ac0a12ba353'
+# Owner 2026-10-09 delivery: exact additive adapter paths; no business/security contract edits.
+DELIVERY_PATHS = {
+    '.github/workflows/local-demo.yml', 'README_DEMO.md',
+    'integrations/telegram/bot.mjs', 'integrations/telegram/legacy-navigation.json',
+    'integrations/telegram/.env.example', 'integrations/telegram/README.md',
+    'tests/local-demo/telegram.test.mjs', 'tests/local-demo/telegram-real.mjs',
+}
 INTEGRATION_PATHS = {
     'apps/customer/src/App.tsx',
     'tests/e2e/showroom.spec.ts',
@@ -158,11 +165,11 @@ INTEGRATION_BINARY = {
 # Owner-approved PR #10 fixture maintenance, exact transformations verified below.
 FIXTURE_PATHS = {'tests/integration/fixtures/auth.ts', 'tests/e2e/fixtures/auth.ts'}
 integration = set(git('diff', '--name-only', INTEGRATION_BASE, 'HEAD').splitlines())
-assert integration <= INTEGRATION_PATHS | FIXTURE_PATHS, 'Unapproved integration delta: ' + str(integration - INTEGRATION_PATHS - FIXTURE_PATHS)
+assert integration <= INTEGRATION_PATHS | FIXTURE_PATHS | DELIVERY_PATHS, 'Unapproved integration delta: ' + str(integration - INTEGRATION_PATHS - FIXTURE_PATHS)
 LOGIN_FIXTURE = 'tests/e2e/fixtures/auth.ts'  # Separately owner-approved exact synchronization only.
 maintenance = set(git('diff', '--name-only', DEMO_BASE, 'HEAD').splitlines())
-assert maintenance <= DEMO_PATHS | INTEGRATION_PATHS | FIXTURE_PATHS | {'scripts/check-sprint3-scope.py', LOGIN_FIXTURE}, 'Unapproved maintenance delta: ' + str(maintenance)
-allowed |= DEMO_PATHS | INTEGRATION_PATHS | FIXTURE_PATHS | {LOGIN_FIXTURE}
+assert maintenance <= DEMO_PATHS | INTEGRATION_PATHS | FIXTURE_PATHS | DELIVERY_PATHS | {'scripts/check-sprint3-scope.py', LOGIN_FIXTURE}, 'Unapproved maintenance delta: ' + str(maintenance)
+allowed |= DEMO_PATHS | INTEGRATION_PATHS | FIXTURE_PATHS | DELIVERY_PATHS | {LOGIN_FIXTURE}
 changed = set(git('diff', '--name-only', BASE, 'HEAD').splitlines())
 assert changed <= allowed, 'Unapproved paths: ' + str(changed - allowed)
 baseline = git('ls-tree', '-r', '--name-only', BASE).splitlines()
@@ -214,7 +221,7 @@ for p in git('ls-files').splitlines():
     else:
         data=raw.decode('utf-8')
     assert not re.search(r'sb_secret_[A-Za-z0-9_-]{15,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{20,}',data), 'Secret-like value: '+p
-    assert not p.startswith('reference/') and not re.search(r'/(?:player|matches|video|tournament|shop|telegram|crm|ai|refund)/',p,re.I), 'Forbidden scope: '+p
+    assert not p.startswith('reference/') and (p in DELIVERY_PATHS or not re.search(r'/(?:player|matches|video|tournament|shop|telegram|crm|ai|refund)/',p,re.I)), 'Forbidden scope: '+p
     if p.startswith(('apps/','packages/')):
         assert all(x not in data for x in ['SUPABASE_DB_URL','payment-adapter','service_role']), 'Server capability in client: '+p
 for p,marker in [('.github/workflows/sprint1a.yml','      - name: Install locked core test dependencies\n'),('.github/workflows/sprint1b.yml','      - name: Locked dependencies, typecheck, lint, unit tests, dependency audit\n')]:

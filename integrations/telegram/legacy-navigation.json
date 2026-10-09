@@ -1,0 +1,7 @@
+[
+  [["🎱 Mở bàn", "booking"], ["Bàn của tôi", "manage_table"]],
+  [["🛍 Shop", "shop"], ["Bảng hạng / Cơ thủ", "rank"]],
+  [["Giải / Đăng ký", "tournament"], ["Đơn / yêu cầu của tôi", "orders"]],
+  [["Hồ sơ thành viên", "member"], ["Đến Volume", "visit"]],
+  [["Phản ánh / Nhờ nhân viên", "feedback"], ["Dành cho chủ CLB", "club_owner"]]
+]

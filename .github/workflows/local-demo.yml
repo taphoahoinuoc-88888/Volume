@@ -46,6 +46,8 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium
+      - name: Telegram public adapter boundaries and navigation
+        run: node --test tests/local-demo/telegram.test.mjs
       - name: Real isolated local launch, ADMIN, Auth, recovery, UI, stop and restart
         env:
           VOLUME_DEMO_REAL: '1'

@@ -1,5 +1,47 @@
 # VOLUME — demo Windows một lần bấm
 
+## Máy đã có VOLUME: cập nhật an toàn tại đúng thư mục
+
+PR #10 đã merge vào `54904e7e6419a6c5678cbbbb326a9246db2e06ee`, cả năm workflow hậu merge PASS.
+Đã sửa SID/icacls và nhập ADMIN UTF-8 trên PowerShell 5.1. Không cần áp dụng lại bản vá thủ công.
+Máy owner `C:\Users\Admin\Downloads\Volume-V2` từng sửa `scripts/local-demo-admin.mjs`;
+**chưa được truy cập trực tiếp trong phiên này**, nên phải kiểm tra local trước khi cập nhật.
+
+Mở PowerShell tại thư mục đó, chạy từng dòng:
+
+```powershell
+Set-Location 'C:\Users\Admin\Downloads\Volume-V2'
+git status --short
+git diff --stat
+git diff --cached --stat
+git branch --show-current
+```
+
+Nếu có thay đổi hoặc file chưa theo dõi: **dừng cập nhật**, giữ nguyên file. Sao lưu riêng file đã sửa
+và đối chiếu với bản mới trước khi merge. Không chạy `reset --hard`, `clean`, chép ZIP đè, hoặc đổi
+thư mục để né lỗi. Không gửi file cấu hình/token lên Git hay chat. `git fetch origin` chỉ tải lịch sử,
+không ghi đè working tree; `git diff HEAD origin/main -- scripts/local-demo-admin.mjs` giúp xem khác biệt.
+Việc hợp nhất bản sửa local cần đọc diff thực tế trên máy, không thể xác nhận từ CI.
+
+Chỉ khi working tree sạch và branch hiện tại là `main`:
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw 'Chua tai duoc main; khong cap nhat.' }
+git merge --ff-only origin/main
+if ($LASTEXITCODE -ne 0) { throw 'Nhanh local khac main; giu nguyen de doi chieu.' }
+```
+
+Sau cập nhật, **nhấp đúp START_VOLUME.bat**. Nếu ADMIN đã có, dùng tài khoản cũ; không tạo lại
+hoặc sửa role trực tiếp. Kiểm tra: showroom → Chọn bàn → đăng nhập; Control Center → bàn/phiên;
+STOP → START lại → tài khoản và dữ liệu vẫn còn. Với local chưa cấu hình ngân hàng, không coi lỗi
+provider hoặc chưa thanh toán là đã mở bàn thành công. Luồng MANUAL/CASH dùng đúng quyền hiện có.
+Kiểm tra Pi Node `testnet2` vẫn hoạt động; không dừng/restart Docker Desktop để thử STOP của VOLUME.
+
+Telegram adapter là tùy chọn server-side riêng, không tự bật khi START; xem
+[`integrations/telegram/README.md`](integrations/telegram/README.md). Chỉ public table/venue được đọc
+trong bot; tạo yêu cầu và xem phiên riêng vẫn đăng nhập V2 trên website.
+
 **Trạng thái: đã triển khai; native Windows launcher và real Linux Docker/Auth/browser đã PASS.**
 Sprint 3 vẫn CLOSED / FROZEN. Full Windows Docker Desktop end-to-end **NOT RUN** trên hosted runner;
 không coi kiểm thử Linux hay backend mô phỏng là bằng chứng full Windows stack.
