@@ -1,5 +1,35 @@
 # VOLUME — demo Windows một lần bấm
 
+## Sửa lỗi worker thoát sau START trên Windows
+
+Owner đã ghi nhận backend/Auth 200 nhưng cổng 3000/3001/55325 mất và PID supervisor chết.
+CI trước đây chưa kiểm tra ranh giới launcher thoát, nên không chứng minh máy owner chạy được.
+Bản sửa tách supervisor khỏi console/pipe của launcher, giữ Windows Job Object cho đúng các tiến trình
+VOLUME, kiểm tra PID/IPC/HTTP và kiểm tra lại bằng helper riêng trước khi mở trình duyệt.
+Không thay Auth/RLS/billing/bootstrap transaction hay xóa pending ADMIN.
+
+Cập nhật tại **đúng thư mục hiện có**, theo mục kiểm tra Git bên dưới. Nếu còn sửa đổi local,
+sao lưu và hợp nhất diff trước; không chép đè hay reset. Sau khi cập nhật, chạy START_VOLUME.bat.
+Nếu đang tạo ADMIN dở, nhập lại đúng email/mật khẩu đã chọn; không tạo database mới.
+Sau khi cửa sổ launcher thoát, chạy trong CMD tại thư mục repo:
+
+```bat
+node scripts/local-demo-admin.mjs check
+curl -s -o NUL -w "CUSTOMER=%{http_code}\n" http://127.0.0.1:3000/
+curl -s -o NUL -w "ADMIN=%{http_code}\n" http://127.0.0.1:3001/
+```
+
+Trong CMD gõ trực tiếp, dùng `%{http_code}` (hai dấu `%` chỉ khi lưu trong file `.bat`).
+`check` phải trả `ready:true`; hai HTTP phải 200. Sau đó thử đăng nhập ADMIN, STOP rồi START lại,
+và xác nhận dữ liệu còn nguyên. Chỉ kết luận máy owner đã sửa khi các bước này PASS trên máy đó.
+
+Lỗi được phân loại bằng mã, ví dụ `ADMIN_LOGIN:UND_ERR_SOCKET`, `ADMIN_BOOTSTRAP:42501`,
+`ADMIN_INPUT:INVALID_JSON`, `WORKER_DEAD`, `SUPERVISOR:WIN32_<mã>` hoặc `WEB_CUSTOMER`.
+File `worker-status.json` trong runtime chỉ chứa attempt ID, thời gian, bước và mã lỗi; không chứa
+credentials/token/config. Không gửi `worker.json`, `state.json`, `.env` hay output Supabase status.
+Gửi dòng lỗi VOLUME và kết quả `check` đã che thông tin riêng nếu cần chẩn đoán tiếp.
+Không restart Docker/WSL, dừng testnet2 hoặc xóa volumes để xử lý lỗi này.
+
 ## Máy đã có VOLUME: cập nhật an toàn tại đúng thư mục
 
 PR #10 đã merge vào `54904e7e6419a6c5678cbbbb326a9246db2e06ee`, cả năm workflow hậu merge PASS.
