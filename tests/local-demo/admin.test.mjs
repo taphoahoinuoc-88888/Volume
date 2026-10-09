@@ -9,7 +9,7 @@ import {spawn} from 'node:child_process';
 import {randomUUID,createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {DemoError,validNode,checkCredentials,localUrl,publicConfig,context,lock,atomic,validateOwned,stop,dockerLocal,sourceFingerprint,processIdentity,sameProcess,validateWorkerRecord,startWorker,stopWorker,command,bootstrapTransaction,setupAdmin,recoverAdmin,migrationCheck,PORTS} from '../../scripts/local-demo-admin.mjs';
-import {secureRuntime,authFailure} from '../../scripts/local-demo-admin.mjs';
+import {secureRuntime,authFailure,safeFailure,assertWorkerReady,requestAuth} from '../../scripts/local-demo-admin.mjs';
 import {verifyTelegramPublicV2} from './telegram-real.mjs';
 const root=path.resolve(import.meta.dirname,'../..');
 const fakeKey=role=>'header.'+Buffer.from(JSON.stringify({role})).toString('base64url')+'.signature';
@@ -21,6 +21,22 @@ test('Auth diagnostics identify the failed stage without echoing response conten
  assert.match(authFailure(422,'weak_password','admin/users'),/Tao tai khoan.*12 ky tu/);
  assert.match(authFailure(400,'invalid_credentials','token?grant_type=password'),/Dang nhap kiem tra.*chua khop/);
  const message=authFailure(500,'SECRET_FROM_RESPONSE','admin/users');assert.ok(!message.includes('SECRET_FROM_RESPONSE'));assert.match(message,/khong reset/);
+});
+
+test('Runtime diagnostics classify nested Auth socket, SQL and input failures without raw content',()=>{
+  for(const [error,code] of [[{cause:{code:'UND_ERR_SOCKET'},message:'PASSWORD TOKEN'},'UND_ERR_SOCKET'],[{code:'28P01',detail:'PASSWORD'},'28P01'],[new SyntaxError('PASSWORD'),'INVALID_JSON'],[{message:'TOKEN',code:'SECRET'},'UNEXPECTED']]){
+    const output=safeFailure('ADMIN_SETUP',error).message;assert.ok(output.includes(code));assert.ok(!/PASSWORD|TOKEN|SECRET/.test(output));
+  }
+});
+test('Auth transport and JSON failures identify ADMIN stage, keep a single request and redact response',async()=>{
+  const original=globalThis.fetch;let calls=0;
+  try{
+    globalThis.fetch=async()=>{calls++;throw Object.assign(new Error('secret-password'),{cause:{code:'UND_ERR_SOCKET'}});};
+    await assert.rejects(requestAuth({API_URL:'http://127.0.0.1:55321',ANON_KEY:'private'},'token?grant_type=password',{password:'private'}),error=>error.message.includes('ADMIN_LOGIN:UND_ERR_SOCKET')&&!error.message.includes('private')&&!error.message.includes('secret-password'));
+    assert.equal(calls,1);
+    globalThis.fetch=async()=>new Response('secret-response',{status:200});
+    await assert.rejects(requestAuth({API_URL:'http://127.0.0.1:55321',SERVICE_ROLE_KEY:'private'},'admin/users',{},true),error=>error.message.includes('ADMIN_CREATE:INVALID_JSON')&&!error.message.includes('secret-response'));
+  }finally{globalThis.fetch=original;}
 });
 
 test('Runtime directory remains private and writable after native permission setup',async t=>{
@@ -123,6 +139,17 @@ test('D22 process arguments are literal and shell metacharacters never execute',
 });
 
 
+if(process.env.VOLUME_DEMO_WINDOWS_WORKER==='1')test('Windows launcher exposes only redacted helper failure categories',async t=>{
+  const dir=await temporary(t);await fs.mkdir(path.join(dir,'scripts'));
+  await fs.copyFile(path.join(root,'scripts/local-demo.ps1'),path.join(dir,'scripts/local-demo.ps1'));
+  await fs.writeFile(path.join(dir,'scripts/local-demo-admin.mjs'),"console.error('secret-password raw-provider-response');console.error('VOLUME: [ADMIN_LOGIN:UND_ERR_SOCKET] Kiem tra Auth local; khong reset.');process.exitCode=1;");
+  const result=await new Promise((resolve,reject)=>{
+    const child=spawn('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-File',path.join(dir,'scripts/local-demo.ps1'),'-Action','Stop'],{stdio:['ignore','pipe','pipe']});let output='';
+    child.stdout.on('data',data=>{output+=data;});child.stderr.on('data',data=>{output+=data;});child.on('error',reject);child.on('close',code=>resolve({code,output}));
+  });
+  assert.notEqual(result.code,0);assert.match(result.output,/ADMIN_LOGIN:UND_ERR_SOCKET/);assert.ok(!/secret-password|raw-provider-response/.test(result.output));
+});
+
 if(process.env.VOLUME_DEMO_WINDOWS_WORKER==='1')test('D11/D13/D14/D15 REAL Windows Vite/Job Object start/stop; Edge health is simulated',{timeout:180000},async t=>{
   assert.equal(process.platform,'win32');const ctx=await context();
   await assert.rejects(fs.access(ctx.runtime)); // A fresh isolated CI runner, never reuse an owner runtime.
@@ -138,15 +165,26 @@ if(process.env.VOLUME_DEMO_WINDOWS_WORKER==='1')test('D11/D13/D14/D15 REAL Windo
   assert.equal(JSON.parse(await fs.readFile(ctx.workerFile,'utf8')).process.pid,first.process.pid);
   const {chromium}=await import('@playwright/test');const browser=await chromium.launch();const page=await browser.newPage();
   try{for(const port of [3000,3001]){await page.goto('http://127.0.0.1:'+port);if(port===3000){await page.locator('#hero-title').waitFor();await page.getByRole('link',{name:'Tài khoản ↗',exact:true}).click();}await page.getByLabel('Email',{exact:true}).waitFor();}}finally{await browser.close();}
+  await assertWorkerReady(ctx);
   // Real supervisor crash: its Windows Job must kill only its own descendants.
   const crashed=first;await command('powershell.exe',['-NoProfile','-Command',`Stop-Process -Id ${crashed.process.pid} -Force`]);
   for(let i=0;i<30&&await processIdentity(crashed.edge.pid);i++)await new Promise(r=>setTimeout(r,200));
+  await assert.rejects(assertWorkerReady(ctx),/WORKER_DEAD/);
   assert.equal(await processIdentity(crashed.edge.pid),null);assert.ok(sameProcess(unrelatedIdentity,await processIdentity(unrelated.pid)));
   await startWorker(ctx,{url:'http://127.0.0.1:55321',key:fakeKey('anon'),customer:'http://127.0.0.1:3000'});
   first=JSON.parse(await fs.readFile(ctx.workerFile,'utf8'));assert.ok(!sameProcess(crashed.process,first.process));
   await stopWorker(ctx);await stopWorker(ctx);for(let i=0;i<30&&first.edge&&await processIdentity(first.edge.pid);i++)await new Promise(r=>setTimeout(r,200));
   if(first.edge)assert.equal(await processIdentity(first.edge.pid),null);assert.ok(sameProcess(unrelatedIdentity,await processIdentity(unrelated.pid)));
   for(const port of [3000,3001])await assert.rejects(fetch('http://127.0.0.1:'+port,{signal:AbortSignal.timeout(1000)}));
+  // Reproduce the owner boundary: both a PowerShell launcher and its Node helper exit.
+  const module=pathToFileURL(path.join(root,'scripts/local-demo-admin.mjs')).href;
+  const launchCode='import('+JSON.stringify(module)+').then(async m=>{await m.startWorker(await m.context(),'+JSON.stringify({url:'http://127.0.0.1:55321',key:fakeKey('anon'),customer:'http://127.0.0.1:3000'})+');})';
+  const fixture=path.join(ctx.runtime,'launcher-exit-fixture.mjs');await fs.writeFile(fixture,launchCode);
+  const ps='& '+"'"+process.execPath.replaceAll("'","''")+"' '"+fixture.replaceAll("'","''")+"'; exit $LASTEXITCODE";
+  await command('powershell.exe',['-NoProfile','-EncodedCommand',Buffer.from(ps,'utf16le').toString('base64')]);
+  for(let i=0;i<3;i++){await assertWorkerReady(ctx);await new Promise(r=>setTimeout(r,750));}
+  await stopWorker(ctx);await assert.rejects(assertWorkerReady(ctx));
+  assert.ok(sameProcess(unrelatedIdentity,await processIdentity(unrelated.pid)));
 });
 
 if(process.env.VOLUME_DEMO_REAL==='1')test('D01–D22 REAL Linux Docker/Auth/UI lifecycle (not Windows Docker proof)',{timeout:1200000},async t=>{

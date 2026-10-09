@@ -1,5 +1,19 @@
 # VOLUME integration — merged product, partial end-to-end evidence
 
+## Physical Windows blocker reported after PR #11
+
+Owner Windows 10 evidence: Auth health 200, customer/control/IPC ports not listening,
+recorded supervisor PID dead after START; ADMIN entry produced a generic error.
+This supersedes any interpretation of green CI as owner-PC startup acceptance.
+Targeted repair creates the Windows supervisor with a private hidden console outside the short-lived
+launcher job (no inherited handles), adds process+IPC+HTTP readiness, a separate
+post-start helper check, sanitized worker stage/exit diagnostics and ADMIN error categories.
+Native Windows regression now starts through a separate PowerShell/Node launcher that exits,
+then checks both HTTP endpoints and ownership. Existing assertions and Job Object cleanup remain.
+ADMIN transaction, pending provisioning data and frozen contracts are preserved.
+The exact owner-PC cause and successful repair remain UNVERIFIED until the owner retests;
+the supplied evidence does not identify a specific ADMIN transport/SQL/input error yet.
+
 Verified main baseline: `54904e7e6419a6c5678cbbbb326a9246db2e06ee` (PR #10 merged).
 The cinematic F6.1 integration and Windows fixes are already shipped; the old blocked CI notes are superseded.
 
