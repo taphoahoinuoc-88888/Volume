@@ -257,7 +257,8 @@ export async function startWorker(ctx,pub) {
     const d=await readJson(path.join(ctx.runtime,'worker-status.json'),true);if(d?.attempt===record.attempt&&d.code!=='OK')break;
     await pause(500);
   }
-  const message=await workerFailure(ctx,record,'[WORKER_START_FAILED] Web/Edge chua san sang hoac supervisor da thoat. Giu nguyen du lieu.');
+  const exitDetail=spawnError?'SPAWN_ERROR':child.exitCode!==null?'EXIT_'+child.exitCode:child.signalCode?'SIGNAL_'+child.signalCode:'NOT_READY';
+  const message=await workerFailure(ctx,record,'[SUPERVISOR:'+exitDetail+'] [WORKER_START_FAILED] Web/Edge chua san sang hoac supervisor da thoat. Giu nguyen du lieu.');
   if(child.exitCode===null&&!spawnError)child.kill();
   await stopWorker(ctx);throw spawnError?safeFailure('SUPERVISOR',spawnError):new DemoError(message);
 }
