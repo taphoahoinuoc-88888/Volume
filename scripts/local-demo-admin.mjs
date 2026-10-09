@@ -247,19 +247,31 @@ export async function startWorker(ctx,pub) {
   for(const port of [PORTS.customer,PORTS.control,PORTS.ipc])await freePort(port);
   const record={root:ctx.root,token:randomBytes(32).toString('hex'),attempt:randomUUID(),process:null,edge:null,public:pub};
   await atomic(ctx.workerFile,record);await workerDiagnostic(ctx,record,'WORKER_INIT');
-  const launch=workerCommand(ctx);let spawnError=null;
-  // A background supervisor must not retain the short-lived launcher's console or pipes.
-  const child=spawn(launch.file,launch.args,{cwd:ctx.root,detached:true,windowsHide:true,stdio:'ignore',env:{...process.env,VOLUME_WORKER_STATUS:path.join(ctx.runtime,'worker-status.json'),VOLUME_WORKER_ATTEMPT:record.attempt}});
-  child.on('error',error=>{spawnError=error;});child.unref();
+  const launch=workerCommand(ctx);let spawnError=null,child=null,supervisor=null;
+  const env={...process.env,VOLUME_WORKER_STATUS:path.join(ctx.runtime,'worker-status.json'),VOLUME_WORKER_ATTEMPT:record.attempt};
+  if(process.platform==='win32'){
+    // PowerShell cannot start with DETACHED_PROCESS. Create a private hidden console
+    // outside the short-lived launcher's Job instead; retain the worker's own Job.
+    try{
+      const pid=Number((await command(launch.file,[...launch.args.slice(0,-1),'Launch'],{cwd:ctx.root,env})).trim());
+      const identity=await processIdentity(pid);if(!identity)fail('[SUPERVISOR_DEAD] Supervisor da thoat truoc khi khoi dong.');
+      validateWorkerRecord(ctx,{...record,process:identity});supervisor=identity;
+    }catch(error){spawnError=error;}
+  }else{
+    child=spawn(launch.file,launch.args,{cwd:ctx.root,detached:true,windowsHide:true,stdio:'ignore',env});
+    child.on('error',error=>{spawnError=error;});child.unref();
+  }
   for(let i=0;i<90;i++){
-    if(spawnError||child.exitCode!==null||child.signalCode!==null)break;
+    if(spawnError||(child&&(child.exitCode!==null||child.signalCode!==null)))break;
+    if(supervisor&&!sameProcess(supervisor,await processIdentity(supervisor.pid)))break;
     try{await assertWorkerReady(ctx);return;}catch{}
     const d=await readJson(path.join(ctx.runtime,'worker-status.json'),true);if(d?.attempt===record.attempt&&d.code!=='OK')break;
     await pause(500);
   }
-  const exitDetail=spawnError?'SPAWN_ERROR':child.exitCode!==null?'EXIT_'+child.exitCode:child.signalCode?'SIGNAL_'+child.signalCode:'NOT_READY';
+  const exitDetail=spawnError?'SPAWN_ERROR':child&&child.exitCode!==null?'EXIT_'+child.exitCode:child?.signalCode?'SIGNAL_'+child.signalCode:'NOT_READY';
   const message=await workerFailure(ctx,record,'[SUPERVISOR:'+exitDetail+'] [WORKER_START_FAILED] Web/Edge chua san sang hoac supervisor da thoat. Giu nguyen du lieu.');
-  if(child.exitCode===null&&!spawnError)child.kill();
+  if(child?.exitCode===null&&!spawnError)child.kill();
+  if(supervisor)await killVerified(supervisor);
   await stopWorker(ctx);throw spawnError?safeFailure('SUPERVISOR',spawnError):new DemoError(message);
 }
 async function worker(ctx,input) {

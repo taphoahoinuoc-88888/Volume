@@ -1,4 +1,4 @@
-﻿param([ValidateSet('Start','Stop','Worker')][string]$Action='Start')
+﻿param([ValidateSet('Start','Stop','Launch','Worker')][string]$Action='Start')
 $ErrorActionPreference='Stop'
 if ($Action -ne 'Worker') {
     [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
@@ -48,7 +48,7 @@ try {
     $command=Get-Command node.exe -ErrorAction SilentlyContinue
     if (-not $command) { throw 'Chua co Node.js. Cai Node.js 22 LTS (22.12 tro len), sau do bam lai START_VOLUME.bat.' }
     $script:Node=$command.Source
-    if ($Action -eq 'Worker') {
+    if ($Action -in @('Launch','Worker')) {
         # Suspended creation + Windows Job Object: every descendant belongs to this supervisor.
         # Closing this supervisor kills only its job, including CLI sidecars; no global taskkill.
         Add-Type -TypeDefinition @'
@@ -65,14 +65,22 @@ public static class VolumeDemoJob {
  [DllImport("kernel32.dll",SetLastError=true)] static extern bool SetInformationJobObject(IntPtr job,int kind,ref Extended info,uint size);
  [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern bool CreateProcess(string app,StringBuilder command,IntPtr pa,IntPtr ta,bool inherit,uint flags,IntPtr env,string cwd,ref Startup startup,out ProcessInfo pi);
  [DllImport("kernel32.dll",SetLastError=true)] static extern bool AssignProcessToJobObject(IntPtr job,IntPtr process);
- [DllImport("kernel32.dll")] static extern uint ResumeThread(IntPtr thread);
- [DllImport("kernel32.dll")] static extern uint WaitForSingleObject(IntPtr handle,uint timeout);
- [DllImport("kernel32.dll")] static extern bool GetExitCodeProcess(IntPtr process,out uint code);
- [DllImport("kernel32.dll")] static extern bool FreeConsole();
+ [DllImport("kernel32.dll",SetLastError=true)] static extern uint ResumeThread(IntPtr thread);
+ [DllImport("kernel32.dll",SetLastError=true)] static extern uint WaitForSingleObject(IntPtr handle,uint timeout);
+ [DllImport("kernel32.dll",SetLastError=true)] static extern bool GetExitCodeProcess(IntPtr process,out uint code);
  [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
  [DllImport("kernel32.dll")] static extern bool TerminateProcess(IntPtr process,uint code);
  [DllImport("kernel32.dll")] static extern IntPtr GetStdHandle(int handle);
  [DllImport("kernel32.dll")] static extern bool SetHandleInformation(IntPtr handle,uint mask,uint flags);
+ public static uint Launch(string powershell,string script,string cwd) {
+   Startup si=new Startup();si.cb=(uint)Marshal.SizeOf(si);si.flags=1;si.show=0;
+   ProcessInfo pi;
+   StringBuilder cmd=new StringBuilder("\""+powershell+"\" -NoLogo -NoProfile -ExecutionPolicy Bypass -File \""+script+"\" -Action Worker");
+   // NEW_CONSOLE gives PowerShell a valid private console; BREAKAWAY escapes the
+   // short-lived Node launcher's kill-on-exit job. No handles are inherited.
+   if(!CreateProcess(powershell,cmd,IntPtr.Zero,IntPtr.Zero,false,0x01000010,IntPtr.Zero,cwd,ref si,out pi))throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error(),"SUPERVISOR_CREATE");
+   try{return pi.pid;}finally{CloseHandle(pi.thread);CloseHandle(pi.process);}
+ }
  public static int Run(string node,string helper,string cwd) {
    IntPtr job=CreateJobObject(IntPtr.Zero,null); ProcessInfo pi=new ProcessInfo();
    if(job==IntPtr.Zero)throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error(),"JOB_CREATE");
@@ -80,7 +88,7 @@ public static class VolumeDemoJob {
      Extended limit=new Extended();limit.basic.flags=0x2000;
      if(!SetInformationJobObject(job,9,ref limit,(uint)Marshal.SizeOf(limit)))throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error(),"JOB_LIMIT");
      Startup si=new Startup();si.cb=(uint)Marshal.SizeOf(si);si.flags=0x100;si.input=GetStdHandle(-10);si.output=GetStdHandle(-11);si.error=GetStdHandle(-12);
-     // Node creates this supervisor detached, with NUL stdio; no launcher handles survive.
+     // This supervisor owns its hidden console; no launcher handles survive.
      SetHandleInformation(si.input,1,1);SetHandleInformation(si.output,1,1);SetHandleInformation(si.error,1,1);
      StringBuilder cmd=new StringBuilder("\""+node+"\" \""+helper+"\" worker");
      if(!CreateProcess(node,cmd,IntPtr.Zero,IntPtr.Zero,true,0x08000004,IntPtr.Zero,cwd,ref si,out pi))throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error(),"WORKER_CREATE");
@@ -92,6 +100,11 @@ public static class VolumeDemoJob {
  }
 }
 '@
+        if ($Action -eq 'Launch') {
+            $powershell=Join-Path $PSHOME 'powershell.exe'
+            [VolumeDemoJob]::Launch($powershell,$PSCommandPath,$script:Root)
+            exit 0
+        }
         $workerExit=[VolumeDemoJob]::Run($script:Node,$script:Helper,$script:Root)
         if ($env:VOLUME_WORKER_STATUS) {
             $previous=Get-Content -LiteralPath $env:VOLUME_WORKER_STATUS -Raw | ConvertFrom-Json
@@ -150,7 +163,7 @@ public static class VolumeDemoJob {
     Write-Host 'VOLUME da mo. Tat bang STOP_VOLUME.bat. Pi Node va du lieu duoc giu nguyen.'
     exit 0
 } catch {
-    if ($Action -eq 'Worker') {
+    if ($Action -in @('Launch','Worker')) {
         $cause=$_.Exception.GetBaseException()
         $code=if ($cause -is [System.ComponentModel.Win32Exception]) { 'WIN32_'+$cause.NativeErrorCode } else { 'UNEXPECTED' }
         if ($env:VOLUME_WORKER_STATUS) {
