@@ -139,6 +139,17 @@ test('D22 process arguments are literal and shell metacharacters never execute',
 });
 
 
+if(process.env.VOLUME_DEMO_WINDOWS_WORKER==='1')test('Windows launcher exposes only redacted helper failure categories',async t=>{
+  const dir=await temporary(t);await fs.mkdir(path.join(dir,'scripts'));
+  await fs.copyFile(path.join(root,'scripts/local-demo.ps1'),path.join(dir,'scripts/local-demo.ps1'));
+  await fs.writeFile(path.join(dir,'scripts/local-demo-admin.mjs'),"console.error('secret-password raw-provider-response');console.error('VOLUME: [ADMIN_LOGIN:UND_ERR_SOCKET] Kiem tra Auth local; khong reset.');process.exitCode=1;");
+  const result=await new Promise((resolve,reject)=>{
+    const child=spawn('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-File',path.join(dir,'scripts/local-demo.ps1'),'-Action','Stop'],{stdio:['ignore','pipe','pipe']});let output='';
+    child.stdout.on('data',data=>{output+=data;});child.stderr.on('data',data=>{output+=data;});child.on('error',reject);child.on('close',code=>resolve({code,output}));
+  });
+  assert.notEqual(result.code,0);assert.match(result.output,/ADMIN_LOGIN:UND_ERR_SOCKET/);assert.ok(!/secret-password|raw-provider-response/.test(result.output));
+});
+
 if(process.env.VOLUME_DEMO_WINDOWS_WORKER==='1')test('D11/D13/D14/D15 REAL Windows Vite/Job Object start/stop; Edge health is simulated',{timeout:180000},async t=>{
   assert.equal(process.platform,'win32');const ctx=await context();
   await assert.rejects(fs.access(ctx.runtime)); // A fresh isolated CI runner, never reuse an owner runtime.

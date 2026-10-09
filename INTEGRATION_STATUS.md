@@ -5,7 +5,8 @@
 Owner Windows 10 evidence: Auth health 200, customer/control/IPC ports not listening,
 recorded supervisor PID dead after START; ADMIN entry produced a generic error.
 This supersedes any interpretation of green CI as owner-PC startup acceptance.
-Targeted repair adds detached supervisor/NUL stdio, process+IPC+HTTP readiness, a separate
+Targeted repair creates the Windows supervisor with a private hidden console outside the short-lived
+launcher job (no inherited handles), adds process+IPC+HTTP readiness, a separate
 post-start helper check, sanitized worker stage/exit diagnostics and ADMIN error categories.
 Native Windows regression now starts through a separate PowerShell/Node launcher that exits,
 then checks both HTTP endpoints and ownership. Existing assertions and Job Object cleanup remain.
