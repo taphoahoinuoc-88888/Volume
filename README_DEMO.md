@@ -1,5 +1,7 @@
 # VOLUME — demo Windows một lần bấm
 
+> **Bản product-completion chưa merge:** dùng hướng dẫn “Bản product-completion sau chuyển chủ” cuối tài liệu. Không cập nhật từ main để lấy các tính năng mới. Các mục PR10/Sprint3 phía dưới là hồ sơ lịch sử, không phải lệnh cập nhật bản product hiện tại. Với database cũ, phải dùng UPDATE_VOLUME.bat đã review trước START; không reset dữ liệu.
+
 ## Sửa lỗi worker thoát sau START trên Windows
 
 Owner đã ghi nhận backend/Auth 200 nhưng cổng 3000/3001/55325 mất và PID supervisor chết.

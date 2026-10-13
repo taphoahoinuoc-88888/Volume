@@ -18,7 +18,7 @@ Earlier Sprint prohibitions apply to their historical scope; no old migration or
 - Table/session/billing RPC behavior unchanged. Floor presentation may only use existing configured labels until explicit floor metadata exists; do not fabricate floor numbers.
 - CEO and ADMIN can read/write the explicitly approved product domains globally; existing table/finance/security rules remain unchanged. MANAGER can read/write in assigned venues, STAFF only via fixed SHOP_MANAGE/RANK_MANAGE/FEEDBACK_MANAGE extras; USER owns only orders/profile/tickets/link. Public venue support configuration: ADMIN/CEO globally, MANAGER only assigned venues; STAFF/USER denied. Global security/configuration, demo seeding and floor configuration remain ADMIN-only. No HR role.
 - All sensitive mutable records use bigint CAS, current authority under existing security serialization lock, reason and atomic audit; no-op does not increment version. Public reads safe only; no broad table SELECT or auth schema client grants.
-- Preserve 7 historical migrations and all old tests/workflows; new CI runs old+new regressions. No dependency changes planned.
+- Preserve 7 historical migrations and all old workflow guarantees; reviewed inventory/fixture compatibility exceptions are documented below; new CI runs old+new regressions. No dependency changes planned.
 - Production provider/domain/SMTP, real bank payments, live bot acceptance and physical Windows acceptance remain separate evidence.
 
 ## Exact implementation allowlist (52 paths)
@@ -88,7 +88,7 @@ Each new path is limited to this contract. Frozen files manifest records origina
 | Telegram proof expiry/replay/replacement/unlink/cutoff | telegram-link.test.ts; direct helper deny | product-telegram.test.mjs private-chat boundary | TelegramPage confirm; live Telegram separately NOT RUN without token |
 | Existing tables/billing/CASH | unchanged Sprint 1–3 DB/API suites | existing unit suites | existing E2E suites |
 | BOM/local-loopback/supervisor/data retention | unchanged launcher real-stack suite | product-startup.test.mjs + existing launcher tests | physical Windows separately NOT RUN |
-| Security/scope/secrets/deps | check-product-scope.py + frozen hashes | npm audit/typecheck/lint/build | product.yml (not executed remotely without push authorization) |
+| Security/scope/secrets/deps | check-product-scope.py + frozen hashes | npm audit/typecheck/lint/build | product.yml (owner-authorized real GitHub Actions) |
 
 ## Execution and evidence
 Fresh checkout reconstructed through authenticated GitHub read connector because shell clone has no credential; every tracked blob and root tree verified, signed commit reconstructed byte-for-byte; shallow main preserves the actual base SHA. Old workspace untouched.
@@ -100,7 +100,7 @@ Four paths are necessary: shared permission labels expose the three fixed extras
 
 UPDATE_VOLUME.bat is an explicit, owner-triggered additive upgrade entrypoint for an existing local database. START retains its fingerprint fail-closed behavior. Upgrade verifies owned resources, copies no differing historical migration, makes a private database backup, runs only pending additive migrations, and retains all data. No Docker restart/reset/prune.
 
-## Owner continuation 2026-10-12 / reviewed maintenance boundary
+## Historical owner continuation 2026-10-12 / reviewed maintenance boundary
 Recovered draft checkpoint: eb7535df9addc9f5e45a4c196802364f4dc79cd1. This is preservation, not acceptance.
 The owner now explicitly authorizes this product scope and minimal documented allowlist extensions; no push/merge/deployment.
 Added exact path `scripts/check-sprint3-scope.py`: only an early product-phase dispatch to the dedicated guard. Existing historical guard body remains byte-identical. Existing five workflows and tests remain unchanged and still run on the actual candidate. The product guard verifies every changed path against this list and all immutable baseline files; it must not test a checkout of old code instead of the candidate.
@@ -109,7 +109,7 @@ Signup UI uses existing Supabase email/password signup and frozen USER bootstrap
 Upgrade must compare transformed runtime configuration, seed and functions before replacing the saved fingerprint. Bot setup rejects pre-existing unexpected role memberships/privileges. Telegram links never store Auth JWTs; all private reads check the original session and current cutoff.
 Environment evidence: current sandbox Node can read stat/cmdline but readlink(`/proc/<pid>/exe`) fails EACCES (earlier execution reported ENOENT); do not relax D13/D14.
 
-## Final test mapping and implementation notes
+## Historical initial test mapping and implementation notes (superseded counts in RESULTS.md)
 - Existing DB/API/browser regression files are unchanged and collected together with new coverage, on the actual candidate. New DB guard has 22 assertions (planned aggregate 231); product API P01–P20 plus Telegram TG01–TG10 add 30 cases (aggregate 166). These counts are NOT passes without runtime execution.
 - Eight product browser journeys across the existing six projects add 48 cases (aggregate 228). They cover checkout/CASH/fulfillment, persistent request and cancellation, stale quote, public reply vs internal note, player/rank, management route denial and Web link/unlink. Supabase is real; only Telegram transport identity in that browser fixture is supplied by the trusted test transport, not a live Telegram claim.
 - Product unit cases cover bigint/cart validation, same-venue isolation, safe redirect/contact, malformed local storage and quantity handling. Existing unit cases remain intact.
@@ -134,3 +134,10 @@ Capture successful product browser pages for actual screenshot review (existing 
 
 ### Fixture FK compatibility (before edit)
 Actual run38425254875: all234 DB assertions PASS; product and Telegram API cases pass, 109 historical table/session cases fail before their scenario because payment fixture TRUNCATE omits new feedback FK dependents. Add exact path `tests/integration/fixtures/payment.ts`: include only feedback_messages and feedback_tickets in the existing isolated test-data TRUNCATE statement. No CASCADE shortcut, no constraint removal, no changed behavioral assertion, no production reset. Re-freeze its resulting hash.
+
+## Current verification continuation 2026-10-14
+Push/draft PR/CI are authorized on PRIVATE taphoahoinuoc-88888/Volume, product-completion only; no merge/deploy. RESULTS.md and PR13 distinguish exact tested revisions. Final planned matrix234 DB/166 API/64 unit/240 browser; counts alone are not PASS. Product09 checks management/customer empty orders navigation; Product04/05 use accessible combobox locators. Existing runtime contracts unchanged. Native D13/D14 and populated stop/start now have real hosted-runner PASS evidence; live Telegram and owner-PC acceptance remain private owner tests.
+
+Retention test also invokes the actual reviewed upgrade command against its populated, disposable CI installation, verifies a private PostgreSQL custom-format backup and unchanged data, then owned stop/start. This tests the idempotent current-version update path; it does not claim physical owner-PC or an older installation migration has been accepted. Existing owner data is never targeted.
+
+Showroom CI found product Web links still marked data-telegram and an obsolete Telegram catalog label. The already-allowed showroom adapter now uses data-product-route and truthful Web labels; the frozen Telegram-destination assertion is unchanged. PRODUCT10 clicks shop/player/feedback destinations against real backend, across all six browser projects. No cinematic asset or Auth contract changed.

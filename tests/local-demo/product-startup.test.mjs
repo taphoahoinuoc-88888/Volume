@@ -19,7 +19,7 @@ test('Upgrade refuses config/seed/Edge drift before migration or fingerprint acc
 });
 
 // Explicit CI-only opt-in: never operate on an existing owner installation.
-if(process.env.VOLUME_PRODUCT_REAL==='1')test('REAL product data and confirmed Telegram link survive owned STOP/START', {timeout:1200000},async t=>{
+if(process.env.VOLUME_PRODUCT_REAL==='1')test('REAL product data and Telegram link survive reviewed upgrade and owned STOP/START', {timeout:1200000},async t=>{
  assert.equal(process.env.GITHUB_ACTIONS,'true','Disposable GitHub runner required');
  const {context,command}=await import('../../scripts/local-demo-admin.mjs');
  const {randomUUID,createHash}=await import('node:crypto');const {default:pg}=await import('pg');
@@ -51,6 +51,10 @@ if(process.env.VOLUME_PRODUCT_REAL==='1')test('REAL product data and confirmed T
  const relations=['public.profiles','public.products','public.shop_orders','public.shop_order_items','public.inventory_movements','public.player_profiles','public.rank_definitions','public.player_ranks','public.rank_history','public.feedback_tickets','public.feedback_messages','public.table_sessions','private.telegram_links','private.telegram_challenges'];
  async function snapshot(){const result={};for(const relation of relations){const r=(await db.query('select count(*)::int n, coalesce(jsonb_agg(to_jsonb(t) order by to_jsonb(t)::text),\'[]\'::jsonb)::text data from '+relation+' t')).rows[0];assert.ok(r.n>0,'Populated '+relation);result[relation]={count:r.n,digest:createHash('sha256').update(r.data).digest('hex')};}return result;}
  const before=await snapshot();const beforeOrders=await rpc(user,'shop_orders_read');assert.deepEqual(await transport('select private.telegram_read($1,$2) result',[43001,'orders']),beforeOrders);
+ const backupsBefore=new Set((await fs.readdir(ctx.runtime)).filter(n=>/^backup-product-.*\.dump$/.test(n)));
+ assert.equal(JSON.parse(await cli('upgrade')).upgraded,true);assert.deepEqual(await snapshot(),before,'Reviewed upgrade preserves populated data');
+ const backupsAfter=(await fs.readdir(ctx.runtime)).filter(n=>/^backup-product-.*\.dump$/.test(n)&&!backupsBefore.has(n));assert.equal(backupsAfter.length,1,'Private backup created before migration');
+ const backup=await fs.open(path.join(ctx.runtime,backupsAfter[0]),'r');try{const header=Buffer.alloc(5);await backup.read(header,0,5,0);assert.equal(header.toString(),'PGDMP','Real PostgreSQL custom-format backup');}finally{await backup.close();}
  await db.end();db=null;await cli('stop');assert.equal(JSON.parse(await cli('start')).needsAdmin,false);db=new pg.Pool({connectionString:local.DB_URL});assert.deepEqual(await snapshot(),before,'All populated business data survives restart');
  user=await auth('token?grant_type=password',{email:userEmail,password});assert.deepEqual(await rpc(user,'shop_orders_read'),beforeOrders);assert.deepEqual(await transport('select private.telegram_read($1,$2) result',[43001,'orders']),beforeOrders);
  assert.equal(JSON.stringify(await rpc(user,'feedback_read')).includes('PRIVATE retention note'),false);assert.equal(JSON.stringify(await rpc(user,'feedback_read')).includes('Public retention reply'),true);

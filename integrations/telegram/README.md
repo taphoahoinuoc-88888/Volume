@@ -1,6 +1,6 @@
 # Telegram transport for the existing VOLUME backend
 
-Product draft — real Telegram and final Supabase integration acceptance NOT RUN here.
+Product review candidate — real Supabase integration runs in GitHub Actions (exact revision/results in docs/product/RESULTS.md and PR13). Live Telegram remains NOT RUN pending private owner testing.
 No bot token is included. This is not a Telegram Auth provider and creates no alternative business database.
 
 ## Windows: start without a domain
