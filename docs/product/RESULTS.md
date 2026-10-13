@@ -170,3 +170,7 @@ Showroom CI found product Web links still marked data-telegram and an obsolete T
 ## Additional executed milestone (6649a44)
 
 Candidate6649a440d93eeb73c53c108445b3cac6af2aba5a: Checkpoint1A run38437294024 and Local Demo run38437294066 SUCCESS;234 DB/166 API/64 unit passed. Product run38437294158 native Windows and real upgrade/backup/retention jobs PASS.49 browser cases passed; WebKit then failed only in the afterEach full-page evidence capture (image exceeds32767px), not an ignored failure. Remaining browser cases NOT RUN. Capture now uses viewport for oversized pages and CSS-scale pixels, preserving all assertions; final exact-head results remain linked in PR13.
+
+Screenshot review found customer confirmation text inherited dark text on a dark background. Customer product confirmation now uses the same light surface/dark text as management (cinematic stylesheet untouched). PRODUCT03 verifies actual computed normal-text contrast >=4.5 while retaining stale-price rejection. Modal evidence is viewport-captured so totals/error/actions are readable at the actual screen size.
+
+Shop review: details previously appeared below the entire catalog, making the clicked card appear unresponsive. Details now expand inside the selected card; its cart link jumps to the existing basket. PRODUCT01 verifies visible expansion/close and basket navigation before real checkout/CASH/fulfillment. No price, inventory or order rule changed.

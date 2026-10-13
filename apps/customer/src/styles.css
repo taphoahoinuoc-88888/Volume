@@ -2,6 +2,6 @@
 
 .timer{font-size:clamp(2.5rem,10vw,4rem);font-variant-numeric:tabular-nums;margin:0;font-weight:750}.balances{display:grid;grid-template-columns:1fr 1fr;gap:8px}.balances dd{margin:0;text-align:right;overflow-wrap:anywhere}.reference{overflow-wrap:anywhere}.payment-qr{width:min(260px,100%);height:auto;justify-self:center}
 
-.product-image{width:100%;height:180px;object-fit:contain}.product-confirm{position:fixed;inset:8vh max(1rem,calc((100vw - 620px)/2));z-index:1000;background:#141920;border:1px solid #596773;border-radius:16px;padding:24px;overflow:auto;box-shadow:0 0 0 100vmax #000b}.product-confirm p{overflow-wrap:anywhere}.product-confirm textarea{width:100%}.card code{display:block;overflow-wrap:anywhere}.row>label{min-width:0}.nav{flex-wrap:wrap}
+.product-image{width:100%;height:180px;object-fit:contain}.product-confirm{position:fixed;inset:8vh max(1rem,calc((100vw - 620px)/2));z-index:1000;background:#fff;color:#15212c;border:1px solid #596773;border-radius:16px;padding:24px;overflow:auto;box-shadow:0 0 0 100vmax #000b}.product-confirm p{overflow-wrap:anywhere}.product-confirm textarea{width:100%}.card code{display:block;overflow-wrap:anywhere}.row>label{min-width:0}.nav{flex-wrap:wrap}
 
 .product-overlay{position:fixed;inset:0;background:#0009;z-index:999}.product-confirm{z-index:1000;max-height:90vh;overflow:auto}
