@@ -166,3 +166,7 @@ Continue only product CI findings on the current branch; inspect actual logs and
 - `tests/local-demo/product-telegram.test.mjs`
 
 Showroom CI found product Web links still marked data-telegram and an obsolete Telegram catalog label. The already-allowed showroom adapter now uses data-product-route and truthful Web labels; the frozen Telegram-destination assertion is unchanged. PRODUCT10 clicks shop/player/feedback destinations against real backend, across all six browser projects. No cinematic asset or Auth contract changed.
+
+## Additional executed milestone (6649a44)
+
+Candidate6649a440d93eeb73c53c108445b3cac6af2aba5a: Checkpoint1A run38437294024 and Local Demo run38437294066 SUCCESS;234 DB/166 API/64 unit passed. Product run38437294158 native Windows and real upgrade/backup/retention jobs PASS.49 browser cases passed; WebKit then failed only in the afterEach full-page evidence capture (image exceeds32767px), not an ignored failure. Remaining browser cases NOT RUN. Capture now uses viewport for oversized pages and CSS-scale pixels, preserving all assertions; final exact-head results remain linked in PR13.
