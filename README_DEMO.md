@@ -417,3 +417,26 @@ Bản này bổ sung shop/kho, hạng cơ thủ, phản ánh và liên kết Tel
 - Telegram: chạy `START_TELEGRAM.bat`, lần đầu gõ S và dán token vào ô ẩn; lần sau Enter. Giữ cửa sổ mở. Không cần mua domain để polling. Link localhost chỉ hoạt động trên chính PC; xem `integrations/telegram/README.md`.
 
 Không công cụ nào được phép restart Docker/WSL, prune, xóa volume hay can thiệp Pi Node/testnet2. Các file riêng và backup ở runtime phải giữ ngoài Git, không gửi token/mật khẩu vào chat.
+
+## Bản product-completion sau chuyển chủ (chưa merge main)
+Repository PRIVATE: https://github.com/taphoahoinuoc-88888/Volume — PR #13.
+Không dùng `git pull main` để lấy bản này. Không chạy bản trong thư mục mới nếu muốn tiếp tục database cũ: launcher gắn danh tính dữ liệu với đường dẫn cài đặt.
+
+Nếu thư mục VOLUME hiện tại là Git checkout, mở PowerShell ngay tại đó:
+```powershell
+git status --short
+```
+Nếu có file đã sửa: giữ nguyên, sao lưu và gửi **tên file** để review; không `reset`, `clean`, `stash` mù hoặc ghi đè. Nếu sạch:
+```powershell
+git remote set-url origin https://github.com/taphoahoinuoc-88888/Volume.git
+git fetch origin product-completion
+git switch product-completion
+git pull --ff-only origin product-completion
+```
+Nếu `git switch` báo branch chưa tồn tại, dùng `git switch --track origin/product-completion` rồi tiếp tục. Đăng nhập GitHub bằng trình duyệt/Git Credential Manager của máy; không dán token vào chat.
+Nếu bản đang dùng là ZIP không có Git: tải ZIP của **branch product-completion** từ repo PRIVATE vào thư mục tạm để đối chiếu. Không tự chạy bản ở đường dẫn mới hoặc chép đè các file đã sửa/cấu hình riêng; cần bàn giao cập nhật đã review vào đúng đường dẫn cũ để giữ danh tính runtime.
+
+Sau khi đúng candidate được kiểm chứng và các file đã đồng bộ: dừng bot bằng Ctrl+C; database VOLUME cũ vẫn chạy; nhấp `UPDATE_VOLUME.bat` để xác minh lịch sử và tạo backup riêng trước migration. Nếu công cụ từ chối: giữ nguyên và gửi mã lỗi, không reset. Tiếp theo nhấp `START_VOLUME.bat`; dùng tài khoản cũ. Khách http://127.0.0.1:3000, nhân sự http://127.0.0.1:3001.
+Telegram: `START_TELEGRAM.bat` → S → nhập token ẩn; đăng nhập Web → Telegram → tạo mã → gửi riêng cho bot → quay lại Web kiểm tra đúng danh tính và xác nhận. Polling không cần domain; nút localhost chỉ mở được Web trên máy chạy VOLUME.
+
+Checklist nghiệm thu riêng trên máy owner: đăng nhập Admin/CEO/Manager đúng scope; đặt đơn/CASH/giao hàng và tồn chỉ trừ một lần; phản ánh có trả lời nhưng không lộ ghi chú; hạng và lịch sử; Web và bot cùng đơn/phiên; unlink chặn đọc; STOP/START giữ dữ liệu. Theo dõi Pi Node/testnet2 vẫn như trước. Không restart Docker/WSL, không xóa volume hoặc database.

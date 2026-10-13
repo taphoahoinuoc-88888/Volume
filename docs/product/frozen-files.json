@@ -44,7 +44,7 @@
   "tests/e2e/sprint3-customer.spec.ts": "001f876a7bb15a424f86a1365700f52fb9d7367f",
   "tests/e2e/sprint3-operations.spec.ts": "6db0d18e0487093b2d6eaff7a222d8be5e5650da",
   "tests/integration/fixtures/auth.ts": "fa3845acb8ffed494be9b0c1b048f81055329891",
-  "tests/integration/fixtures/payment.ts": "468d51c34319461bed235b6853d73b2e4f96aa90",
+  "tests/integration/fixtures/payment.ts": "c51e699f192b8cdaacc7e31a060ce6949583c260",
   "tests/integration/fixtures/session-finance.ts": "fb438168893aba2c5989098d777b70df6edaf106",
   "tests/integration/sprint1-api.test.ts": "5cf267d0785f159ecd8d998b94fd0be33b0f079a",
   "tests/integration/sprint1-auth-recovery.test.ts": "14f019ef07bf9dcf87917100ef4eafaf4dffa57a",

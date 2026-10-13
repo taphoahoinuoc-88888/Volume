@@ -21,7 +21,7 @@ Earlier Sprint prohibitions apply to their historical scope; no old migration or
 - Preserve 7 historical migrations and all old tests/workflows; new CI runs old+new regressions. No dependency changes planned.
 - Production provider/domain/SMTP, real bank payments, live bot acceptance and physical Windows acceptance remain separate evidence.
 
-## Exact implementation allowlist (51 paths)
+## Exact implementation allowlist (52 paths)
 ```text
 docs/product/IMPLEMENTATION_PLAN.md
 docs/product/RECOVERY_MATRIX.md
@@ -36,6 +36,7 @@ supabase/tests/product_security.test.sql
 supabase/tests/sprint2_constraints.test.sql
 supabase/tests/sprint3_security.test.sql
 tests/integration/product.test.ts
+tests/integration/fixtures/payment.ts
 tests/integration/telegram-link.test.ts
 tests/e2e/product.spec.ts
 packages/shared/src/product.ts
@@ -127,3 +128,9 @@ Actual Product run 38368082969 attempt2: Linux launcher/D13/D14 PASS, Windows pr
 Add exactly two paths: `supabase/tests/sprint2_constraints.test.sql` and `supabase/tests/sprint3_security.test.sql`. Purpose: scope the six immutable baseline bigint-version checks to their six named Sprint1–3 entities and make full-schema inventory an exact 21-name list including the 11 explicitly authorized product entities. Do not drop/skip any assertion or change any runtime grant/RLS/function/schema. Existing deny/atomicity/billing assertions remain byte-identical; keep 16 and 12 assertions respectively. Manifest re-freezes these narrowly reviewed test changes; other frozen hashes unchanged.
 Product test misconception: Sprint1 deliberately grants authenticated schema USAGE for RLS helpers. USAGE does not expose a schema via PostgREST or grant table/function access. Replace the incorrect no-USAGE expectation with explicit no-CREATE and no direct read/write of both private Telegram tables; retain helper EXECUTE denial checks and add exact product mutable-version inventory. Preserve frozen schema grant, never revoke it to force a test PASS.
 Capture successful product browser pages for actual screenshot review (existing allowed product.spec.ts), with fixture data only and link proofs redacted. No dependency or architecture change.
+
+### Completion evidence extension within existing allowed paths
+`tests/local-demo/product-startup.test.mjs` adds an explicitly opted-in, fresh GitHub-runner-only real launcher persistence journey. It creates only disposable test data through real Auth/RPCs, records aggregate digests (never credentials), stops/starts only owned VOLUME services and verifies populated accounts, inventory/orders, ranks/history, feedback/private notes and Telegram links survive. Refuse if not GITHUB_ACTIONS or if an existing launcher state exists. No reset/prune/volume deletion, no testnet2 operations. `.github/workflows/product.yml` adds a dedicated disposable Linux retention job; PR-triggered validation remains complete, while redundant product branch push runs are removed (main push remains). Physical owner-PC and live Telegram remain owner acceptance.
+
+### Fixture FK compatibility (before edit)
+Actual run38425254875: all234 DB assertions PASS; product and Telegram API cases pass, 109 historical table/session cases fail before their scenario because payment fixture TRUNCATE omits new feedback FK dependents. Add exact path `tests/integration/fixtures/payment.ts`: include only feedback_messages and feedback_tickets in the existing isolated test-data TRUNCATE statement. No CASCADE shortcut, no constraint removal, no changed behavioral assertion, no production reset. Re-freeze its resulting hash.

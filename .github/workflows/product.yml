@@ -1,7 +1,7 @@
 name: Product completion
 on:
   push:
-    branches: [product-completion, main]
+    branches: [main]
   pull_request:
     branches: [main]
 permissions:
@@ -163,3 +163,20 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --test tests/local-demo/product-startup.test.mjs tests/local-demo/product-telegram.test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  product-retention:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: npm ci
+      - name: Real populated product data survives owned launcher STOP and START
+        env:
+          VOLUME_PRODUCT_REAL: '1'
+        run: node --test tests/local-demo/product-startup.test.mjs
+      - name: Stop only owned demo services, preserve data
+        if: always()
+        run: node scripts/local-demo-admin.mjs stop
