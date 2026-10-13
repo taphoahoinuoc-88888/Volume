@@ -31,6 +31,7 @@ async function workerFailure(ctx,record,fallback){
 }
 const fail=message=>{throw new DemoError(message);};
 export function validNode(version=process.versions.node) {const [major,minor]=version.split('.').map(Number);return (major===22&&minor>=12)||major===24;}
+export function parseAdminInput(text){return JSON.parse(text.replace(/^\uFEFF/,''));}
 export function checkCredentials(email,password) {
   if(typeof email!=='string'||email.length>254||! /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))fail('Email chua dung. Hay nhap lai.');
   if(typeof password!=='string'||password.length<12||password.length>256||/[\x00-\x1f]/.test(password))fail('Mat khau can 12-256 ky tu, khong co ky tu dieu khien.');
@@ -351,19 +352,61 @@ export async function start(ctx) {
     state.containers=(await inventory(ctx,state)).map(c=>c.Id);state.phase='READY';await save(ctx,state);await assertWorkerReady(ctx);return {needsAdmin};
   }catch(e){state.containers=(await inventory(ctx,state)).map(c=>c.Id);state.phase='FAILED';await save(ctx,state);await stopWorker(ctx).catch(()=>{});throw e;}
 }
+export async function verifyUpgradeInputs(ctx,state) {
+ const target=path.join(ctx.runtime,'supabase');
+ const original=await fs.readFile(path.join(ctx.root,'supabase','config.toml'),'utf8');
+ const expected=original.replace('project_id = "volume-v2"','project_id = "'+state.project+'"').replace('port = 54321','port = 55321').replace('port = 54322','port = 55322').replace('shadow_port = 54320','shadow_port = 55320').replace('port = 54324','port = 55324');
+ if(await fs.readFile(path.join(target,'config.toml'),'utf8')!==expected)fail('Cau hinh backend da thay doi. Dung de review.');
+ const seed=await fs.readFile(path.join(ctx.root,'supabase','seed.sql'));
+ if(!seed.equals(await fs.readFile(path.join(target,'seed.sql'))))fail('Seed da thay doi. Dung de review.');
+ const source=path.join(ctx.root,'supabase','functions'),dest=path.join(target,'functions');
+ const names=(await filesUnder(source)).map(p=>path.relative(source,p));
+ if(JSON.stringify(names)!==JSON.stringify((await filesUnder(dest)).map(p=>path.relative(dest,p))))fail('Danh sach Edge function khac baseline.');
+ for(const name of names)if(!(await fs.readFile(path.join(source,name))).equals(await fs.readFile(path.join(dest,name))))fail('Edge function da thay doi. Dung de review.');
+}
+export async function upgradeProduct(ctx) {
+ await dockerLocal(ctx);await secureRuntime(ctx);const state=await stateFor(ctx);
+ if(!state)fail('Chua co VOLUME local. Bam START_VOLUME.bat de tao database moi.');
+ const items=await inventory(ctx,state);validateOwned(state,items);
+ const ownedDb=items.find(c=>c.Name==='/supabase_db_'+state.project&&c.State?.Running);
+ if(!ownedDb)fail('Database VOLUME phai dang chay de sao luu. Khong restart Docker/WSL.');
+ await verifyUpgradeInputs(ctx,state);
+ const original=path.join(ctx.runtime,'supabase','migrations');
+ for(const file of await fs.readdir(original)) {
+   if(!file.endsWith('.sql'))continue;
+   const [before,after]=await Promise.all([fs.readFile(path.join(original,file)),fs.readFile(path.join(ctx.root,'supabase','migrations',file))]);
+   if(!before.equals(after))fail('Migration cu khac ban hien tai. Dung de review; khong ghi de.');
+ }
+ const s=await status(ctx);const db=await poolFor(ctx,s);
+ try {
+  const existing=(await db.query('select version from supabase_migrations.schema_migrations order by version')).rows.map(r=>r.version);
+  const expected=(await fs.readdir(path.join(ctx.root,'supabase','migrations'))).filter(p=>p.endsWith('.sql')).map(p=>p.split('_')[0]).sort();
+  if(JSON.stringify(existing)!==JSON.stringify(expected.slice(0,existing.length)))fail('Lich su migration khong phai prefix da duyet.');
+  if(expected.slice(existing.length).some(v=>!['20261012000100','20261012000200','20261012000300','20261013000100'].includes(v)))fail('Co migration ngoai pham vi product da duyet.');
+  await stopWorker(ctx);
+  // Complete binary dump; failure prevents migration. Never log its contents.
+  const backup=await exec('docker',['exec',ownedDb.Id,'pg_dump','-U','supabase_admin','-d','postgres','--format=custom'],{encoding:'buffer',maxBuffer:512*1024*1024,timeout:180000,windowsHide:true});
+  const backupPath=path.join(ctx.runtime,'backup-product-'+Date.now()+'.dump');await fs.writeFile(backupPath,backup.stdout,{mode:0o600});
+  for(const file of await fs.readdir(path.join(ctx.root,'supabase','migrations')))if(file.endsWith('.sql'))await fs.copyFile(path.join(ctx.root,'supabase','migrations',file),path.join(original,file));
+  await ctx.run(ctx.cli,['migration','up','--local','--workdir',ctx.runtime],{timeout:180000});
+  await migrationCheck(ctx,db);state.fingerprint=await sourceFingerprint(ctx.root);await save(ctx,state);
+  console.error('VOLUME: Da sao luu rieng va cap nhat additive. Bam START_VOLUME.bat. Khong xoa du lieu.');return {upgraded:true};
+ }finally{await db.end();}
+}
 async function main() {
   const mode=process.argv[2];const ctx=await context();
   if(mode==='worker'){const record=await readJson(ctx.workerFile);try{await worker(ctx,{record,pub:record.public});}catch(error){await workerDiagnostic(ctx,record,'WORKER_INIT',error);throw error;}return;}
   if(mode==='check'){console.log(JSON.stringify(await assertWorkerReady(ctx)));return;}
-  if(!['start','stop','admin','recover'].includes(mode))fail('Lenh demo khong hop le.');
+  if(!['start','stop','admin','recover','upgrade'].includes(mode))fail('Lenh demo khong hop le.');
   const release=await lock();try{
     let result;
-    if(mode==='start')result=await start(ctx);
+    if(mode==='upgrade')result=await upgradeProduct(ctx);
+    else if(mode==='start')result=await start(ctx);
     else if(mode==='stop')result=await stop(ctx);
     else {
       const state=await stateFor(ctx);if(!state||state.phase!=='READY')fail('Bam START_VOLUME.bat truoc.');
       await dockerLocal(ctx);validateOwned(state,await inventory(ctx,state));const s=await status(ctx);const db=await poolFor(ctx,s);
-      try{await migrationCheck(ctx,db);let data='';for await(const chunk of process.stdin){data+=chunk;if(data.length>4096)fail('Du lieu nhap qua lon.');}const input=await atStage('ADMIN_INPUT',()=>JSON.parse(data));
+      try{await migrationCheck(ctx,db);let data='';for await(const chunk of process.stdin){data+=chunk;if(data.length>4096)fail('Du lieu nhap qua lon.');}const input=await atStage('ADMIN_INPUT',()=>parseAdminInput(data));
         result=await atStage(mode==='admin'?'ADMIN_SETUP':'ADMIN_RECOVERY',()=>mode==='admin'?setupAdmin(ctx,state,s,db,input):recoverAdmin(s,db,input.email));
       }finally{await db.end();}
     }

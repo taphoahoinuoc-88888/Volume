@@ -13,7 +13,7 @@ document.querySelectorAll<HTMLElement>('[data-telegram]').forEach(element=>{
  const link=telegramLink(username,element.dataset.tgStart||'home');
  if(element instanceof HTMLAnchorElement&&link){element.href=link;element.rel='noopener noreferrer';}
  element.addEventListener('click',event=>{
-  if(!link){event.preventDefault();note.textContent='Telegram chưa được cấu hình. Gọi Volume: 0929 379 797.';note.scrollIntoView({block:'center'});return;}
+  if(!link){event.preventDefault();note.textContent='Telegram chưa được cấu hình. Mở mục Hỗ trợ để gửi phản ánh hoặc xem liên hệ chi nhánh.';note.scrollIntoView({block:'center'});return;}
   // A standard HTTPS app link works on iOS and desktop; no timed redirect or popup race.
   if(!(element instanceof HTMLAnchorElement))window.location.assign(link);
  });
@@ -44,3 +44,7 @@ void loadTables();
 const interval=window.setInterval(()=>void loadTables(),15000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void loadTables();});
 window.addEventListener('pagehide',()=>clearInterval(interval),{once:true});
+
+// Functional product destinations retain the existing cinematic presentation/assets.
+const featureRoutes:Record<string,string>={shop:'/shop',orders:'/orders',rank:'/player',feedback:'/feedback',member:'/profile'};
+document.querySelectorAll<HTMLElement>('[data-telegram]').forEach(element=>{const route=featureRoutes[element.dataset.tgStart||''];if(!route)return;const copy=element.cloneNode(true) as HTMLElement;if(copy instanceof HTMLAnchorElement){copy.href=route;copy.removeAttribute('target');}else copy.addEventListener('click',()=>window.location.assign(route));element.replaceWith(copy);});

@@ -401,3 +401,19 @@ Earlier WebKit internal navigation errors remain historical failures, not retros
 At that same candidate, Local Demo run 37738855973 was SUCCESS: native Windows 21/21 and real Linux stack 21/21,
 zero failed/skipped. Full Windows Docker Desktop end-to-end remains NOT RUN. The new candidate and post-merge
 five-workflow evidence will be recorded in PR #9; merge requires all five workflows green on the actual candidate.
+
+## Product completion — bản local chưa nghiệm thu backend/E2E
+
+Bản này bổ sung shop/kho, hạng cơ thủ, phản ánh và liên kết Telegram. Xem `docs/product/RESULTS.md` trước khi dùng. Không thay bản đang chạy trên PC bằng thao tác reset/clean hoặc chép đè file riêng.
+
+### Cách chạy Windows sau khi bản cập nhật được kiểm thử trên môi trường phù hợp
+- Cài mới: chạy `START_VOLUME.bat`, làm theo hướng dẫn ADMIN hiện có. Khách truy cập `http://127.0.0.1:3000`; nhân sự `http://127.0.0.1:3001`.
+- Bản cũ có dữ liệu: giữ nguyên thư mục/cấu hình riêng, dừng bot bằng Ctrl+C; khi database VOLUME vẫn chạy, dùng `UPDATE_VOLUME.bat`. Công cụ xác minh resource thuộc VOLUME, so cấu hình/seed/function/migration cũ, tạo bản sao lưu riêng rồi chỉ áp dụng bốn migration product đã duyệt. Nếu từ chối, dừng và gửi mã lỗi; không reset database. Sau đó dùng START lại. Luồng upgrade thực tế vẫn cần nghiệm thu, chưa được gọi PASS tại sandbox này.
+- `ADMIN_INPUT` chấp nhận UTF-8 BOM. Owner đã báo website khởi động được sau bản sửa BOM; đó chưa phải nghiệm thu tất cả luồng Windows/ADMIN.
+- ADMIN → Sản phẩm & kho → “Tạo danh mục minh họa để thử” nếu toàn bộ catalogue còn trống. Giá, tồn và ảnh đều DEMO; không phải dữ liệu bán hàng thật. Không tự ghi đè catalogue đang có.
+- Nhân sự được cấp quyền nhập/xuất kho bằng số lượng tăng/giảm và lý do. Khách đặt giỏ giữ hàng 15 phút; tại quầy ghi nhận đủ CASH thực tế rồi giao hàng/xuất kho. Chưa tích hợp thanh toán ngân hàng cho shop.
+- Cơ thủ tự tạo hồ sơ → gửi mã cơ thủ cho quản lý → quản lý xác nhận hạng theo quy định CLB. Không tự tính hạng.
+- ADMIN/CEO cấu hình tài khoản Telegram hỗ trợ công khai cho từng chi nhánh; MANAGER chỉ cấu hình chi nhánh được giao. Khách gửi phản ánh hoặc mở liên hệ này tại mục Hỗ trợ.
+- Telegram: chạy `START_TELEGRAM.bat`, lần đầu gõ S và dán token vào ô ẩn; lần sau Enter. Giữ cửa sổ mở. Không cần mua domain để polling. Link localhost chỉ hoạt động trên chính PC; xem `integrations/telegram/README.md`.
+
+Không công cụ nào được phép restart Docker/WSL, prune, xóa volume hay can thiệp Pi Node/testnet2. Các file riêng và backup ở runtime phải giữ ngoài Git, không gửi token/mật khẩu vào chat.

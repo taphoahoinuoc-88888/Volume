@@ -1,6 +1,6 @@
 import type {Access,Role} from './database.types';
 export const roleLabels:Record<Role,string>={ADMIN:'Quản trị hệ thống',CEO:'Ban điều hành',MANAGER:'Quản lý chi nhánh',STAFF:'Nhân viên',USER:'Khách hàng'};
-export const extraLabels:Record<string,string>={STAFF_DIRECTORY_READ:'Xem danh sách nhân sự',STAFF_MEMBERSHIP_STATUS_MANAGE:'Đổi trạng thái làm việc của nhân viên'};
+export const extraLabels:Record<string,string>={SHOP_MANAGE:'Quản lý sản phẩm, kho và đơn hàng',RANK_MANAGE:'Xác nhận hạng cơ thủ',FEEDBACK_MANAGE:'Xử lý phản ánh dịch vụ',STAFF_DIRECTORY_READ:'Xem danh sách nhân sự',STAFF_MEMBERSHIP_STATUS_MANAGE:'Đổi trạng thái làm việc của nhân viên'};
 export const accountLabel=(status:string)=>status==='ACTIVE'?'Được sử dụng':'Tài khoản bị khóa';
 export const membershipLabel=(status:string)=>status==='ACTIVE'?'Đang làm việc':'Ngừng tại chi nhánh';
 export function hasExtra(a:Access,permission:string,venue?:string){return a.memberships.some(m=>m.status==='ACTIVE'&&(!venue||m.venue_id===venue)&&m.extra_permissions.includes(permission));}
