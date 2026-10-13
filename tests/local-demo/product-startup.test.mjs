@@ -54,6 +54,7 @@ if(process.env.VOLUME_PRODUCT_REAL==='1')test('REAL product data and confirmed T
  await db.end();db=null;await cli('stop');assert.equal(JSON.parse(await cli('start')).needsAdmin,false);db=new pg.Pool({connectionString:local.DB_URL});assert.deepEqual(await snapshot(),before,'All populated business data survives restart');
  user=await auth('token?grant_type=password',{email:userEmail,password});assert.deepEqual(await rpc(user,'shop_orders_read'),beforeOrders);assert.deepEqual(await transport('select private.telegram_read($1,$2) result',[43001,'orders']),beforeOrders);
  assert.equal(JSON.stringify(await rpc(user,'feedback_read')).includes('PRIVATE retention note'),false);assert.equal(JSON.stringify(await rpc(user,'feedback_read')).includes('Public retention reply'),true);
+ assert.deepEqual(await transport('select private.telegram_read($1,$2) result',[43001,'feedback']),await rpc(user,'feedback_read'));assert.deepEqual(await transport('select private.telegram_read($1,$2) result',[43001,'rank']),await rpc(user,'player_rank_read'));
  await rpc(admin,'change_shop_order',{p_order:order.id,expected_version:'2',p_action:'FULFILL',p_reason:'Deliver after restart'});assert.equal((await db.query('select on_hand from public.products where id=$1',[product.id])).rows[0].on_hand,3);
  assert.equal((await transport('select private.telegram_read($1,$2) result',[43001,'orders']))[0].state,'FULFILLED');
 });
