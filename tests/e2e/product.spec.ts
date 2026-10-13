@@ -35,3 +35,5 @@ test('PRODUCT08 CEO creates a product through preview/reason/confirm; operationa
  const row=(await f.rpc('ceo','shop_inventory',{p_venue:f.A})).data.products.find((p:any)=>p.name===name);expect(row).toBeTruthy();
  await page.goto(control+'/support?venue='+f.A);await expect(page.getByRole('heading',{name:'Liên hệ hỗ trợ Telegram',exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'Tầng / khu vực bàn'})).toHaveCount(0);await page.getByLabel('Username hỗ trợ (không có @)').fill('BrowserVenueHelp');await page.getByRole('button',{name:'Xem trước công bố'}).click();await confirm(page);await expect(page.getByText('Hiện tại: @BrowserVenueHelp')).toBeVisible();
 });
+
+test.afterEach(async({page},info)=>{if(info.status===info.expectedStatus){await page.locator('code').evaluateAll(nodes=>nodes.forEach(n=>{if(n.textContent?.includes('link_'))n.textContent='[LINK PROOF REDACTED]';}));await page.screenshot({path:info.outputPath('product-surface.png'),fullPage:true});}});

@@ -1,6 +1,7 @@
 # Product completion — authorized 2026-10-12
 Base: e25296877b84e9a233b3fda2f37afcd8003e0924; exact Git tree 3d231546c6aeebeda73b24a7cb82bb919e460602.
-Branch: product-completion (local; no push/merge/deploy authorized).
+Repository: taphoahoinuoc-88888/Volume (PRIVATE after ownership transfer).
+Branch: product-completion; owner authorizes push, draft PR13 and CI/fixes; no merge/deploy.
 Owner attachment authorizes additive shop/inventory, rank, feedback/support, Telegram linking, local startup.
 Earlier Sprint prohibitions apply to their historical scope; no old migration or identity/security helper will be edited.
 
@@ -20,7 +21,7 @@ Earlier Sprint prohibitions apply to their historical scope; no old migration or
 - Preserve 7 historical migrations and all old tests/workflows; new CI runs old+new regressions. No dependency changes planned.
 - Production provider/domain/SMTP, real bank payments, live bot acceptance and physical Windows acceptance remain separate evidence.
 
-## Exact implementation allowlist (49 paths)
+## Exact implementation allowlist (51 paths)
 ```text
 docs/product/IMPLEMENTATION_PLAN.md
 docs/product/RECOVERY_MATRIX.md
@@ -32,6 +33,8 @@ supabase/migrations/20261012000200_product_operations.sql
 supabase/migrations/20261012000300_telegram_link.sql
 supabase/migrations/20261013000100_product_management_permissions.sql
 supabase/tests/product_security.test.sql
+supabase/tests/sprint2_constraints.test.sql
+supabase/tests/sprint3_security.test.sql
 tests/integration/product.test.ts
 tests/integration/telegram-link.test.ts
 tests/e2e/product.spec.ts
@@ -118,3 +121,9 @@ Starting clean local HEAD 872577337a21eb1b8a597fc2e29d6301febbe8c1; remote main 
 Add exact path `supabase/migrations/20261013000100_product_management_permissions.sql` before implementation: replace only product permission helper and safe access/contact RPCs. Explicit CEO writes are owner-authorized; no global security/configuration grant. All ten earlier migrations are now hash-frozen; no assumed knowledge of owner DB application state, no history rewriting.
 Venue human-support contact is operational, not global security: ADMIN/CEO global; MANAGER assigned venue; STAFF (including product extras)/USER denied. UI must distinguish operational support from ADMIN-only sample seeding/floor settings.
 Local updater accepts this specific fourth product migration; no reset or lifecycle broadening. Existing source tests denying CEO product writes are corrected to the new owner contract, with positive CEO and negative scope/security cases, not skipped.
+
+## Real CI compatibility maintenance, documented before edits (2026-10-13)
+Actual Product run 38368082969 attempt2: Linux launcher/D13/D14 PASS, Windows product PASS, real Supabase/Edge starts; 227/231 DB assertions PASS. Four failures are schema-inventory test assumptions, not observed permission bypasses.
+Add exactly two paths: `supabase/tests/sprint2_constraints.test.sql` and `supabase/tests/sprint3_security.test.sql`. Purpose: scope the six immutable baseline bigint-version checks to their six named Sprint1–3 entities and make full-schema inventory an exact 21-name list including the 11 explicitly authorized product entities. Do not drop/skip any assertion or change any runtime grant/RLS/function/schema. Existing deny/atomicity/billing assertions remain byte-identical; keep 16 and 12 assertions respectively. Manifest re-freezes these narrowly reviewed test changes; other frozen hashes unchanged.
+Product test misconception: Sprint1 deliberately grants authenticated schema USAGE for RLS helpers. USAGE does not expose a schema via PostgREST or grant table/function access. Replace the incorrect no-USAGE expectation with explicit no-CREATE and no direct read/write of both private Telegram tables; retain helper EXECUTE denial checks and add exact product mutable-version inventory. Preserve frozen schema grant, never revoke it to force a test PASS.
+Capture successful product browser pages for actual screenshot review (existing allowed product.spec.ts), with fixture data only and link proofs redacted. No dependency or architecture change.

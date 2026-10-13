@@ -1,11 +1,13 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path=public,extensions;
-select plan(22);
+select plan(25);
 select ok(not has_table_privilege('authenticated','public.products','SELECT'),'No broad catalog table SELECT');
 select ok(not has_table_privilege('authenticated','public.shop_orders','SELECT'),'No broad order SELECT');
 select ok(not has_table_privilege('authenticated','public.feedback_messages','SELECT'),'No note table SELECT');
-select ok(not has_schema_privilege('authenticated','private','USAGE'),'Private transport schema not exposed');
+select ok(not has_schema_privilege('authenticated','private','CREATE'),'Client cannot create or replace private schema objects');
+select ok(not has_table_privilege('authenticated','private.telegram_links','SELECT,INSERT,UPDATE,DELETE'),'Client cannot read or mutate private links despite RLS-helper schema USAGE');
+select ok(not has_table_privilege('authenticated','private.telegram_challenges','SELECT,INSERT,UPDATE,DELETE'),'Client cannot read or mutate private proofs');
 select ok(not has_function_privilege('authenticated','private.telegram_read(bigint,text)','EXECUTE'),'Direct private read denied');
 select ok(not has_function_privilege('anon','private.telegram_redeem(text,bigint,text)','EXECUTE'),'Direct proof redemption denied');
 select ok(has_function_privilege('volume_telegram_transport','private.telegram_read(bigint,text)','EXECUTE'),'Only trusted bot transport can read linked projection');
@@ -24,5 +26,6 @@ select ok(not has_function_privilege('service_role','private.product_can(uuid,te
 select ok(not has_function_privilege('anon','public.save_support(uuid,bigint,text,text)','EXECUTE'),'Guest cannot configure venue support');
 select ok(has_function_privilege('authenticated','public.save_support(uuid,bigint,text,text)','EXECUTE'),'Authenticated callers reach scope-enforcing support RPC');
 select is((select count(*)::int from pg_proc p join pg_namespace n on n.oid=p.pronamespace join pg_roles r on r.oid=p.proowner where ((n.nspname='private' and p.proname='product_can') or (n.nspname='public' and p.proname in ('product_access','support_setting','save_support'))) and r.rolname='volume_core' and p.prosecdef and 'search_path=""'=any(p.proconfig)),4,'Replacement helpers retain restricted owner and empty search path');
+select is((select array_agg(table_name::text order by table_name)::text from information_schema.columns where table_schema='public' and column_name='version' and data_type='bigint'),array['billiard_tables','feedback_tickets','payments','player_profiles','player_ranks','products','profiles','rank_definitions','shop_orders','staff_memberships','table_sessions','venue_support','venues']::text[]::text,'Exact six baseline plus seven product bigint-version entities');
 select * from finish();
 rollback;
