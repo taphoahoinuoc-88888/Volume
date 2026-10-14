@@ -177,3 +177,5 @@ Shop review: details previously appeared below the entire catalog, making the cl
 
 ## CI repair: expanded product details (2026-10-14)
 Candidate ceb28012 failed the same PRODUCT01 viewport assertion in all four browser workflows. The screenshot shows the detail button at the viewport bottom; expanding content below it does not scroll the document. ShopPage now focuses the newly expanded detail panel and brings it into view after React commits it. The existing viewport assertion is retained unchanged; no timeout, security, fixture or workflow relaxation. Full candidate CI is required after this patch.
+
+PRODUCT10 on52d9e96 passed49 browser cases before WebKit internal navigation failure. HTTP diagnostics show immediate hard navigation after headings while shop_catalog/player_rank_read and all four feedback RPCs were still pending and aborted. The test now waits for the exact destination RPC responses (assert200 and completed bodies), plus the existing WebKit load-settling pattern before leaving. No retry/timeout increase or assertion removal. The product-detail viewport regression passed.
