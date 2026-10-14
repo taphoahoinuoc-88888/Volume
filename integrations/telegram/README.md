@@ -1,65 +1,28 @@
-# Telegram → VOLUME V2
+# Telegram transport for the existing VOLUME backend
 
-This is a small server-side adapter for the existing bot identity, not a new business backend.
-It reuses labels and intent routes from supplied F6.1 `bot/navigation.py` (`PRIMARY`/`CUSTOMER`)
-and `bot/app.py`. The original ZIP/source remains untouched. `legacy-navigation.json` contains
-only those presentation labels/routes. No legacy Store, SQLite, credentials, payment simulation,
-staff identity or role assignment is imported. No new dependencies are needed: use the launcher-supported Node 22/24.
+Product review candidate — real Supabase integration runs in GitHub Actions (exact revision/results in docs/product/RESULTS.md and PR13). Live Telegram remains NOT RUN pending private owner testing.
+No bot token is included. This is not a Telegram Auth provider and creates no alternative business database.
 
-## What actually works
+## Windows: start without a domain
+1. Start VOLUME with `START_VOLUME.bat`. Existing installations need the reviewed additive upgrade described in `README_DEMO.md`; no database reset.
+2. Stop the old bot poller if this same bot is already running elsewhere. Do not delete its webhook automatically.
+3. Double-click `START_TELEGRAM.bat`; type `S` on the first run. Paste the existing bot token in the hidden prompt. This configures the existing bot; it does not create another bot.
+4. Later runs: double-click and press Enter. Keep the bot window open. Ctrl+C stops polling only.
 
-- `/start`, existing showroom intents, navigation buttons, `/tables`, `/booking`, `/status`, `/visit`.
-- Availability and hourly price: fresh `public_tables` RPC on each click, with pagination.
-- Venue name/address: `public_venues`; contact: the same venue's public table projection.
-- Booking and status: button opens the existing authenticated V2 `/tables` page. V2 performs
-  creation, version/idempotency checks and displays actual private session/payment state.
-  **This is an authenticated website handoff, not private-session synchronization into Telegram chat.**
-- Shop discovery opens the preserved showroom. Rank/tournament/order menus explicitly state that
-  their legacy transactions are not synchronized; no invented rankings, orders or payment success.
+Polling uses outbound Telegram HTTPS; no purchased domain or public inbound webhook is necessary. Localhost/127.0.0.1 web buttons open the website **only on the host PC**. Phone Telegram can receive the bot's text while that PC runs; a localhost button on the phone cannot reach the PC. Public hosting is not configured or implied.
 
-The old shop/ranking/tournament services require the legacy SQLite authority and cannot safely be
-imported as V2 services in this scope. Their source/data is preserved, but this adapter does not run
-those transactions. Do not switch an actively used legacy bot to this adapter expecting its old
-orders/registrations to appear. Existing legacy records remain in their original installation.
+Setup uses the already-owned local Supabase connection only to provision a dedicated non-superuser/noinherit login. It grants membership solely in `volume_telegram_transport`; that role has only the two private read/redeem helper capabilities, not direct Auth/profile/payment/table access. A pre-existing login with unexpected privilege/ownership/membership is rejected. The server validates local resource identity before this operation. Password and token stay in ACL-protected runtime `telegram-private.json`, outside the repository. No token appears on process arguments. Setup refuses an existing webhook. One local kernel lock covers setup and every polling entrypoint. Another machine's poller cannot be controlled; Telegram conflict causes a safe stop.
 
-## Private configuration and startup
+## Link and test
+1. Sign into the customer website → Telegram → create a five-minute code.
+2. Copy the `/start link_…` command to the bot's **private** chat.
+3. Return to the website, refresh link status, verify the displayed Telegram identity, and confirm.
+4. In bot menus inspect own orders, own rank, own feedback and own table sessions. Management menus only provide URLs for scopes/actions returned by the shared backend; the website independently reauthorizes.
+5. Unlink on Web; private bot reads must be denied. Account/permission cutoff also denies the old link; log in again, unlink and relink explicitly.
 
-1. Reuse the existing bot token, privately. Do not create another bot or run two pollers for one token.
-   Stop the old bot process normally only when ready to test this adapter; do not delete its data.
-2. Copy `.env.example` to a private file **outside the checkout**, e.g.
-   `%LOCALAPPDATA%\VolumeTelegram\server.env`. Fill the token, exact bot username, existing V2
-   API URL/anon key, and owner-approved HTTPS customer website origin. Do not use service-role keys,
-   user tokens, URL credentials, or a phone's `localhost` as the customer website.
-   Keep `VITE_TELEGRAM_BOT_USERNAME` on the website consistent with `VOLUME_TELEGRAM_USERNAME`.
-3. From the repository, PowerShell:
+Proofs are random, hashed at rest, expire in five minutes and redeem once. Web confirmation is bound to the initiating real Supabase session. Bot transport accepts only a matching private chat/from identity. The DB maps it to a confirmed link and checks that original Auth session plus live account/cutoff on every private read. No target JWT is stored. Existing confirmed identities cannot be silently replaced; a Telegram identity previously linked to another Volume profile is conservatively rejected even after revocation pending a future reviewed transfer policy.
 
-```powershell
-node --env-file="$env:LOCALAPPDATA\VolumeTelegram\server.env" integrations/telegram/bot.mjs --check
-node --env-file="$env:LOCALAPPDATA\VolumeTelegram\server.env" integrations/telegram/bot.mjs
-```
+Human support is separate from the bot: ADMIN/CEO (all venues) or MANAGER (assigned venues only) configures a public venue support username in Control Center → Liên hệ hỗ trợ. Customer Feedback presents that link; private staff contacts are never used automatically.
 
-`--check` verifies bot identity, checks for an existing webhook, and reads V2 public data. It sends no
-messages and never removes webhooks or pending updates. A webhook causes an explicit safe stop;
-do not disable an existing deployment blindly. `TELEGRAM_HTTP_409` means a conflicting poller or
-webhook must be resolved. Connection/configuration failures stop with a sanitized code; no raw API
-response, message content, token or full request URL is logged. Correct the connection and restart.
-Ctrl+C stops this process only, after the current long poll (up to 40 seconds). START/STOP_VOLUME
-does not start or stop the bot. No public deployment is performed by these commands.
-
-Telegram callbacks and start payloads are navigation selections only. The adapter makes only two
-anon RPC calls; no private token, chat→profile identity map, admin endpoint or database connection.
-Private booking/status stays behind existing V2 login and RLS. Adding in-chat private status or
-booking would require a separately reviewed account-linking contract; it is not silently enabled.
-
-## Verification
-
-`node --test tests/local-demo/telegram.test.mjs` checks transport, field projections, route validation,
-pagination, spoofed/group updates and credential-safe errors. The existing Local Demo real-stack CI
-also checks this adapter against real V2 RPCs, data changes, hidden/disabled venue filtering and
-anon denial of private sessions. Telegram transport is mocked in CI; no real message is sent.
-
-**Remaining live step:** with the existing bot token and an already approved reachable HTTPS V2
-website, run `--check`, then test `/start`, table refresh, venue info, booking through V2 login,
-and `/status` handoff on a real Telegram client. Verify the same session in Control Center.
-Bank-provider success is not available in the local demo without a configured provider; do not
-simulate payment or call it paid. Live Telegram is NOT RUN without those credentials/endpoints.
+## Evidence boundaries
+`node --test tests/local-demo/telegram.test.mjs tests/local-demo/product-telegram.test.mjs tests/local-demo/product-startup.test.mjs` exercises transport/input boundaries with test doubles, not live Telegram. `tests/integration/telegram-link.test.ts` exercises real Auth/database ownership, replay, cutoff and rollback when local Supabase is available. `tests/e2e/product.spec.ts` covers Web confirmation using the trusted test transport, not Telegram servers. No live-chat success is claimed without owner testing with private credentials.

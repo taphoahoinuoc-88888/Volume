@@ -29,7 +29,7 @@ export function paymentTools(f:Fixture){
  const roles:Record<string,string>={admin1:'ADMIN',admin2:'ADMIN',ceo:'CEO',managerA:'MANAGER',managerB:'MANAGER',managerAB:'MANAGER',staffA:'STAFF',staffB:'STAFF',hrA:'STAFF',user1:'USER',user2:'USER',disabled:'USER',inactive:'STAFF'};
  async function reset(){
   const c=await f.db.connect();try{await c.query('begin');await c.query('select pg_advisory_xact_lock(20261006,1)');
-   await c.query('truncate public.session_financial_issues,public.session_cash_receipts,public.payment_receipts,public.payments,public.table_sessions,public.billiard_tables,public.audit_events');
+   await c.query('truncate public.feedback_messages,public.feedback_tickets,public.session_financial_issues,public.session_cash_receipts,public.payment_receipts,public.payments,public.table_sessions,public.billiard_tables,public.audit_events');
    for(const [name,role]of Object.entries(roles))await c.query('update public.profiles set role=$2,account_status=$3,version=1,sessions_revoked_before=null where id=$1',[f.users[name].id,role,name==='disabled'?'DISABLED':'ACTIVE']);
    await c.query("update public.staff_memberships set status=case when profile_id=$1 then 'INACTIVE' else 'ACTIVE' end,extra_permissions=case when profile_id=$2 then array['STAFF_DIRECTORY_READ','STAFF_MEMBERSHIP_STATUS_MANAGE'] else '{}'::text[] end,version=1",[f.users.inactive.id,f.users.hrA.id]);
    await c.query("update public.venues set is_enabled=code<>'DISABLED',is_public=code='A',version=1,management_contact=null");await c.query('commit');

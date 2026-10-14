@@ -1,0 +1,13 @@
+import {test,expect} from 'vitest';import {cartLines,safeNext,supportLink,vnd,type Product} from './product';
+const p={id:'p',venue_id:'a',price_vnd:'100000',version:'9007199254740993',available:2} as Product;
+test('cart keeps bigint versions/prices as exact strings',()=>expect(cartLines([{product:p,quantity:2}])).toEqual([{id:'p',quantity:2,price_vnd:'100000',version:'9007199254740993',available:2}]));
+test.each([0,-1,100,1.5,NaN])('invalid quantity %s denied',quantity=>expect(()=>cartLines([{product:p,quantity}])).toThrow());
+test('cart denies cross-venue and duplicate SKU',()=>{expect(()=>cartLines([{product:p,quantity:1},{product:{...p,id:'q',venue_id:'b'},quantity:1}])).toThrow();expect(()=>cartLines([{product:p,quantity:1},{product:p,quantity:1}])).toThrow();});
+test.each(['https://evil.example','//evil.example','/admin','javascript:alert(1)','/shop?token=secret'])('safe handoff %s',value=>expect(safeNext(value)).toBe(value.startsWith('/shop')?'/shop':'/profile'));
+test('working internal handoff preserved',()=>expect(safeNext('/feedback')).toBe('/feedback'));
+test('public human contact is constrained username only',()=>{expect(supportLink('support_volume')).toBe('https://t.me/support_volume');expect(supportLink('https://evil')).toBeNull();expect(supportLink(null)).toBeNull();});
+test('money never converts bigint to float',()=>expect(vnd('9007199254740993')).toContain('9.007.199.254.740.993'));
+import {restoreCart,cartQuantity} from './product';
+test.each(['{broken','[null]','[{"quantity":1.5}]','{"product":"invalid"}'])('malformed local draft safely clears %s',raw=>expect(restoreCart(raw)).toEqual([]));
+test.each(['','NaN','1.5','-1','100','1e999'])('quantity %s cannot crash bigint total',value=>expect(cartQuantity(value)).toBe(1));
+test('valid quantities and exact draft retained across reload',()=>{expect(cartQuantity('99')).toBe(99);const row={product:{...p,id:'10000000-0000-0000-0000-000000000001',venue_id:'20000000-0000-0000-0000-000000000001',name:'Example',variant:''},quantity:2};expect(restoreCart(JSON.stringify([row]))).toEqual([row]);});

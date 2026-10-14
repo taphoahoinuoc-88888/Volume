@@ -1,5 +1,7 @@
 # VOLUME — demo Windows một lần bấm
 
+> **Bản product-completion chưa merge:** dùng hướng dẫn “Bản product-completion sau chuyển chủ” cuối tài liệu. Không cập nhật từ main để lấy các tính năng mới. Các mục PR10/Sprint3 phía dưới là hồ sơ lịch sử, không phải lệnh cập nhật bản product hiện tại. Với database cũ, phải dùng UPDATE_VOLUME.bat đã review trước START; không reset dữ liệu.
+
 ## Sửa lỗi worker thoát sau START trên Windows
 
 Owner đã ghi nhận backend/Auth 200 nhưng cổng 3000/3001/55325 mất và PID supervisor chết.
@@ -401,3 +403,42 @@ Earlier WebKit internal navigation errors remain historical failures, not retros
 At that same candidate, Local Demo run 37738855973 was SUCCESS: native Windows 21/21 and real Linux stack 21/21,
 zero failed/skipped. Full Windows Docker Desktop end-to-end remains NOT RUN. The new candidate and post-merge
 five-workflow evidence will be recorded in PR #9; merge requires all five workflows green on the actual candidate.
+
+## Product completion — bản local chưa nghiệm thu backend/E2E
+
+Bản này bổ sung shop/kho, hạng cơ thủ, phản ánh và liên kết Telegram. Xem `docs/product/RESULTS.md` trước khi dùng. Không thay bản đang chạy trên PC bằng thao tác reset/clean hoặc chép đè file riêng.
+
+### Cách chạy Windows sau khi bản cập nhật được kiểm thử trên môi trường phù hợp
+- Cài mới: chạy `START_VOLUME.bat`, làm theo hướng dẫn ADMIN hiện có. Khách truy cập `http://127.0.0.1:3000`; nhân sự `http://127.0.0.1:3001`.
+- Bản cũ có dữ liệu: giữ nguyên thư mục/cấu hình riêng, dừng bot bằng Ctrl+C; khi database VOLUME vẫn chạy, dùng `UPDATE_VOLUME.bat`. Công cụ xác minh resource thuộc VOLUME, so cấu hình/seed/function/migration cũ, tạo bản sao lưu riêng rồi chỉ áp dụng bốn migration product đã duyệt. Nếu từ chối, dừng và gửi mã lỗi; không reset database. Sau đó dùng START lại. Luồng upgrade thực tế vẫn cần nghiệm thu, chưa được gọi PASS tại sandbox này.
+- `ADMIN_INPUT` chấp nhận UTF-8 BOM. Owner đã báo website khởi động được sau bản sửa BOM; đó chưa phải nghiệm thu tất cả luồng Windows/ADMIN.
+- ADMIN → Sản phẩm & kho → “Tạo danh mục minh họa để thử” nếu toàn bộ catalogue còn trống. Giá, tồn và ảnh đều DEMO; không phải dữ liệu bán hàng thật. Không tự ghi đè catalogue đang có.
+- Nhân sự được cấp quyền nhập/xuất kho bằng số lượng tăng/giảm và lý do. Khách đặt giỏ giữ hàng 15 phút; tại quầy ghi nhận đủ CASH thực tế rồi giao hàng/xuất kho. Chưa tích hợp thanh toán ngân hàng cho shop.
+- Cơ thủ tự tạo hồ sơ → gửi mã cơ thủ cho quản lý → quản lý xác nhận hạng theo quy định CLB. Không tự tính hạng.
+- ADMIN/CEO cấu hình tài khoản Telegram hỗ trợ công khai cho từng chi nhánh; MANAGER chỉ cấu hình chi nhánh được giao. Khách gửi phản ánh hoặc mở liên hệ này tại mục Hỗ trợ.
+- Telegram: chạy `START_TELEGRAM.bat`, lần đầu gõ S và dán token vào ô ẩn; lần sau Enter. Giữ cửa sổ mở. Không cần mua domain để polling. Link localhost chỉ hoạt động trên chính PC; xem `integrations/telegram/README.md`.
+
+Không công cụ nào được phép restart Docker/WSL, prune, xóa volume hay can thiệp Pi Node/testnet2. Các file riêng và backup ở runtime phải giữ ngoài Git, không gửi token/mật khẩu vào chat.
+
+## Bản product-completion sau chuyển chủ (chưa merge main)
+Repository PRIVATE: https://github.com/taphoahoinuoc-88888/Volume — PR #13.
+Không dùng `git pull main` để lấy bản này. Không chạy bản trong thư mục mới nếu muốn tiếp tục database cũ: launcher gắn danh tính dữ liệu với đường dẫn cài đặt.
+
+Nếu thư mục VOLUME hiện tại là Git checkout, mở PowerShell ngay tại đó:
+```powershell
+git status --short
+```
+Nếu có file đã sửa: giữ nguyên, sao lưu và gửi **tên file** để review; không `reset`, `clean`, `stash` mù hoặc ghi đè. Nếu sạch:
+```powershell
+git remote set-url origin https://github.com/taphoahoinuoc-88888/Volume.git
+git fetch origin product-completion
+git switch product-completion
+git pull --ff-only origin product-completion
+```
+Nếu `git switch` báo branch chưa tồn tại, dùng `git switch --track origin/product-completion` rồi tiếp tục. Đăng nhập GitHub bằng trình duyệt/Git Credential Manager của máy; không dán token vào chat.
+Nếu bản đang dùng là ZIP không có Git: tải ZIP của **branch product-completion** từ repo PRIVATE vào thư mục tạm để đối chiếu. Không tự chạy bản ở đường dẫn mới hoặc chép đè các file đã sửa/cấu hình riêng; cần bàn giao cập nhật đã review vào đúng đường dẫn cũ để giữ danh tính runtime.
+
+Sau khi đúng candidate được kiểm chứng và các file đã đồng bộ: dừng bot bằng Ctrl+C; database VOLUME cũ vẫn chạy; nhấp `UPDATE_VOLUME.bat` để xác minh lịch sử và tạo backup riêng trước migration. Nếu công cụ từ chối: giữ nguyên và gửi mã lỗi, không reset. Tiếp theo nhấp `START_VOLUME.bat`; dùng tài khoản cũ. Khách http://127.0.0.1:3000, nhân sự http://127.0.0.1:3001.
+Telegram: `START_TELEGRAM.bat` → S → nhập token ẩn; đăng nhập Web → Telegram → tạo mã → gửi riêng cho bot → quay lại Web kiểm tra đúng danh tính và xác nhận. Polling không cần domain; nút localhost chỉ mở được Web trên máy chạy VOLUME.
+
+Checklist nghiệm thu riêng trên máy owner: đăng nhập Admin/CEO/Manager đúng scope; đặt đơn/CASH/giao hàng và tồn chỉ trừ một lần; phản ánh có trả lời nhưng không lộ ghi chú; hạng và lịch sử; Web và bot cùng đơn/phiên; unlink chặn đọc; STOP/START giữ dữ liệu. Theo dõi Pi Node/testnet2 vẫn như trước. Không restart Docker/WSL, không xóa volume hoặc database.

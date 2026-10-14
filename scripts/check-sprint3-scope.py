@@ -1,3 +1,11 @@
+# PRODUCT_PHASE_DISPATCH_BEGIN
+# Owner-authorized product phase: same current candidate, additive exact allowlist.
+import pathlib as _product_path
+if _product_path.Path('docs/product/IMPLEMENTATION_PLAN.md').is_file():
+    import runpy as _product_run
+    _product_run.run_path('scripts/check-product-scope.py', run_name='__main__')
+    raise SystemExit(0)
+# PRODUCT_PHASE_DISPATCH_END
 """S3-T01/T43/T45/T47/T48: exact candidate scope; no frozen-snapshot testing."""
 import json
 import pathlib

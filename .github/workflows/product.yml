@@ -1,0 +1,182 @@
+name: Product completion
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: product-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  required-product:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      TARGETED_EDGE_UI: 'false'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Exact product allowlist, immutable security, JWT configuration and secrets
+        run: python scripts/check-product-scope.py
+      - name: Locked dependencies, typecheck, lint, unit tests, dependency audit
+        run: |
+          npm ci
+          npm run typecheck
+          npm run lint
+          npm run test:unit
+          npm audit --audit-level=high
+      - name: Launcher, BOM, upgrade and Telegram transport security
+        run: node --test tests/local-demo/admin.test.mjs tests/local-demo/telegram.test.mjs tests/local-demo/product-startup.test.mjs tests/local-demo/product-telegram.test.mjs
+      - name: Pin Supabase and start real local stack
+        run: |
+          npm install --global supabase@2.119.0
+          test "$(supabase --version)" = '2.119.0'
+          if ! supabase start > "$RUNNER_TEMP/supabase-start.log" 2>&1; then
+            python - <<'PY'
+          import os,pathlib,re
+          data=pathlib.Path(os.environ['RUNNER_TEMP']+'/supabase-start.log').read_text()
+          for line in data.splitlines():
+            if re.search(r'error|failed|SQLSTATE|Applying migration',line,re.I):
+              print(re.sub(r'eyJ[A-Za-z0-9_.-]+|sb_(?:secret|publishable)_[A-Za-z0-9_-]+','[REDACTED]',line))
+          PY
+            exit 1
+          fi
+          supabase db reset
+          docker exec supabase_db_volume-v2 psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c "alter role volume_session_reader bypassrls; grant usage on schema auth to volume_session_reader; grant select(id,user_id,created_at) on auth.sessions to volume_session_reader;"
+      - name: Record actual local runtime versions without credentials
+        run: |
+          supabase --version
+          node --version
+          docker inspect --format '{{.Name}} {{.Config.Image}}' supabase_db_volume-v2 supabase_auth_volume-v2 supabase_edge_runtime_volume-v2
+          docker exec supabase_db_volume-v2 psql -U postgres -d postgres -At -v ON_ERROR_STOP=1 -c "select version();"
+      - name: Serve JWT-verified local opening function
+        run: |
+          if [ "$TARGETED_EDGE_UI" != 'true' ]; then
+            supabase functions serve open-table-payment > "$RUNNER_TEMP/edge-serve.log" 2>&1 &
+          fi
+          node --input-type=module - <<'JS'
+          import {execFileSync} from 'node:child_process';
+          const local=JSON.parse(execFileSync('supabase',['status','-o','json'],{encoding:'utf8'}));
+          let ready=false;
+          for(let i=0;i<60;i++){
+            try{const r=await fetch(local.API_URL+'/functions/v1/open-table-payment',{headers:{apikey:local.ANON_KEY,Authorization:'Bearer '+local.ANON_KEY}});if(r.status===405){ready=true;break;}}catch{}
+            await new Promise(resolve=>setTimeout(resolve,500));
+          }
+          if(!ready)throw new Error('JWT-verified Edge handler not ready');
+          console.log('Actual JWT-verified Edge function readiness PASS');
+          JS
+          if [ "$TARGETED_EDGE_UI" != 'true' ]; then
+            echo 'VOLUME_EDGE_RUNTIME_READY=true' >> "$GITHUB_ENV"
+          fi
+      - name: Complete frozen Sprint1–3 and additive product DB/API/Edge/security regression
+        run: |
+          supabase test db
+          if [ "$TARGETED_EDGE_UI" = 'true' ]; then
+            npx vitest run tests/integration/sprint2-acquire.test.ts tests/integration/sprint2-payments.test.ts
+          else
+            npm run test:integration
+          fi
+      - name: Public browser environment and production build
+        run: |
+          supabase status -o json > "$RUNNER_TEMP/local-status.json"
+          python - <<'PY'
+          import os,json,pathlib
+          data=json.loads(pathlib.Path(os.environ['RUNNER_TEMP']+'/local-status.json').read_text())
+          assert data['API_URL'].startswith('http://127.0.0.1:')
+          content='VITE_SUPABASE_URL='+data['API_URL']+'\nVITE_SUPABASE_ANON_KEY='+data['ANON_KEY']+'\nVITE_CUSTOMER_URL=http://127.0.0.1:3000\n'
+          for app in ['customer','control-center']:pathlib.Path('apps',app,'.env').write_text(content)
+          PY
+          npm run build
+      - name: Install Chromium and WebKit
+        run: npx playwright install --with-deps chromium webkit
+      - name: Actual browser/backend Auth, roles, venue scope and confirmations
+        run: |
+          if [ "$TARGETED_EDGE_UI" = 'true' ]; then
+            npm run test:e2e -- tests/e2e/sprint1-permissions.spec.ts --project=webkit-desktop --grep 'PW02: direct route'
+          else
+            npm run test:e2e
+          fi
+      - name: Redacted Edge runtime diagnostics on failure
+        if: failure()
+        run: |
+          python - <<'PY'
+          import os,pathlib,re,subprocess
+          texts=[]
+          p=pathlib.Path(os.environ['RUNNER_TEMP']+'/edge-serve.log')
+          if p.exists():texts.append(p.read_text())
+          r=subprocess.run(['docker','logs','supabase_edge_runtime_volume-v2'],capture_output=True,text=True)
+          texts.append(r.stdout+r.stderr)
+          for line in ''.join(texts).splitlines():
+            if re.search(r'error|failed|boot|cannot|permission|worker|Listening|Serving',line,re.I):
+              line=re.sub(r'eyJ[A-Za-z0-9_.-]+|sb_(?:secret|publishable)_[A-Za-z0-9_-]+|postgres(?:ql)?://[^\s]+','[REDACTED]',line)
+              print(line)
+          PY
+      - name: Redact test credentials before artifact upload
+        if: always()
+        run: |
+          python - <<'PY'
+          import pathlib,re
+          for p in pathlib.Path('test-results').rglob('*'):
+            if p.suffix in {'.json','.md','.txt'}:
+              content=p.read_text()
+              content=re.sub(r'Local-[0-9a-f-]+!|Recovered-browser-password-2026!|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+|sb_secret_[A-Za-z0-9_-]+','[REDACTED]',content)
+              content=re.sub(r'([?&](?:token|token_hash|access_token|refresh_token)=)[^&\s\"\'<>]+',r'\1[REDACTED]',content)
+              p.write_text(content)
+          PY
+      - name: Browser screenshots and report evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: product-browser-evidence
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Required evidence summary
+        if: env.TARGETED_EDGE_UI != 'true'
+        run: |
+          echo "Product candidate required tests PASS for $GITHUB_SHA; real Supabase CLI2.119.0, JWT-verified Edge function, DB/API/security and Chromium/WebKit desktop1440/mobile390/320; frozen Sprint1 regression retained; provider-neutral only, no production; current HEAD includes authorized additive product coverage; no live Telegram or physical owner-PC claim." >> "$GITHUB_STEP_SUMMARY"
+      - name: Stop local stack
+        if: always()
+        run: supabase stop --no-backup
+
+  windows-product:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npx playwright install chromium
+      - name: Frozen supervisor and new product input/transport tests
+        shell: powershell
+        run: |
+          ./tests/local-demo/launcher.Tests.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test tests/local-demo/product-startup.test.mjs tests/local-demo/product-telegram.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  product-retention:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: npm ci
+      - name: Real populated product data survives owned launcher STOP and START
+        env:
+          VOLUME_PRODUCT_REAL: '1'
+        run: node --test tests/local-demo/product-startup.test.mjs
+      - name: Stop only owned demo services, preserve data
+        if: always()
+        run: node scripts/local-demo-admin.mjs stop

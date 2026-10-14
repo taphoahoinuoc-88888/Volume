@@ -12,14 +12,14 @@ function origin(value,local=false){
  return u.origin;
 }
 export function configuration(env){
- const api=origin(env.VOLUME_SUPABASE_URL,true),web=origin(env.VOLUME_CUSTOMER_URL);
+ const api=origin(env.VOLUME_SUPABASE_URL,true),web=origin(env.VOLUME_CUSTOMER_URL,env.VOLUME_TELEGRAM_LOCAL_TEST==='1');
  const key=env.VOLUME_SUPABASE_ANON_KEY||'';
  // This adapter intentionally uses only the same legacy anon key as frozen V2.
  let claims;try{claims=JSON.parse(Buffer.from(key.split('.')[1],'base64url').toString());}catch{throw new BotError('CONFIG_ANON_KEY');}
  if(key.split('.').length!==3||claims.role!=='anon')throw new BotError('CONFIG_ANON_KEY');
  const username=env.VOLUME_TELEGRAM_USERNAME||'';
  if(!/^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(username))throw new BotError('CONFIG_USERNAME');
- return {api,web,key,username};
+ const control=env.VOLUME_CONTROL_URL?origin(env.VOLUME_CONTROL_URL,env.VOLUME_TELEGRAM_LOCAL_TEST==='1'):null;return {api,web,key,username,control};
 }
 const clean=(value,max=120)=>typeof value==='string'?value.replace(/[\u0000-\u001f\u007f]/g,' ').slice(0,max):'';
 const validId=value=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -47,7 +47,7 @@ export function publicData(config,request=fetch){
 }
 const labels={available:'Còn trống',pending:'Đang giữ để thanh toán',playing:'Đang chơi'};
 const menu=JSON.parse(await readFile(new URL('./legacy-navigation.json',import.meta.url),'utf8'));
-const routes=new Set(['home','booking','book','manage_table','tables','visit','volume','shop','rank','tournament','feedback','club_owner','orders','member','match','help']);
+const routes=new Set(['home','booking','book','manage_table','tables','visit','volume','shop','rank','tournament','feedback','club_owner','orders','member','match','help','management']);
 const urlButton=(text,url)=>({text,url});
 const actionButton=(text,callback_data)=>({text,callback_data});
 export function resolveIntent(text){
@@ -56,10 +56,25 @@ export function resolveIntent(text){
  const intent=match[1]==='start'?(match[2]||'home'):({menu:'home',status:'manage_table'}[match[1]]||match[1]);
  return routes.has(intent)?intent:'home';
 }
-export function createHandler({config,data,send}){
+export function createHandler({config,data,send,privateData}){
  const web=(path)=>config.web+path;
  const home=()=>menu.map(row=>row.map(([text,intent])=>actionButton(text,intent)));
- async function view(intent){
+ async function view(intent,telegram){
+  if(intent==='shop')return {text:'🛍 CỬA HÀNG VOLUME\nChọn sản phẩm, xem giá/tồn tại chi nhánh và đặt hàng trong tài khoản. Đơn hàng giữ tồn 15 phút; thanh toán tiền mặt tại quầy.',rows:[[urlButton('Mua gậy, phụ kiện và bàn',web('/shop'))],[actionButton('Đơn hàng của tôi','orders')]]};
+  if(['orders','rank','feedback','management'].includes(intent)||(intent==='manage_table'&&privateData)){
+   const paths={orders:'/orders',rank:'/player',feedback:'/feedback',manage_table:'/tables',management:'/overview'};
+   const titles={orders:'ĐƠN HÀNG CỦA TÔI',rank:'HẠNG CƠ THỦ',feedback:'PHẢN ÁNH & HỖ TRỢ',manage_table:'BÀN / PHIÊN CỦA TÔI',management:'QUẢN LÝ'};
+   let text=titles[intent],rows=[[urlButton('Mở '+titles[intent].toLowerCase(),web(paths[intent]==='/overview'?'/profile':paths[intent]))]];
+   try{if(!privateData)throw new BotError('LINK_REQUIRED');const result=await privateData.read(telegram,{manage_table:'sessions'}[intent]||intent);
+    if(intent==='orders')text+='\n'+(result.slice(0,8).map(o=>'Đơn '+o.id.slice(0,8)+' · '+({PENDING:'Chờ thu tiền tại quầy',PAID:'Đã thu tiền mặt',FULFILLED:'Đã giao',CANCELLED:'Đã hủy',EXPIRED:'Hết hạn'}[o.state]||'Kiểm tra trạng thái')+' · '+new Intl.NumberFormat('vi-VN').format(BigInt(o.total_vnd))+' đ').join('\n')||'Chưa có đơn hàng.');
+    if(intent==='rank')text+='\n'+(result.ranks.map(r=>clean(r.venue_name)+' · '+clean(r.rank_name)+(r.rank_active?'':' (định nghĩa đã ngừng)')).join('\n')||'Chưa có hạng do CLB xác nhận.');
+    if(intent==='feedback')text+='\n'+(result.slice(0,5).map(t=>clean(t.message,180)+' · '+({NEW:'Đã tiếp nhận',IN_PROGRESS:'Đang xử lý',RESOLVED:'Đã giải quyết'}[t.state]||'Đang kiểm tra')+(t.messages.length?'\nTrả lời: '+clean(t.messages.at(-1).message,300):'')).join('\n\n')||'Chưa có phản ánh.');
+    if(intent==='manage_table')text+='\n'+(result.slice(0,8).map(t=>clean(t.label)+' · '+({ACTIVE:'Đang chơi',PENDING_PAYMENT:'Chờ thanh toán',CANCELLED:'Đã hủy',CLOSED:'Đã đóng'}[t.state]||'Kiểm tra trạng thái')).join('\n')||'Chưa có phiên của bạn.');
+    if(intent==='management'){rows=[];text+='\nCác màn hình sẽ kiểm tra lại tài khoản VOLUME và phạm vi chi nhánh.';for(const v of result.venues){const base=config.control;if(!base)continue;for(const [allowed,path,label] of [[v.access.shop_read,'orders','Đơn hàng'],[v.access.shop_read,'products','Kho'],[v.access.rank_read,'ranks','Hạng'],[v.access.feedback_read,'feedback','Phản ánh'],[v.access.support_write,'support','Liên hệ hỗ trợ']])if(allowed)rows.push([urlButton(clean(v.name)+' · '+label,base+'/'+path+'?venue='+encodeURIComponent(v.id))]);if(['ADMIN','CEO','MANAGER','STAFF'].includes(result.role))rows.push([urlButton(clean(v.name)+' · Bàn & phiên',base+'/tables?venue='+encodeURIComponent(v.id))]);}if(!rows.length)text+='\nKhông có phạm vi quản lý hoặc chưa cấu hình địa chỉ Control Center.';}
+   }catch{ text+='\nTelegram không có quyền đọc dữ liệu riêng khi chưa liên kết hoặc quyền đã bị thu hồi. Đăng nhập VOLUME, mở Liên kết Telegram và xác nhận tài khoản của bạn.';rows.push([urlButton('Liên kết / kiểm tra tài khoản',web('/telegram'))]);}
+   if(intent==='feedback')rows.push([urlButton('Gửi phản ánh / chat với người hỗ trợ',web('/feedback'))]);
+   return {text,rows};
+  }
   const match=/^tables_(\d{1,4})$/.exec(intent);
   if(match||['tables','booking','book'].includes(intent)){
    const tables=await data.tables(),page=match?Number(match[1]):0,size=6;
@@ -87,10 +102,12 @@ export function createHandler({config,data,send}){
   // No group/forwarded/inline identity assumptions. No Telegram value becomes V2 authorization.
   if(message?.chat?.type!=='private'||!Number.isSafeInteger(message.chat.id)||message.chat.id<=0||from?.id!==message.chat.id||from?.is_bot)return;
   if(callback&&typeof callback.id==='string')await send('answerCallbackQuery',{callback_query_id:callback.id});
+  const proof=!callback&&/^\/start(?:@[A-Za-z0-9_]+)? link_([0-9a-f]{48})$/.exec(message.text||'');
+  if(proof){let text;try{if(!privateData)throw new BotError('PRIVATE_BACKEND_CONFIG');await privateData.redeem(proof[1],from.id,clean(from.first_name||from.username||'Telegram'));text='Đã nhận yêu cầu. Quay lại website VOLUME, tải lại và xác nhận đúng tài khoản Telegram. Liên kết chưa có hiệu lực cho đến khi bạn xác nhận trên website.';}catch{text='Mã không hợp lệ, đã dùng hoặc hết hạn. Tạo mã mới trong tài khoản VOLUME; không gửi mật khẩu vào chat.';}await send('sendMessage',{chat_id:from.id,text});return;}
   const requested=callback?callback.data:resolveIntent(message.text);
   const intent=routes.has(requested)||/^(tables|visit)_\d{1,4}$/.test(requested||'')?requested:'home';
   let result;
-  try{result=await view(intent);}catch(error){if(!(error instanceof BotError))throw error;result={text:'Chưa kết nối được dữ liệu V2. Không có yêu cầu đặt bàn nào được tạo. Thử tải lại hoặc mở website.',rows:[[actionButton('Thử lại',intent)],[urlButton('Mở Volume',web('/tables'))]]};}
+  try{result=await view(intent,from.id);}catch(error){if(!(error instanceof BotError))throw error;result={text:'Chưa kết nối được dữ liệu V2. Không có yêu cầu đặt bàn nào được tạo. Thử tải lại hoặc mở website.',rows:[[actionButton('Thử lại',intent)],[urlButton('Mở Volume',web('/tables'))]]};}
   if(intent!=='home')result.rows.push([actionButton('← Menu Volume','home')]);
   await send('sendMessage',{chat_id:message.chat.id,text:result.text,link_preview_options:{is_disabled:true},reply_markup:{inline_keyboard:result.rows}});
  };
@@ -107,19 +124,23 @@ export function telegramApi(token,request=fetch){
  };
 }
 export async function run(env=process.env){
+ const {lock}=await import('../../scripts/local-demo-admin.mjs');const release=await lock(55327);
+ try{return await poll(env);}finally{await release();}
+}
+async function poll(env){
  const config=configuration(env),api=telegramApi(env.VOLUME_TELEGRAM_TOKEN);
  const me=await api('getMe');if(me.username?.toLowerCase()!==config.username.toLowerCase())throw new BotError('BOT_USERNAME_MISMATCH');
  if((await api('getWebhookInfo')).url)throw new BotError('EXISTING_WEBHOOK_STOP');
  const data=publicData(config);await Promise.all([data.tables(),data.venues()]);
  if(process.argv.includes('--check')){console.log('VOLUME: bot username and public V2 connection verified; no messages sent.');return;}
- const handle=createHandler({config,data,send:api});let offset=0,stopping=false;
+ const {privateData:connectPrivate}=await import('./private-data.mjs');const privateBackend=env.VOLUME_TELEGRAM_DB_URL?connectPrivate(env.VOLUME_TELEGRAM_DB_URL):null;const handle=createHandler({config,data,send:api,privateData:privateBackend});let offset=0,stopping=false;
  const stop=()=>{stopping=true;};process.once('SIGINT',stop);process.once('SIGTERM',stop);
  console.log('VOLUME: Telegram adapter running. Ctrl+C to stop; no database lifecycle actions.');
  try{while(!stopping){
   const updates=await api('getUpdates',{offset,timeout:25,allowed_updates:['message','callback_query']});
   if(!Array.isArray(updates))throw new BotError('TELEGRAM_INVALID_UPDATES');
   for(const update of updates){if(stopping)break;if(!Number.isSafeInteger(update.update_id)||update.update_id<0)throw new BotError('TELEGRAM_INVALID_UPDATES');await handle(update);offset=update.update_id+1;}
- }}finally{process.removeListener('SIGINT',stop);process.removeListener('SIGTERM',stop);}
+ }}finally{await privateBackend?.close();process.removeListener('SIGINT',stop);process.removeListener('SIGTERM',stop);}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  run().catch(error=>{console.error('VOLUME: '+(error instanceof BotError?error.code:'INTERNAL_ERROR')+'. Check private configuration / existing bot process; no data reset.');process.exitCode=1;});
