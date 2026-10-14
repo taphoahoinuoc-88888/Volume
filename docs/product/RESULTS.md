@@ -174,3 +174,6 @@ Candidate6649a440d93eeb73c53c108445b3cac6af2aba5a: Checkpoint1A run38437294024 a
 Screenshot review found customer confirmation text inherited dark text on a dark background. Customer product confirmation now uses the same light surface/dark text as management (cinematic stylesheet untouched). PRODUCT03 verifies actual computed normal-text contrast >=4.5 while retaining stale-price rejection. Modal evidence is viewport-captured so totals/error/actions are readable at the actual screen size.
 
 Shop review: details previously appeared below the entire catalog, making the clicked card appear unresponsive. Details now expand inside the selected card; its cart link jumps to the existing basket. PRODUCT01 verifies visible expansion/close and basket navigation before real checkout/CASH/fulfillment. No price, inventory or order rule changed.
+
+## CI repair: expanded product details (2026-10-14)
+Candidate ceb28012 failed the same PRODUCT01 viewport assertion in all four browser workflows. The screenshot shows the detail button at the viewport bottom; expanding content below it does not scroll the document. ShopPage now focuses the newly expanded detail panel and brings it into view after React commits it. The existing viewport assertion is retained unchanged; no timeout, security, fixture or workflow relaxation. Full candidate CI is required after this patch.
